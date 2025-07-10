@@ -16,6 +16,14 @@ export interface SarinPacket {
   returnDate?: string;
 }
 
+export interface ScannedPacket {
+  id: string;
+  kapanNumber: string;
+  packetNumber: string;
+  suffix: string;
+  fullBarcode: string;
+}
+
 export interface LaserLot {
   id: string;
   lotNumber: string;
@@ -27,6 +35,7 @@ export interface LaserLot {
   isReturned: boolean;
   returnedBy?: string;
   returnDate?: string;
+  scannedPackets?: ScannedPacket[];
 }
 
 export interface SarinOperator {
@@ -59,3 +68,5 @@ export interface ReassignLog {
   toOperator: string;
   packets: { mainPacketNumber: string; lotNumber: string; quantityTransferred: number }[];
 }
+
+    
