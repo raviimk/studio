@@ -90,7 +90,6 @@ export interface FourPLot {
   id: string;
   kapan: string;
   lot: string;
-  packets: string[];
   pcs: number;
   techingOperator: string;
   techingAmount: number;

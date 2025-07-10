@@ -29,14 +29,10 @@ export default function FourPTechingEntryPage() {
 
   const [barcode, setBarcode] = useState('');
   const [lotDetails, setLotDetails] = useState<LotDetails | null>(null);
-
-  const [packets, setPackets] = useState<string[]>([]);
-  const [currentPacket, setCurrentPacket] = useState('');
   
   const [techingOperator, setTechingOperator] = useState('');
   const [pcs, setPcs] = useState('');
 
-  const packetInputRef = useRef<HTMLInputElement>(null);
   const pcsInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -55,19 +51,7 @@ export default function FourPTechingEntryPage() {
     }
     const [, kapan, lot] = match;
     setLotDetails({ kapan, lot });
-    setTimeout(() => packetInputRef.current?.focus(), 100);
-  };
-
-  const handleAddPacket = () => {
-    if (currentPacket.trim()) {
-      setPackets([...packets, currentPacket.trim()]);
-      setCurrentPacket('');
-      packetInputRef.current?.focus();
-    }
-  };
-
-  const handleDeletePacket = (index: number) => {
-    setPackets(packets.filter((_, i) => i !== index));
+    setTimeout(() => pcsInputRef.current?.focus(), 100);
   };
   
   const handleSaveLot = () => {
@@ -87,7 +71,6 @@ export default function FourPTechingEntryPage() {
     const newLot: FourPLot = {
       id: uuidv4(),
       ...lotDetails,
-      packets,
       pcs: numPcs,
       techingOperator: techingOperator,
       techingAmount: techingAmount,
@@ -100,8 +83,6 @@ export default function FourPTechingEntryPage() {
     // Reset state
     setBarcode('');
     setLotDetails(null);
-    setPackets([]);
-    setCurrentPacket('');
     setPcs('');
     if(fourPTechingOperators.length > 1) {
         setTechingOperator('');
@@ -124,7 +105,7 @@ export default function FourPTechingEntryPage() {
       <Card>
           <CardHeader>
             <CardTitle>Create New Lot</CardTitle>
-            <CardDescription>Scan barcode, add packets, and enter details to create a new lot.</CardDescription>
+            <CardDescription>Scan barcode and enter details to create a new lot.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
               {/* Step 1: Barcode */}
@@ -146,53 +127,27 @@ export default function FourPTechingEntryPage() {
 
             {lotDetails && (
                 <div className="space-y-6 animate-in fade-in-50">
-                    {/* Step 2: Packet Entry */}
-                    <div>
-                        <Label>Step 2: Enter Packet Numbers (Optional)</Label>
-                        <p className="text-sm text-muted-foreground">For Kapan: <span className="font-bold">{lotDetails.kapan}</span>, Lot: <span className="font-bold">{lotDetails.lot}</span></p>
-                        <div className="flex gap-2 max-w-sm mt-1">
-                            <Input
-                                ref={packetInputRef}
-                                placeholder="Enter packet number"
-                                value={currentPacket}
-                                onChange={e => setCurrentPacket(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddPacket(); } }}
-                            />
-                            <Button onClick={handleAddPacket}>Add Packet</Button>
-                        </div>
-                        {packets.length > 0 && (
-                            <div className="border rounded-md mt-2 max-w-sm">
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Packet</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {packets.map((p, i) => (
-                                            <TableRow key={i}><TableCell>{p}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeletePacket(i)}><Trash2 className="h-4 w-4"/></Button></TableCell></TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                    </div>
-                    
-                    {/* Step 3 & 4: Operator and PCS */}
+                    <p className="text-sm text-muted-foreground">Creating entry for Kapan: <span className="font-bold">{lotDetails.kapan}</span>, Lot: <span className="font-bold">{lotDetails.lot}</span></p>
+
+                    {/* Step 2 & 3: Operator and PCS */}
                     <div className="grid md:grid-cols-2 gap-4 max-w-sm">
                          <div>
-                            <Label htmlFor="teching-op">Step 3: Select Teching Operator</Label>
+                            <Label htmlFor="teching-op">Step 2: Select Teching Operator</Label>
                              <Select onValueChange={setTechingOperator} value={techingOperator}>
                                 <SelectTrigger id="teching-op" className="mt-1"><SelectValue placeholder="Select Operator" /></SelectTrigger>
                                 <SelectContent>{fourPTechingOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
                          <div>
-                            <Label htmlFor="pcs-entry">Step 4: Enter Total PCS</Label>
+                            <Label htmlFor="pcs-entry">Step 3: Enter Total PCS</Label>
                             <Input id="pcs-entry" ref={pcsInputRef} value={pcs} onChange={e => setPcs(e.target.value)} type="number" placeholder="e.g., 25" className="mt-1"/>
                         </div>
                     </div>
 
-                    {/* Step 5: Save */}
+                    {/* Step 4: Save */}
                     <div className="flex gap-2">
                         <Button onClick={handleSaveLot}>Save Lot</Button>
-                        <Button variant="outline" onClick={() => { setLotDetails(null); setBarcode(''); setPackets([]); }}>Cancel</Button>
+                        <Button variant="outline" onClick={() => { setLotDetails(null); setBarcode(''); }}>Cancel</Button>
                     </div>
                 </div>
             )}
