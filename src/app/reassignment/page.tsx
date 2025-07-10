@@ -33,7 +33,7 @@ export default function ReassignmentPage() {
     return sarinPackets.filter(p => p.operator === fromOperator && !p.isReturned && p.packetCount > 0);
   }, [fromOperator, sarinPackets]);
 
-  const handleSelectionChange = (packetId: string, packet: SarinPacket, type: 'full' | 'partial', quantity?: number) => {
+  const handleSelectionChange = (packetId: string, packet: SarinPacket, type: 'full' | 'partial' | 'none', quantity?: number) => {
     if (type === 'none') {
         const newSelection = {...selectedPackets};
         delete newSelection[packetId];
@@ -76,7 +76,7 @@ export default function ReassignmentPage() {
     
     const newPackets: SarinPacket[] = [];
     const updatedPackets = [...sarinPackets];
-    const reassignedPacketInfo: { mainPacketNumber: string, lotNumber: string, quantity: number }[] = [];
+    const newLogs: ReassignLog[] = [];
 
     for (const packetId of packetIdsToReassign) {
       const selection = selectedPackets[packetId];
@@ -84,9 +84,8 @@ export default function ReassignmentPage() {
 
       const originalPacketIndex = updatedPackets.findIndex(p => p.id === packetId);
       if (originalPacketIndex === -1) continue;
-
+      
       const originalPacket = updatedPackets[originalPacketIndex];
-      reassignedPacketInfo.push({ mainPacketNumber: originalPacket.mainPacketNumber, lotNumber: originalPacket.lotNumber, quantity: selection.quantity });
 
       if (selection.type === 'full') {
         updatedPackets[originalPacketIndex] = { ...originalPacket, operator: toOperator };
@@ -103,26 +102,31 @@ export default function ReassignmentPage() {
         };
         newPackets.push(newPacketForToOperator);
       }
+      
+      const newLog: ReassignLog = {
+        id: uuidv4(),
+        date: new Date().toISOString(),
+        fromOperator,
+        toOperator,
+        packets: [{ 
+            mainPacketNumber: originalPacket.mainPacketNumber,
+            lotNumber: originalPacket.lotNumber,
+            quantityTransferred: selection.quantity 
+        }],
+      };
+      newLogs.push(newLog);
     }
 
     const finalPackets = [...updatedPackets, ...newPackets];
 
-    const newLog: ReassignLog = {
-      id: uuidv4(),
-      date: new Date().toISOString(),
-      fromOperator,
-      toOperator,
-      packets: reassignedPacketInfo.map(p => ({
-        mainPacketNumber: p.mainPacketNumber,
-        lotNumber: p.lotNumber,
-        quantityTransferred: p.quantity,
-      })),
-    };
-
     setSarinPackets(finalPackets);
-    setReassignLogs([...reassignLogs, newLog]);
-    toast({ title: 'Success', description: `${reassignedPacketInfo.length} transfer(s) completed successfully.` });
+    setReassignLogs([...reassignLogs, ...newLogs]);
+    toast({ title: 'Success', description: `${newLogs.length} transfer(s) completed successfully.` });
+    
+    // Reset state
     setSelectedPackets({});
+    setFromOperator('');
+    setToOperator('');
   };
 
   return (
@@ -169,7 +173,7 @@ export default function ReassignmentPage() {
                     <TableCell>
                       <RadioGroup 
                         value={selectedPackets[p.id]?.type || 'none'} 
-                        onValueChange={(type) => handleSelectionChange(p.id, p, type as 'full' | 'partial' | 'none')}
+                        onValueChange={(type) => handleSelectionChange(p.id, p, type as 'full' | 'partial' | 'none', selectedPackets[p.id]?.quantity)}
                         className="space-y-2"
                       >
                         <div className="flex items-center space-x-2">
@@ -182,18 +186,19 @@ export default function ReassignmentPage() {
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="partial" id={`partial-${p.id}`} />
-                          <Label htmlFor={`partial-${p.id}`} className="font-normal">✍️ Partial Transfer</Label>
+                          <Label htmlFor={`partial-${p.id}`} className="font-normal">✍️ Partial Transfer: Enter no. of packets</Label>
                         </div>
                       </RadioGroup>
                       {selectedPackets[p.id]?.type === 'partial' && (
                         <div className="mt-2 pl-6">
                             <Input 
                                 type="number" 
-                                placeholder="No. of packets"
+                                placeholder="No. of packets to transfer"
                                 className="h-8"
                                 max={p.packetCount}
                                 min="1"
                                 onChange={(e) => handleSelectionChange(p.id, p, 'partial', parseInt(e.target.value))}
+                                value={selectedPackets[p.id]?.quantity || ''}
                             />
                         </div>
                       )}
@@ -202,9 +207,10 @@ export default function ReassignmentPage() {
                 ))}
               </TableBody>
             </Table>
-             {availablePackets.length === 0 && <p className="text-center text-muted-foreground p-4">No available packets for this operator.</p>}
+             {availablePackets.length === 0 && fromOperator && <p className="text-center text-muted-foreground p-4">No available packets for this operator.</p>}
+             {!fromOperator && <p className="text-center text-muted-foreground p-4">Select an operator to see available packets.</p>}
           </div>
-          <Button onClick={handleReassign} className="mt-4" disabled={Object.keys(selectedPackets).length === 0}>Reassign Selected Packets</Button>
+          <Button onClick={handleReassign} className="mt-4" disabled={Object.keys(selectedPackets).length === 0 || !toOperator}>Reassign Selected Packets</Button>
         </CardContent>
       </Card>
     </div>
