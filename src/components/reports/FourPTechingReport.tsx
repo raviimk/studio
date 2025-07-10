@@ -12,6 +12,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-range';
 import type { DateRange } from 'react-day-picker';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
 import { format } from 'date-fns';
 
 export default function FourPTechingReport() {
@@ -36,8 +37,8 @@ export default function FourPTechingReport() {
 
   const summary = useMemo(() => {
     return filteredData.reduce((acc, lot) => {
-        acc.totalPcs += lot.pcs;
-        acc.totalAmount += lot.techingAmount;
+        acc.totalPcs += lot.pcs || 0;
+        acc.totalAmount += lot.techingAmount || 0;
         return acc;
     }, { totalPcs: 0, totalAmount: 0 });
   }, [filteredData]);
@@ -106,7 +107,7 @@ export default function FourPTechingReport() {
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge variant="outline">{lot.techingOperator}</Badge></TableCell>
                     <TableCell>{lot.pcs}</TableCell>
-                    <TableCell>₹{lot.techingAmount?.toFixed(2)}</TableCell>
+                    <TableCell>₹{(lot.techingAmount || 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
                 {filteredData.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
