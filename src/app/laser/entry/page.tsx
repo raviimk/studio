@@ -40,10 +40,16 @@ export default function NewLaserLotPage() {
   const [currentLotDetails, setCurrentLotDetails] = useState<FormValues | null>(null);
   const [scannedPackets, setScannedPackets] = useState<ScannedPacket[]>([]);
   const [barcode, setBarcode] = useState('');
-  const [mismatchedPacket, setMismatchedPacket] = useState<ScannedPacket | null>(null);
   
+  // State for Kapan mismatch dialog
+  const [mismatchedPacket, setMismatchedPacket] = useState<ScannedPacket | null>(null);
+  const kapanMismatchDialogTriggerRef = useRef<HTMLButtonElement>(null);
+  
+  // State for cross-lot duplicate dialog
+  const [duplicatePacketInfo, setDuplicatePacketInfo] = useState<{ packet: ScannedPacket, existingLotNumber: string } | null>(null);
+  const duplicateDialogTriggerRef = useRef<HTMLButtonElement>(null);
+
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const alertDialogTriggerRef = useRef<HTMLButtonElement>(null);
 
 
   const form = useForm<FormValues>({
@@ -77,10 +83,11 @@ export default function NewLaserLotPage() {
   const handleAddPacket = (packet: ScannedPacket) => {
     if(scannedPackets.length >= packetCount) {
         toast({ variant: 'destructive', title: 'Limit Reached', description: 'You have already scanned all packets for this lot.' });
+        setBarcode('');
         return;
     }
     if (scannedPackets.some(p => p.fullBarcode === packet.fullBarcode)) {
-        toast({ variant: 'destructive', title: 'Duplicate Packet', description: 'This packet has already been scanned.' });
+        toast({ variant: 'destructive', title: 'Duplicate Packet', description: 'This packet has already been scanned for the current lot.' });
         setBarcode('');
         return;
     }
@@ -112,14 +119,35 @@ export default function NewLaserLotPage() {
         fullBarcode: barcode
     };
 
-    if (kapan === currentLotDetails.kapanNumber) {
-        handleAddPacket(newPacket);
-    } else {
-        setMismatchedPacket(newPacket);
-        alertDialogTriggerRef.current?.click();
+    // Cross-lot duplicate check
+    const existingLot = laserLots.find(lot => lot.scannedPackets?.some(p => p.fullBarcode === barcode));
+    if (existingLot) {
+        setDuplicatePacketInfo({ packet: newPacket, existingLotNumber: existingLot.lotNumber });
+        duplicateDialogTriggerRef.current?.click();
+        return;
     }
-  };
 
+    // Kapan mismatch check
+    if (kapan !== currentLotDetails.kapanNumber) {
+        setMismatchedPacket(newPacket);
+        kapanMismatchDialogTriggerRef.current?.click();
+        return;
+    }
+    
+    handleAddPacket(newPacket);
+  };
+  
+  const proceedWithPacket = (packet: ScannedPacket | null) => {
+      if (!packet || !currentLotDetails) return;
+       if (packet.kapanNumber !== currentLotDetails.kapanNumber) {
+            setMismatchedPacket(packet);
+            kapanMismatchDialogTriggerRef.current?.click();
+       } else {
+            handleAddPacket(packet);
+       }
+  }
+
+  // Dialog actions
   const addMismatchedPacket = () => {
     if (mismatchedPacket) {
         handleAddPacket(mismatchedPacket);
@@ -132,6 +160,20 @@ export default function NewLaserLotPage() {
     setBarcode('');
     barcodeInputRef.current?.focus();
   }
+
+  const addDuplicatePacket = () => {
+      if (duplicatePacketInfo) {
+          proceedWithPacket(duplicatePacketInfo.packet);
+      }
+      setDuplicatePacketInfo(null);
+  }
+
+  const ignoreDuplicatePacket = () => {
+      setDuplicatePacketInfo(null);
+      setBarcode('');
+      barcodeInputRef.current?.focus();
+  }
+
 
   function createFinalLot() {
      if (!currentLotDetails || scannedPackets.length !== currentLotDetails.packetCount) {
@@ -260,9 +302,10 @@ export default function NewLaserLotPage() {
         </Card>
       )}
 
+      {/* Kapan Mismatch Dialog */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
-            <button ref={alertDialogTriggerRef} className="hidden">Open Dialog</button>
+            <button ref={kapanMismatchDialogTriggerRef} className="hidden">Open Kapan Mismatch Dialog</button>
         </AlertDialogTrigger>
         <AlertDialogContent>
             <AlertDialogHeader>
@@ -279,6 +322,29 @@ export default function NewLaserLotPage() {
             <AlertDialogFooter>
                 <AlertDialogCancel onClick={ignoreMismatchedPacket}>No, Ignore</AlertDialogCancel>
                 <AlertDialogAction onClick={addMismatchedPacket}>Yes, Add Anyway</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cross-Lot Duplicate Dialog */}
+       <AlertDialog>
+        <AlertDialogTrigger asChild>
+            <button ref={duplicateDialogTriggerRef} className="hidden">Open Duplicate Dialog</button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle className='flex items-center gap-2'>
+                    <AlertTriangle className="text-yellow-500" /> Duplicate Packet Found
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                    This packet (<span className="font-bold font-mono">{duplicatePacketInfo?.packet.fullBarcode}</span>) is already scanned in Lot <span className="font-bold">{duplicatePacketInfo?.existingLotNumber}</span>.
+                    <br />
+                    Are you sure you want to add it again to this lot?
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={ignoreDuplicatePacket}>No, Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={addDuplicatePacket}>Yes, Add Anyway</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
