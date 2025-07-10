@@ -5,6 +5,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  AreaChart,
   BarChart2,
   ChevronRight,
   Diamond,
@@ -75,6 +76,11 @@ const menuItems = [
     label: 'Packet Reassignment',
     href: '/reassignment',
     icon: Replace,
+  },
+   {
+    label: 'Reports Center',
+    href: '/analysis-report',
+    icon: AreaChart,
   },
    {
     label: 'AI Insights',
