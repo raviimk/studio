@@ -11,6 +11,7 @@ import {
   Gem,
   LayoutGrid,
   ListTodo,
+  Puzzle,
   Replace,
   Settings,
   Sparkles,
@@ -60,6 +61,14 @@ const menuItems = [
       { label: 'Return Lot', href: '/laser/return' },
       { label: 'Recent Entries', href: '/laser/recent' },
       { label: 'Lot Analysis', href: '/laser/analysis' },
+    ],
+  },
+  {
+    label: '4P & 4P Teching',
+    icon: Puzzle,
+    subItems: [
+      { label: '4P Entry/Return', href: '/fourp/entry' },
+      { label: '4P Teching Entry/Return', href: '/fourp-teching/entry' },
     ],
   },
   {

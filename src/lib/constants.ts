@@ -5,3 +5,10 @@ export const SARIN_OPERATORS_KEY = 'sarinOperators';
 export const LASER_OPERATORS_KEY = 'laserOperators';
 export const SARIN_MAPPINGS_KEY = 'sarinMappings';
 export const LASER_MAPPINGS_KEY = 'laserMappings';
+
+// 4P and 4P Teching
+export const FOURP_OPERATORS_KEY = 'fourPOperators';
+export const FOURP_TECHING_OPERATORS_KEY = 'fourPTechingOperators';
+export const PRICE_MASTER_KEY = 'priceMaster';
+export const FOURP_LOTS_KEY = 'fourPLots';
+export const FOURP_TECHING_LOTS_KEY = 'fourPTechingLots';

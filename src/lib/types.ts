@@ -69,4 +69,31 @@ export interface ReassignLog {
   packets: { mainPacketNumber: string; lotNumber: string; quantityTransferred: number }[];
 }
 
-    
+// 4P & 4P Teching Types
+export interface FourPOperator {
+  id: string;
+  name: string;
+}
+
+export interface FourPTechingOperator {
+  id: string;
+  name: string;
+}
+
+export interface PriceMaster {
+  fourP: number;
+  fourPTeching: number;
+}
+
+export interface FourPLot {
+  id: string;
+  kapan: string;
+  lot: string;
+  packets: string[];
+  isReturned: boolean;
+  entryDate: string;
+  returnedBy?: string;
+  returnDate?: string;
+  pcsReturned?: number;
+  totalAmount?: number;
+}

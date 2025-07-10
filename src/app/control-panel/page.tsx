@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -10,10 +10,13 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator } from '@/lib/types';
+import { 
+  LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
+  FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY
+} from '@/lib/constants';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/PageHeader';
@@ -33,35 +36,41 @@ const laserMappingSchema = z.object({
   machine: z.string().min(1, 'Machine name is required'),
 });
 
+const fourPOperatorSchema = z.object({
+  name: z.string().min(1, 'Operator name is required'),
+});
+
+const fourPTechingOperatorSchema = z.object({
+  name: z.string().min(1, 'Operator name is required'),
+});
+
+const priceMasterSchema = z.object({
+  fourP: z.coerce.number().min(0, 'Rate must be positive'),
+  fourPTeching: z.coerce.number().min(0, 'Rate must be positive'),
+});
+
+
 export default function ControlPanelPage() {
   const { toast } = useToast();
   const [sarinOperators, setSarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const [sarinMappings, setSarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
   const [laserOperators, setLaserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
   const [laserMappings, setLaserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
+  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
 
-  const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({
-    resolver: zodResolver(sarinOperatorSchema),
-    defaultValues: { name: '', machine: '' },
-  });
-
-  const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({
-    resolver: zodResolver(laserOperatorSchema),
-    defaultValues: { name: '' },
-  });
-
-  const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({
-    resolver: zodResolver(laserMappingSchema),
-    defaultValues: { tensionType: '', machine: '' },
-  });
+  const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
+  const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
+  const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({ resolver: zodResolver(laserMappingSchema), defaultValues: { tensionType: '', machine: '' } });
+  const fourPForm = useForm<z.infer<typeof fourPOperatorSchema>>({ resolver: zodResolver(fourPOperatorSchema), defaultValues: { name: '' } });
+  const fourPTechingForm = useForm<z.infer<typeof fourPTechingOperatorSchema>>({ resolver: zodResolver(fourPTechingOperatorSchema), defaultValues: { name: '' } });
+  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster });
   
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
-    const newOperator: SarinOperator = { id: operatorId, name: values.name };
-    const newMapping: SarinMapping = { id: uuidv4(), operatorId: operatorId, operatorName: values.name, machine: values.machine };
-
-    setSarinOperators([...sarinOperators, newOperator]);
-    setSarinMappings([...sarinMappings, newMapping]);
+    setSarinOperators([...sarinOperators, { id: operatorId, name: values.name }]);
+    setSarinMappings([...sarinMappings, { id: uuidv4(), operatorId: operatorId, operatorName: values.name, machine: values.machine }]);
     toast({ title: 'Success', description: 'Sarin operator and mapping added.' });
     sarinForm.reset();
   }
@@ -73,8 +82,7 @@ export default function ControlPanelPage() {
   }
 
   function handleAddLaserOperator(values: z.infer<typeof laserOperatorSchema>) {
-    const newOperator: LaserOperator = { id: uuidv4(), name: values.name };
-    setLaserOperators([...laserOperators, newOperator]);
+    setLaserOperators([...laserOperators, { id: uuidv4(), name: values.name }]);
     toast({ title: 'Success', description: 'Laser operator added.' });
     laserOpForm.reset();
   }
@@ -85,8 +93,7 @@ export default function ControlPanelPage() {
   }
 
   function handleAddLaserMapping(values: z.infer<typeof laserMappingSchema>) {
-    const newMapping: LaserMapping = { id: uuidv4(), ...values };
-    setLaserMappings([...laserMappings, newMapping]);
+    setLaserMappings([...laserMappings, { id: uuidv4(), ...values }]);
     toast({ title: 'Success', description: 'Laser tension mapping added.' });
     laserMapForm.reset();
   }
@@ -96,13 +103,42 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Laser tension mapping deleted.' });
   }
 
+  function handleAddFourPOperator(values: z.infer<typeof fourPOperatorSchema>) {
+    setFourPOperators([...fourPOperators, { id: uuidv4(), ...values }]);
+    toast({ title: 'Success', description: '4P operator added.' });
+    fourPForm.reset();
+  }
+
+  function handleDeleteFourPOperator(id: string) {
+    setFourPOperators(fourPOperators.filter(op => op.id !== id));
+    toast({ title: 'Success', description: '4P operator deleted.' });
+  }
+
+  function handleAddFourPTechingOperator(values: z.infer<typeof fourPTechingOperatorSchema>) {
+    setFourPTechingOperators([...fourPTechingOperators, { id: uuidv4(), ...values }]);
+    toast({ title: 'Success', description: '4P Teching operator added.' });
+    fourPTechingForm.reset();
+  }
+
+  function handleDeleteFourPTechingOperator(id: string) {
+    setFourPTechingOperators(fourPTechingOperators.filter(op => op.id !== id));
+    toast({ title: 'Success', description: '4P Teching operator deleted.' });
+  }
+
+  function handleUpdatePriceMaster(values: z.infer<typeof priceMasterSchema>) {
+    setPriceMaster(values);
+    toast({ title: 'Success', description: 'Price master updated.' });
+  }
+
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
-      <PageHeader title="Control Panel" description="Manage operators and machine mappings." />
+      <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
+          <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
           <Card>
@@ -214,6 +250,92 @@ export default function ControlPanelPage() {
                 </Card>
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="4p" className="space-y-6 mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Price Master</CardTitle>
+                    <CardDescription>Set the per-piece rates for 4P and 4P Teching work.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...priceMasterForm}>
+                        <form onSubmit={priceMasterForm.handleSubmit(handleUpdatePriceMaster)} className="space-y-4 max-w-sm">
+                             <FormField control={priceMasterForm.control} name="fourP" render={({ field }) => (
+                                <FormItem><FormLabel>4P Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={priceMasterForm.control} name="fourPTeching" render={({ field }) => (
+                                <FormItem><FormLabel>4P Teching Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <Button type="submit">Update Rates</Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>Add 4P Operator</CardTitle></CardHeader>
+                        <CardContent>
+                            <Form {...fourPForm}>
+                                <form onSubmit={fourPForm.handleSubmit(handleAddFourPOperator)} className="space-y-4">
+                                    <FormField control={fourPForm.control} name="name" render={({ field }) => (
+                                        <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <Button type="submit">Add 4P Operator</Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader><CardTitle>Manage 4P Operators</CardTitle></CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {fourPOperators.map(op => (
+                                        <TableRow key={op.id}>
+                                            <TableCell>{op.name}</TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>Add 4P Teching Operator</CardTitle></CardHeader>
+                        <CardContent>
+                            <Form {...fourPTechingForm}>
+                                <form onSubmit={fourPTechingForm.handleSubmit(handleAddFourPTechingOperator)} className="space-y-4">
+                                    <FormField control={fourPTechingForm.control} name="name" render={({ field }) => (
+                                        <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <Button type="submit">Add 4P Teching Operator</Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader><CardTitle>Manage 4P Teching Operators</CardTitle></CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {fourPTechingOperators.map(op => (
+                                        <TableRow key={op.id}>
+                                            <TableCell>{op.name}</TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </TabsContent>
       </Tabs>
     </div>
