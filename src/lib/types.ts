@@ -1,3 +1,4 @@
+
 export interface SarinPacket {
   id: string;
   senderName: string;
@@ -90,10 +91,13 @@ export interface FourPLot {
   kapan: string;
   lot: string;
   packets: string[];
-  isReturned: boolean;
+  pcs: number;
+  techingOperator: string;
+  techingAmount: number;
   entryDate: string;
-  returnedBy?: string;
+  isReturnedToFourP: boolean;
+  // Fields below are added on return
+  fourPOperator?: string;
   returnDate?: string;
-  pcsReturned?: number;
-  totalAmount?: number;
+  fourPAmount?: number;
 }

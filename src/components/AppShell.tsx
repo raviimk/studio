@@ -67,8 +67,8 @@ const menuItems = [
     label: '4P & 4P Teching',
     icon: Puzzle,
     subItems: [
-      { label: '4P Entry/Return', href: '/fourp/entry' },
-      { label: '4P Teching Entry/Return', href: '/fourp-teching/entry' },
+      { label: '4P Teching Entry', href: '/fourp-teching/entry' },
+      { label: '4P Return', href: '/fourp/return' },
     ],
   },
   {
