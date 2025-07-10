@@ -7,10 +7,17 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+
+type TransferSelection = {
+  type: 'full' | 'partial';
+  quantity: number;
+};
 
 export default function ReassignmentPage() {
   const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
@@ -18,26 +25,40 @@ export default function ReassignmentPage() {
   const [reassignLogs, setReassignLogs] = useLocalStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
   const [fromOperator, setFromOperator] = useState<string>('');
   const [toOperator, setToOperator] = useState<string>('');
-  const [selectedPackets, setSelectedPackets] = useState<Record<string, boolean>>({});
+  const [selectedPackets, setSelectedPackets] = useState<Record<string, TransferSelection>>({});
   const { toast } = useToast();
 
   const availablePackets = useMemo(() => {
     if (!fromOperator) return [];
-    return sarinPackets.filter(p => p.operator === fromOperator && !p.isReturned);
+    return sarinPackets.filter(p => p.operator === fromOperator && !p.isReturned && p.packetCount > 0);
   }, [fromOperator, sarinPackets]);
 
-  const handleSelectAll = (checked: boolean) => {
-    const newSelected: Record<string, boolean> = {};
-    if (checked) {
-      availablePackets.forEach(p => newSelected[p.id] = true);
+  const handleSelectionChange = (packetId: string, packet: SarinPacket, type: 'full' | 'partial', quantity?: number) => {
+    if (type === 'none') {
+        const newSelection = {...selectedPackets};
+        delete newSelection[packetId];
+        setSelectedPackets(newSelection);
+        return;
     }
-    setSelectedPackets(newSelected);
+
+    const numQuantity = quantity || 0;
+    if (type === 'partial' && (numQuantity <= 0 || numQuantity > packet.packetCount)) {
+        toast({ variant: 'destructive', title: 'Invalid quantity', description: `Must be between 1 and ${packet.packetCount}` });
+        const newSelection = {...selectedPackets};
+        delete newSelection[packetId];
+        setSelectedPackets(newSelection);
+        return;
+    }
+
+    setSelectedPackets(prev => ({
+      ...prev,
+      [packetId]: {
+        type: type,
+        quantity: type === 'full' ? packet.packetCount : numQuantity,
+      }
+    }));
   };
-  
-  const handleSelectPacket = (packetId: string, checked: boolean) => {
-    setSelectedPackets(prev => ({...prev, [packetId]: checked }));
-  };
-  
+
   const handleReassign = () => {
     if (!fromOperator || !toOperator) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select both "From" and "To" operators.' });
@@ -47,32 +68,61 @@ export default function ReassignmentPage() {
         toast({ variant: 'destructive', title: 'Error', description: '"From" and "To" operators cannot be the same.' });
         return;
     }
-    const packetIdsToReassign = Object.keys(selectedPackets).filter(id => selectedPackets[id]);
+    const packetIdsToReassign = Object.keys(selectedPackets);
     if (packetIdsToReassign.length === 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select at least one packet to reassign.' });
       return;
     }
+    
+    const newPackets: SarinPacket[] = [];
+    const updatedPackets = [...sarinPackets];
+    const reassignedPacketInfo: { mainPacketNumber: string, lotNumber: string, quantity: number }[] = [];
 
-    const updatedPackets = sarinPackets.map(p => {
-      if (packetIdsToReassign.includes(p.id)) {
-        return { ...p, operator: toOperator };
+    for (const packetId of packetIdsToReassign) {
+      const selection = selectedPackets[packetId];
+      if (!selection || selection.quantity <= 0) continue;
+
+      const originalPacketIndex = updatedPackets.findIndex(p => p.id === packetId);
+      if (originalPacketIndex === -1) continue;
+
+      const originalPacket = updatedPackets[originalPacketIndex];
+      reassignedPacketInfo.push({ mainPacketNumber: originalPacket.mainPacketNumber, lotNumber: originalPacket.lotNumber, quantity: selection.quantity });
+
+      if (selection.type === 'full') {
+        updatedPackets[originalPacketIndex] = { ...originalPacket, operator: toOperator };
+      } else { // partial
+        updatedPackets[originalPacketIndex].packetCount -= selection.quantity;
+        
+        const newPacketForToOperator: SarinPacket = {
+          ...originalPacket,
+          id: uuidv4(),
+          operator: toOperator,
+          packetCount: selection.quantity,
+          date: new Date().toISOString(),
+          time: new Date().toLocaleTimeString(),
+        };
+        newPackets.push(newPacketForToOperator);
       }
-      return p;
-    });
+    }
+
+    const finalPackets = [...updatedPackets, ...newPackets];
 
     const newLog: ReassignLog = {
       id: uuidv4(),
       date: new Date().toISOString(),
       fromOperator,
       toOperator,
-      packets: sarinPackets.filter(p => packetIdsToReassign.includes(p.id)).map(p => ({ mainPacketNumber: p.mainPacketNumber, lotNumber: p.lotNumber }))
+      packets: reassignedPacketInfo.map(p => ({
+        mainPacketNumber: p.mainPacketNumber,
+        lotNumber: p.lotNumber,
+        quantityTransferred: p.quantity,
+      })),
     };
 
-    setSarinPackets(updatedPackets);
+    setSarinPackets(finalPackets);
     setReassignLogs([...reassignLogs, newLog]);
-    toast({ title: 'Success', description: `${packetIdsToReassign.length} packet(s) reassigned successfully.` });
+    toast({ title: 'Success', description: `${reassignedPacketInfo.length} transfer(s) completed successfully.` });
     setSelectedPackets({});
-    // Resetting selectors could be added if desired
   };
 
   return (
@@ -84,7 +134,7 @@ export default function ReassignmentPage() {
           <div className="grid md:grid-cols-2 gap-4 pt-4">
             <div>
               <label className="text-sm font-medium">From Operator</label>
-              <Select onValueChange={setFromOperator} value={fromOperator}>
+              <Select onValueChange={(value) => { setFromOperator(value); setSelectedPackets({}); }} value={fromOperator}>
                 <SelectTrigger><SelectValue placeholder="Select source operator" /></SelectTrigger>
                 <SelectContent>{sarinOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
               </Select>
@@ -104,32 +154,57 @@ export default function ReassignmentPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]">
-                    <Checkbox onCheckedChange={handleSelectAll} />
-                  </TableHead>
-                  <TableHead>Main Packet #</TableHead>
-                  <TableHead>Lot #</TableHead>
-                  <TableHead>Kapan #</TableHead>
-                  <TableHead>Packet Count</TableHead>
+                  <TableHead>Packet Details</TableHead>
+                  <TableHead className="w-[400px]">Transfer Option</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {availablePackets.map(p => (
-                  <TableRow key={p.id}>
+                  <TableRow key={p.id} className="align-top">
                     <TableCell>
-                      <Checkbox checked={!!selectedPackets[p.id]} onCheckedChange={(checked) => handleSelectPacket(p.id, !!checked)} />
+                      <div className="font-medium">{p.mainPacketNumber}</div>
+                      <div>Lot: {p.lotNumber} | Kapan: {p.kapanNumber}</div>
+                      <div className="text-sm text-muted-foreground">Packets: {p.packetCount}</div>
                     </TableCell>
-                    <TableCell>{p.mainPacketNumber}</TableCell>
-                    <TableCell>{p.lotNumber}</TableCell>
-                    <TableCell>{p.kapanNumber}</TableCell>
-                    <TableCell>{p.packetCount}</TableCell>
+                    <TableCell>
+                      <RadioGroup 
+                        value={selectedPackets[p.id]?.type || 'none'} 
+                        onValueChange={(type) => handleSelectionChange(p.id, p, type as 'full' | 'partial' | 'none')}
+                        className="space-y-2"
+                      >
+                        <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="none" id={`none-${p.id}`} />
+                            <Label htmlFor={`none-${p.id}`} className="font-normal">Don't Transfer</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="full" id={`full-${p.id}`} />
+                          <Label htmlFor={`full-${p.id}`} className="font-normal">✅ Transfer Full Entry</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="partial" id={`partial-${p.id}`} />
+                          <Label htmlFor={`partial-${p.id}`} className="font-normal">✍️ Partial Transfer</Label>
+                        </div>
+                      </RadioGroup>
+                      {selectedPackets[p.id]?.type === 'partial' && (
+                        <div className="mt-2 pl-6">
+                            <Input 
+                                type="number" 
+                                placeholder="No. of packets"
+                                className="h-8"
+                                max={p.packetCount}
+                                min="1"
+                                onChange={(e) => handleSelectionChange(p.id, p, 'partial', parseInt(e.target.value))}
+                            />
+                        </div>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
              {availablePackets.length === 0 && <p className="text-center text-muted-foreground p-4">No available packets for this operator.</p>}
           </div>
-          <Button onClick={handleReassign} className="mt-4">Reassign Selected Packets</Button>
+          <Button onClick={handleReassign} className="mt-4" disabled={Object.keys(selectedPackets).length === 0}>Reassign Selected Packets</Button>
         </CardContent>
       </Card>
     </div>
