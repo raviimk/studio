@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Barcode, AlertTriangle, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY } from '@/lib/constants';
@@ -37,6 +37,7 @@ export default function NewLaserLotPage() {
   const [laserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
 
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [currentLotDetails, setCurrentLotDetails] = useState<FormValues | null>(null);
   const [scannedPackets, setScannedPackets] = useState<ScannedPacket[]>([]);
   const [barcode, setBarcode] = useState('');
   const [mismatchedPacket, setMismatchedPacket] = useState<ScannedPacket | null>(null);
@@ -57,8 +58,7 @@ export default function NewLaserLotPage() {
   });
 
   const selectedTension = form.watch('tensionType');
-  const packetCount = form.watch('packetCount');
-
+  
   useEffect(() => {
     if (selectedTension) {
       const mapping = laserMappings.find(m => m.tensionType === selectedTension);
@@ -67,9 +67,12 @@ export default function NewLaserLotPage() {
   }, [selectedTension, laserMappings, form]);
 
   const handleInitialSubmit = (values: FormValues) => {
+    setCurrentLotDetails(values);
     setFormSubmitted(true);
     setTimeout(() => barcodeInputRef.current?.focus(), 100);
   };
+  
+  const packetCount = currentLotDetails?.packetCount || 0;
 
   const handleAddPacket = (packet: ScannedPacket) => {
     if(scannedPackets.length >= packetCount) {
@@ -92,7 +95,7 @@ export default function NewLaserLotPage() {
 
   const handleBarcodeScan = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcode) return;
+    if (!barcode || !currentLotDetails) return;
 
     const match = barcode.match(/^R(\d+)-(\d+)-(.+)$/);
     if (!match) {
@@ -109,7 +112,7 @@ export default function NewLaserLotPage() {
         fullBarcode: barcode
     };
 
-    if (kapan === form.getValues('kapanNumber')) {
+    if (kapan === currentLotDetails.kapanNumber) {
         handleAddPacket(newPacket);
     } else {
         setMismatchedPacket(newPacket);
@@ -131,14 +134,14 @@ export default function NewLaserLotPage() {
   }
 
   function createFinalLot() {
-     if (scannedPackets.length !== packetCount) {
-        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${packetCount} packets, but found ${scannedPackets.length}.` });
+     if (!currentLotDetails || scannedPackets.length !== currentLotDetails.packetCount) {
+        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${currentLotDetails?.packetCount} packets, but found ${scannedPackets.length}.` });
         return;
     }
 
     const newLot: LaserLot = {
       id: uuidv4(),
-      ...form.getValues(),
+      ...currentLotDetails,
       scannedPackets,
       entryDate: new Date().toISOString(),
       isReturned: false,
@@ -151,6 +154,7 @@ export default function NewLaserLotPage() {
     setFormSubmitted(false);
     setScannedPackets([]);
     setBarcode('');
+    setCurrentLotDetails(null);
   }
 
   return (
@@ -191,7 +195,7 @@ export default function NewLaserLotPage() {
         </CardContent>
       </Card>
 
-      {formSubmitted && (
+      {formSubmitted && currentLotDetails && (
         <Card className="max-w-4xl mx-auto mt-8">
             <CardHeader><CardTitle>Step 2: Scan Packets</CardTitle></CardHeader>
             <CardContent>
@@ -267,7 +271,7 @@ export default function NewLaserLotPage() {
                 </AlertDialogTitle>
                 <AlertDialogDescription>
                     Scanned packet belongs to Kapan <span className="font-bold">{mismatchedPacket?.kapanNumber}</span>.
-                    Your current lot's Kapan is <span className="font-bold">{form.getValues('kapanNumber')}</span>.
+                    Your current lot's Kapan is <span className="font-bold">{currentLotDetails?.kapanNumber}</span>.
                     <br />
                     Do you want to add this packet anyway?
                 </AlertDialogDescription>
