@@ -108,6 +108,13 @@ export default function FourPTechingEntryPage() {
     }
   };
 
+  const handleDeleteLot = (lotId: string) => {
+    if (window.confirm('Are you sure you want to delete this lot entry? This action cannot be undone.')) {
+      setFourPTechingLots(fourPTechingLots.filter(lot => lot.id !== lotId));
+      toast({ title: 'Success', description: 'Lot entry deleted.' });
+    }
+  };
+
   const recentEntries = fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()).slice(0, 10);
 
   return (
@@ -197,7 +204,7 @@ export default function FourPTechingEntryPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>PCS</TableHead><TableHead>Teching Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>PCS</TableHead><TableHead>Teching Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {recentEntries.map(lot => (
                   <TableRow key={lot.id}>
@@ -207,9 +214,14 @@ export default function FourPTechingEntryPage() {
                     <TableCell>{lot.techingOperator}</TableCell>
                     <TableCell>{lot.techingAmount?.toFixed(2)}</TableCell>
                     <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteLot(lot.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
-                 {recentEntries.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
+                 {recentEntries.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
