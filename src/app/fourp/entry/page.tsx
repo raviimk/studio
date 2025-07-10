@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { FOURP_LOTS_KEY, FOURP_OPERATORS_KEY, PRICE_MASTER_KEY } from '@/lib/constants';
 import { FourPLot, FourPOperator, PriceMaster } from '@/lib/types';
@@ -14,6 +14,7 @@ import { Barcode, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { Label } from '@/components/ui/label';
 
 type LotDetails = {
   kapan: string;
@@ -196,14 +197,17 @@ export default function FourPEntryPage() {
                     <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                     <TableCell>
                       {returningLotId === lot.id ? (
-                        <div className="flex gap-2 items-end">
-                            <div className="w-[150px]">
-                                <Label>Operator</Label>
-                                <Select onValueChange={setOperator} value={operator}><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent></Select>
+                        <div className="flex flex-wrap gap-2 items-end">
+                            <div className="min-w-[150px]">
+                                <Label htmlFor={`op-${lot.id}`} className="text-xs">Operator</Label>
+                                <Select onValueChange={setOperator} value={operator}>
+                                    <SelectTrigger id={`op-${lot.id}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                                    <SelectContent>{fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                                </Select>
                             </div>
-                            <div className="w-[120px]">
-                                <Label>PCS Returned</Label>
-                                <Input value={pcsReturned} onChange={e => setPcsReturned(e.target.value)} type="number" placeholder="e.g., 150"/>
+                            <div className="min-w-[120px]">
+                                <Label htmlFor={`pcs-${lot.id}`} className="text-xs">PCS Returned</Label>
+                                <Input id={`pcs-${lot.id}`} value={pcsReturned} onChange={e => setPcsReturned(e.target.value)} type="number" placeholder="e.g., 150"/>
                             </div>
                             <Button onClick={handleReturnLot}>Confirm</Button>
                             <Button variant="ghost" onClick={() => setReturningLotId(null)}>Cancel</Button>
