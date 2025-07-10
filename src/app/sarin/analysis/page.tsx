@@ -20,11 +20,11 @@ export default function LotAnalysisPage() {
     const packetsInLot = sarinPackets.filter(p => p.lotNumber === searchTerm);
     if (packetsInLot.length === 0) return { notFound: true };
 
+    const firstPacket = packetsInLot[0];
     const totalEntries = packetsInLot.length;
     const totalPacketCount = packetsInLot.reduce((sum, p) => sum + p.packetCount, 0);
     const totalJiram = packetsInLot.reduce((sum, p) => sum + (p.jiramCount || 0), 0);
     const isReturned = packetsInLot.some(p => p.isReturned);
-    const entryDate = packetsInLot[0]?.date;
     const returnEntry = packetsInLot.find(p => p.isReturned);
 
     return {
@@ -32,7 +32,9 @@ export default function LotAnalysisPage() {
       totalPacketCount,
       totalJiram,
       isReturned,
-      entryDate: entryDate ? format(new Date(entryDate), 'PPp') : 'N/A',
+      kapanNumber: firstPacket?.kapanNumber || 'N/A',
+      operator: firstPacket?.operator || 'N/A',
+      entryDate: firstPacket?.date ? format(new Date(firstPacket.date), 'PPp') : 'N/A',
       returnDate: returnEntry?.returnDate ? format(new Date(returnEntry.returnDate), 'PPp') : 'N/A',
       returnedBy: returnEntry?.returnedBy || 'N/A',
       notFound: false,
@@ -71,6 +73,12 @@ export default function LotAnalysisPage() {
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div className="font-medium">Kapan Number:</div>
+              <div>{lotData.kapanNumber}</div>
+
+              <div className="font-medium">Operator:</div>
+              <div>{lotData.operator}</div>
+              
               <div className="font-medium">Total Entries:</div>
               <div>{lotData.totalEntries}</div>
               
