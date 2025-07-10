@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, AlertTriangle } from 'lucide-react';
+import { Barcode, AlertTriangle, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -76,8 +76,18 @@ export default function NewLaserLotPage() {
         toast({ variant: 'destructive', title: 'Limit Reached', description: 'You have already scanned all packets for this lot.' });
         return;
     }
+    if (scannedPackets.some(p => p.fullBarcode === packet.fullBarcode)) {
+        toast({ variant: 'destructive', title: 'Duplicate Packet', description: 'This packet has already been scanned.' });
+        setBarcode('');
+        return;
+    }
     setScannedPackets(prev => [...prev, packet]);
     setBarcode('');
+  }
+
+  const handleDeletePacket = (packetId: string) => {
+    setScannedPackets(prev => prev.filter(p => p.id !== packetId));
+    toast({ title: 'Packet Removed', description: 'The packet has been removed from the list.' });
   }
 
   const handleBarcodeScan = (e: React.FormEvent) => {
@@ -207,6 +217,7 @@ export default function NewLaserLotPage() {
                                 <TableHead>Kapan</TableHead>
                                 <TableHead>Packet #</TableHead>
                                 <TableHead>Suffix</TableHead>
+                                <TableHead className="w-[80px] text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -219,6 +230,13 @@ export default function NewLaserLotPage() {
                                         <TableCell>{packet?.kapanNumber || '...'}</TableCell>
                                         <TableCell>{packet?.packetNumber || '...'}</TableCell>
                                         <TableCell>{packet?.suffix || '...'}</TableCell>
+                                        <TableCell className="text-right">
+                                            {packet && (
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </TableCell>
                                     </TableRow>
                                 );
                             })}
@@ -264,5 +282,3 @@ export default function NewLaserLotPage() {
     </div>
   );
 }
-
-    

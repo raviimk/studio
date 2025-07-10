@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -58,6 +59,7 @@ const menuItems = [
       { label: 'New Laser Lot', href: '/laser/entry' },
       { label: 'Return Lot', href: '/laser/return' },
       { label: 'Recent Entries', href: '/laser/recent' },
+      { label: 'Lot Analysis', href: '/laser/analysis' },
     ],
   },
   {
