@@ -39,9 +39,11 @@ export default function FourPWorkReport() {
   const summary = useMemo(() => {
     return filteredData.reduce((acc, lot) => {
         acc.totalPcs += lot.pcs;
+        acc.totalBlocking += lot.blocking || 0;
+        acc.totalFinalPcs += lot.finalPcs || 0;
         acc.totalAmount += lot.fourPAmount || 0;
         return acc;
-    }, { totalPcs: 0, totalAmount: 0 });
+    }, { totalPcs: 0, totalAmount: 0, totalBlocking: 0, totalFinalPcs: 0 });
   }, [filteredData]);
 
   const handlePrint = () => window.print();
@@ -74,10 +76,18 @@ export default function FourPWorkReport() {
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader><CardTitle>Total PCS</CardTitle></CardHeader>
           <CardContent><p className="text-4xl font-bold">{summary.totalPcs.toLocaleString()}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Total Blocking</CardTitle></CardHeader>
+          <CardContent><p className="text-4xl font-bold text-destructive">{summary.totalBlocking.toLocaleString()}</p></CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle>Total Final PCS</CardTitle></CardHeader>
+          <CardContent><p className="text-4xl font-bold">{summary.totalFinalPcs.toLocaleString()}</p></CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Total Amount (₹)</CardTitle></CardHeader>
@@ -96,7 +106,9 @@ export default function FourPWorkReport() {
                   <TableHead>Kapan</TableHead>
                   <TableHead>Lot</TableHead>
                   <TableHead>4P Operator</TableHead>
-                  <TableHead>PCS</TableHead>
+                  <TableHead>Total PCS</TableHead>
+                  <TableHead>Blocking</TableHead>
+                  <TableHead>Final PCS</TableHead>
                   <TableHead>Amount (₹)</TableHead>
                 </TableRow>
               </TableHeader>
@@ -108,10 +120,12 @@ export default function FourPWorkReport() {
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>
                     <TableCell>{lot.pcs}</TableCell>
+                    <TableCell className="text-destructive">{lot.blocking || 0}</TableCell>
+                    <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell>₹{lot.fourPAmount?.toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {filteredData.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
+                {filteredData.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>

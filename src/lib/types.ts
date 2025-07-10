@@ -99,4 +99,6 @@ export interface FourPLot {
   fourPOperator?: string;
   returnDate?: string;
   fourPAmount?: number;
+  blocking?: number;
+  finalPcs?: number;
 }
