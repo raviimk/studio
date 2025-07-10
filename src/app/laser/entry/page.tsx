@@ -119,8 +119,8 @@ export default function NewLaserLotPage() {
         fullBarcode: barcode
     };
 
-    // Cross-lot duplicate check
-    const existingLot = laserLots.find(lot => lot.scannedPackets?.some(p => p.fullBarcode === barcode));
+    // Cross-lot duplicate check in *unreturned* lots
+    const existingLot = laserLots.find(lot => !lot.isReturned && lot.scannedPackets?.some(p => p.fullBarcode === barcode));
     if (existingLot) {
         setDuplicatePacketInfo({ packet: newPacket, existingLotNumber: existingLot.lotNumber });
         duplicateDialogTriggerRef.current?.click();
@@ -139,6 +139,7 @@ export default function NewLaserLotPage() {
   
   const proceedWithPacket = (packet: ScannedPacket | null) => {
       if (!packet || !currentLotDetails) return;
+       // Re-check for kapan mismatch after duplicate confirmation
        if (packet.kapanNumber !== currentLotDetails.kapanNumber) {
             setMismatchedPacket(packet);
             kapanMismatchDialogTriggerRef.current?.click();
@@ -337,9 +338,9 @@ export default function NewLaserLotPage() {
                     <AlertTriangle className="text-yellow-500" /> Duplicate Packet Found
                 </AlertDialogTitle>
                 <AlertDialogDescription>
-                    This packet (<span className="font-bold font-mono">{duplicatePacketInfo?.packet.fullBarcode}</span>) is already scanned in Lot <span className="font-bold">{duplicatePacketInfo?.existingLotNumber}</span>.
+                    This packet (<span className="font-bold font-mono">{duplicatePacketInfo?.packet.fullBarcode}</span>) is already in an active lot (<span className="font-bold">{duplicatePacketInfo?.existingLotNumber}</span>).
                     <br />
-                    Are you sure you want to add it again to this lot?
+                    Are you sure you want to add it again to this new lot?
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
