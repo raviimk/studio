@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -99,7 +100,7 @@ export default function ReturnSarinLotPage() {
                   <TableCell>{lot.operator}</TableCell>
                   <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                   <TableCell>
-                    <Button onClick={() => handleReturn(lot.lotNumber)} disabled={!returningOperator}>Return Lot</Button>
+                    <Button onClick={() => handleReturn(lot.lotNumber)} disabled={!returningOperator || returningOperator !== lot.operator}>Return Lot</Button>
                   </TableCell>
                 </TableRow>
               ))}
