@@ -14,6 +14,7 @@ import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { format } from 'date-fns';
+import { Input } from '../ui/input';
 
 export default function LaserReport() {
   const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
@@ -24,6 +25,7 @@ export default function LaserReport() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const filteredData = useMemo(() => {
     return laserLots.filter(lot => {
@@ -33,9 +35,15 @@ export default function LaserReport() {
       const isDateMatch = dateRange?.from && dateRange?.to
         ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to)
         : true;
-      return isOperatorMatch && isStatusMatch && isDateMatch;
+      
+      const searchLower = searchTerm.toLowerCase();
+      const isSearchMatch = !searchTerm ||
+        lot.lotNumber.toLowerCase().includes(searchLower) ||
+        lot.kapanNumber.toLowerCase().includes(searchLower);
+
+      return isOperatorMatch && isStatusMatch && isDateMatch && isSearchMatch;
     }).sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
-  }, [laserLots, selectedOperator, returnStatus, dateRange]);
+  }, [laserLots, selectedOperator, returnStatus, dateRange, searchTerm]);
   
   const handlePrint = () => window.print();
 
@@ -47,7 +55,7 @@ export default function LaserReport() {
            <CardDescription>Analyze laser lot entries with powerful filters.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
              <div className="flex-1">
               <label className="text-sm font-medium">Operator</label>
               <Select value={selectedOperator} onValueChange={setSelectedOperator}>
@@ -69,12 +77,21 @@ export default function LaserReport() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1">
+            <div className="lg:col-span-2">
               <label className="text-sm font-medium">Date Range</label>
               <DatePickerWithRange date={dateRange} setDate={setDateRange} />
             </div>
           </div>
-           <Button onClick={handlePrint}>Print Report</Button>
+           <div className="pt-2">
+              <label className="text-sm font-medium">Search</label>
+              <Input
+                placeholder="Search by Lot or Kapan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+           <Button onClick={handlePrint} className="mt-4">Print Report</Button>
         </CardContent>
       </Card>
 

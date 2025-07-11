@@ -14,6 +14,7 @@ import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { format } from 'date-fns';
+import { Input } from '../ui/input';
 
 export default function FourPWorkReport() {
   const [fourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
@@ -23,6 +24,7 @@ export default function FourPWorkReport() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const filteredData = useMemo(() => {
     return fourPTechingLots.filter(lot => {
@@ -32,9 +34,15 @@ export default function FourPWorkReport() {
       const isDateMatch = dateRange?.from && dateRange?.to
         ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to)
         : true;
-      return isOperatorMatch && isDateMatch;
+      
+      const searchLower = searchTerm.toLowerCase();
+      const isSearchMatch = !searchTerm ||
+        lot.lot.toLowerCase().includes(searchLower) ||
+        lot.kapan.toLowerCase().includes(searchLower);
+
+      return isOperatorMatch && isDateMatch && isSearchMatch;
     }).sort((a, b) => new Date(b.returnDate!).getTime() - new Date(a.returnDate!).getTime());
-  }, [fourPTechingLots, selectedOperator, dateRange]);
+  }, [fourPTechingLots, selectedOperator, dateRange, searchTerm]);
 
   const summary = useMemo(() => {
     return filteredData.reduce((acc, lot) => {
@@ -56,7 +64,7 @@ export default function FourPWorkReport() {
           <CardDescription>Analyze all completed 4P work entries.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium">4P Operator</label>
               <Select value={selectedOperator} onValueChange={setSelectedOperator}>
@@ -67,12 +75,21 @@ export default function FourPWorkReport() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1">
+            <div className="md:col-span-2">
               <label className="text-sm font-medium">Date Range</label>
               <DatePickerWithRange date={dateRange} setDate={setDateRange} />
             </div>
           </div>
-          <Button onClick={handlePrint}>Print Report</Button>
+           <div className="pt-2">
+              <label className="text-sm font-medium">Search</label>
+              <Input
+                placeholder="Search by Lot or Kapan..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+          <Button onClick={handlePrint} className="mt-4">Print Report</Button>
         </CardContent>
       </Card>
       

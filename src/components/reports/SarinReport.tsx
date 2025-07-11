@@ -14,6 +14,7 @@ import { subDays, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { format } from 'date-fns';
+import { Input } from '../ui/input';
 
 export default function SarinReport() {
   const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
@@ -24,6 +25,7 @@ export default function SarinReport() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [searchTerm, setSearchTerm] = useState('');
 
   const filteredData = useMemo(() => {
     return sarinPackets.filter(p => {
@@ -33,9 +35,16 @@ export default function SarinReport() {
       const isDateMatch = dateRange?.from && dateRange?.to
         ? packetDate >= startOfDay(dateRange.from) && packetDate <= endOfDay(dateRange.to)
         : true;
-      return isOperatorMatch && isStatusMatch && isDateMatch;
+        
+      const searchLower = searchTerm.toLowerCase();
+      const isSearchMatch = !searchTerm ||
+        p.lotNumber.toLowerCase().includes(searchLower) ||
+        p.kapanNumber.toLowerCase().includes(searchLower) ||
+        p.mainPacketNumber.toLowerCase().includes(searchLower);
+
+      return isOperatorMatch && isStatusMatch && isDateMatch && isSearchMatch;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sarinPackets, selectedOperator, returnStatus, dateRange]);
+  }, [sarinPackets, selectedOperator, returnStatus, dateRange, searchTerm]);
 
   const handlePrint = () => window.print();
 
@@ -47,7 +56,7 @@ export default function SarinReport() {
           <CardDescription>Analyze Sarin packet entries with powerful filters.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium">Operator</label>
               <Select value={selectedOperator} onValueChange={setSelectedOperator}>
@@ -69,12 +78,21 @@ export default function SarinReport() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex-1">
+            <div className="lg:col-span-2">
               <label className="text-sm font-medium">Date Range</label>
               <DatePickerWithRange date={dateRange} setDate={setDateRange} />
             </div>
           </div>
-          <Button onClick={handlePrint}>Print Report</Button>
+           <div className="pt-2">
+              <label className="text-sm font-medium">Search</label>
+              <Input
+                placeholder="Search by Lot, Kapan or Packet..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+          <Button onClick={handlePrint} className="mt-4">Print Report</Button>
         </CardContent>
       </Card>
       
