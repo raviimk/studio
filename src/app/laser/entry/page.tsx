@@ -103,10 +103,11 @@ export default function NewLaserLotPage() {
   const handleBarcodeScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcode || !currentLotDetails) return;
-
-    const match = barcode.match(/^R(\d+)-(\d+)-(.+)$/);
+    
+    // Regex to handle both "61-102" and "R61-102-A" formats
+    const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
     if (!match) {
-        toast({ variant: 'destructive', title: 'Invalid Barcode', description: 'Format must be R{Kapan}-{Packet}-{Suffix}.' });
+        toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: 'Expected "Kapan-Packet" or "R-Kapan-Packet-Suffix".' });
         return;
     }
     const [, kapan, packetNumber, suffix] = match;
@@ -114,8 +115,8 @@ export default function NewLaserLotPage() {
     const newPacket: ScannedPacket = {
         id: uuidv4(),
         kapanNumber: kapan,
-        packetNumber,
-        suffix,
+        packetNumber: packetNumber,
+        suffix: suffix || '', // Store empty string if no suffix
         fullBarcode: barcode
     };
 
@@ -276,7 +277,7 @@ export default function NewLaserLotPage() {
                                         <TableCell>{packet?.fullBarcode || '...'}</TableCell>
                                         <TableCell>{packet?.kapanNumber || '...'}</TableCell>
                                         <TableCell>{packet?.packetNumber || '...'}</TableCell>
-                                        <TableCell>{packet?.suffix || '...'}</TableCell>
+                                        <TableCell>{packet?.suffix || 'Main'}</TableCell>
                                         <TableCell className="text-right">
                                             {packet && (
                                                 <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
