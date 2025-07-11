@@ -11,9 +11,11 @@ import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 interface UnreturnedLot {
   lotNumber: string;
+  kapanNumber: string;
   machine: string;
   operator: string;
   entryDate: string;
@@ -25,16 +27,28 @@ export default function ReturnSarinLotPage() {
   const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const { toast } = useToast();
   const [returningOperator, setReturningOperator] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState('');
 
 
   const unreturnedLots: UnreturnedLot[] = useMemo(() => {
     const lots: Record<string, UnreturnedLot> = {};
+    const searchLower = searchTerm.toLowerCase();
+
     sarinPackets
-      .filter(p => !p.isReturned)
+      .filter(p => {
+        if (!p.isReturned) {
+            if (!searchTerm) return true;
+            return p.lotNumber.toLowerCase().includes(searchLower) ||
+                   p.kapanNumber.toLowerCase().includes(searchLower) ||
+                   p.operator.toLowerCase().includes(searchLower);
+        }
+        return false;
+      })
       .forEach(p => {
         if (!lots[p.lotNumber]) {
           lots[p.lotNumber] = {
             lotNumber: p.lotNumber,
+            kapanNumber: p.kapanNumber,
             machine: p.machine,
             operator: p.operator,
             entryDate: p.date,
@@ -44,7 +58,7 @@ export default function ReturnSarinLotPage() {
         lots[p.lotNumber].packetIds.push(p.id);
       });
     return Object.values(lots);
-  }, [sarinPackets]);
+  }, [sarinPackets, searchTerm]);
 
   const handleReturn = (lotNumber: string) => {
     if (!returningOperator) {
@@ -65,20 +79,24 @@ export default function ReturnSarinLotPage() {
       <PageHeader title="Return Sarin Lot" description="Mark Sarin lots as returned." />
       <Card>
         <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <CardTitle>Unreturned Lots</CardTitle>
-                <div className='w-full sm:w-auto'>
-                    <Select onValueChange={setReturningOperator} value={returningOperator}>
-                        <SelectTrigger className="w-full sm:w-[200px]">
-                            <SelectValue placeholder="Select Returning Operator" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {sarinOperators.map(op => (
-                            <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
+            <CardTitle>Unreturned Lots</CardTitle>
+            <div className="mt-4 flex flex-col sm:flex-row gap-4">
+                <Input
+                    placeholder="Search by Lot, Kapan, or Operator..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                />
+                <Select onValueChange={setReturningOperator} value={returningOperator}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                        <SelectValue placeholder="Select Returning Operator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {sarinOperators.map(op => (
+                        <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
         </CardHeader>
         <CardContent>
@@ -86,6 +104,7 @@ export default function ReturnSarinLotPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Lot Number</TableHead>
+                <TableHead>Kapan Number</TableHead>
                 <TableHead>Machine</TableHead>
                 <TableHead>Operator</TableHead>
                 <TableHead>Entry Date</TableHead>
@@ -96,6 +115,7 @@ export default function ReturnSarinLotPage() {
               {unreturnedLots.map(lot => (
                 <TableRow key={lot.lotNumber}>
                   <TableCell>{lot.lotNumber}</TableCell>
+                  <TableCell>{lot.kapanNumber}</TableCell>
                   <TableCell>{lot.machine}</TableCell>
                   <TableCell>{lot.operator}</TableCell>
                   <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>

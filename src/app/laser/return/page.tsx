@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -20,6 +21,7 @@ export default function ReturnLaserLotPage() {
   const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
   const [selectedOperators, setSelectedOperators] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
 
   // State for the return verification dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -95,14 +97,32 @@ export default function ReturnLaserLotPage() {
     return verifiedPackets.size === selectedLot.scannedPackets.length;
   }, [selectedLot, verifiedPackets]);
 
-  const unreturnedLots = laserLots.filter(lot => !lot.isReturned);
+  const unreturnedLots = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return laserLots.filter(lot => {
+        if (lot.isReturned) return false;
+        if (!searchTerm) return true;
+        return lot.lotNumber.toLowerCase().includes(searchLower) ||
+               lot.kapanNumber.toLowerCase().includes(searchLower);
+    });
+  }, [laserLots, searchTerm]);
 
   return (
     <>
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="Return Laser Lot" description="Mark laser lots as returned after packet verification." />
         <Card>
-          <CardHeader><CardTitle>Unreturned Lots</CardTitle></CardHeader>
+          <CardHeader>
+              <CardTitle>Unreturned Lots</CardTitle>
+              <div className="mt-4">
+                  <Input
+                      placeholder="Search by Lot or Kapan Number..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="max-w-sm"
+                  />
+              </div>
+          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
