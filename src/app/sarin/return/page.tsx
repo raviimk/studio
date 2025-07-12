@@ -20,7 +20,7 @@ interface UnreturnedLot {
   operator: string;
   entryDate: string;
   packetIds: string[];
-  mainPacketNumbers: number;
+  mainPacketCount: number;
   totalPacketCount: number;
   totalJiramCount: number;
 }
@@ -56,16 +56,16 @@ export default function ReturnSarinLotPage() {
             operator: p.operator,
             entryDate: p.date,
             packetIds: [],
-            mainPacketNumbers: 0,
+            mainPacketCount: 0,
             totalPacketCount: 0,
             totalJiramCount: 0,
           };
         }
-        lots[p.lotNumber].packetIds.push(p.id);
-        // Assuming one entry per main packet number, we count unique entries.
-        lots[p.lotNumber].mainPacketNumbers += 1; 
-        lots[p.lotNumber].totalPacketCount += p.packetCount;
-        lots[p.lotNumber].totalJiramCount += p.jiramCount || 0;
+        const lot = lots[p.lotNumber];
+        lot.packetIds.push(p.id);
+        lot.mainPacketCount += 1; 
+        lot.totalPacketCount += p.packetCount;
+        lot.totalJiramCount += p.jiramCount || 0;
       });
     return Object.values(lots);
   }, [sarinPackets, searchTerm]);
@@ -129,7 +129,7 @@ export default function ReturnSarinLotPage() {
                   <TableCell>{lot.operator}</TableCell>
                   <TableCell>
                     <div className="font-mono text-xs font-bold">
-                        {lot.mainPacketNumbers} / {lot.totalPacketCount} / {lot.totalJiramCount}
+                        {lot.mainPacketCount} / {lot.totalPacketCount} / {lot.totalJiramCount}
                     </div>
                   </TableCell>
                   <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
