@@ -132,7 +132,7 @@ export default function FourPWorkReport() {
               <TableBody>
                 {filteredData.map(lot => (
                   <TableRow key={lot.id}>
-                    <TableCell>{format(new Date(lot.returnDate!), 'PP')}</TableCell>
+                    <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PP') : 'N/A'}</TableCell>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>

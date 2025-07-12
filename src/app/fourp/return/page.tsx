@@ -13,8 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-
 
 export default function FourPReturnPage() {
   const { toast } = useToast();
@@ -23,10 +21,9 @@ export default function FourPReturnPage() {
   const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
 
   const [selectedOperator, setSelectedOperator] = useState('');
-  const [blockingPcs, setBlockingPcs] = useState<Record<string, string>>({});
 
   const handleReturnLot = (lotId: string) => {
-    if (!selectedOperator) {
+     if (!selectedOperator) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select a 4P operator.' });
       return;
     }
@@ -37,19 +34,7 @@ export default function FourPReturnPage() {
       return;
     }
 
-    const numBlockingPcs = parseInt(blockingPcs[lotId] || '0', 10);
-    if (isNaN(numBlockingPcs) || numBlockingPcs < 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Blocking PCS must be a positive number.' });
-      return;
-    }
-
-    if(numBlockingPcs > lotToReturn.pcs) {
-      toast({ variant: 'destructive', title: 'Error', description: `Blocking PCS (${numBlockingPcs}) cannot be more than Total PCS (${lotToReturn.pcs}).` });
-      return;
-    }
-    
-    const finalPcs = (lotToReturn.pcs || 0) - numBlockingPcs;
-    const fourPAmount = finalPcs * priceMaster.fourP;
+    const fourPAmount = (lotToReturn.finalPcs || 0) * priceMaster.fourP;
     
     const updatedLots = fourPTechingLots.map(lot =>
       lot.id === lotId
@@ -57,19 +42,13 @@ export default function FourPReturnPage() {
             ...lot,
             isReturnedToFourP: true,
             fourPOperator: selectedOperator,
-            blocking: numBlockingPcs,
-            finalPcs: finalPcs,
             fourPAmount,
             returnDate: new Date().toISOString(),
           }
         : lot
     );
     setFourPTechingLots(updatedLots);
-    toast({ title: `Lot Returned`, description: `Assigned to ${selectedOperator}. Final PCS: ${finalPcs}, Amount: ₹${fourPAmount.toFixed(2)}` });
-  };
-  
-  const handleBlockingPcsChange = (lotId: string, value: string) => {
-    setBlockingPcs(prev => ({ ...prev, [lotId]: value }));
+    toast({ title: `Lot Returned`, description: `Assigned to ${selectedOperator}. Amount: ₹${fourPAmount.toFixed(2)}` });
   };
   
   const unreturnedLots = useMemo(() => {
@@ -85,7 +64,7 @@ export default function FourPReturnPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-      <PageHeader title="4P Return" description="Process the return of lots from 4P operators and deduct blocking pieces." />
+      <PageHeader title="4P Return" description="Process the return of lots from 4P operators." />
 
       <Card>
         <CardHeader>
@@ -105,39 +84,24 @@ export default function FourPReturnPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Total PCS</TableHead><TableHead>Blocking PCS</TableHead><TableHead>Final PCS</TableHead><TableHead>Final Amount</TableHead><TableHead>Teching Details</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Teching Operator</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {unreturnedLots.map(lot => {
-                  const blockingValue = parseInt(blockingPcs[lot.id] || '0', 10);
-                  const finalPcs = lot.pcs - (isNaN(blockingValue) ? 0 : blockingValue);
-                  const finalAmount = finalPcs * priceMaster.fourP;
+                  const fourPAmount = (lot.finalPcs || 0) * priceMaster.fourP;
                   return (
                   <TableRow key={lot.id}>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
-                    <TableCell className="font-medium">{lot.pcs}</TableCell>
+                    <TableCell className="font-bold">{lot.finalPcs}</TableCell>
+                    <TableCell className="font-bold text-green-600">₹{fourPAmount.toFixed(2)}</TableCell>
+                    <TableCell><Badge variant="outline">{lot.techingOperator}</Badge></TableCell>
+                    <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                     <TableCell>
-                      <Input 
-                        type="number"
-                        className="w-24 h-8"
-                        placeholder="e.g. 7"
-                        value={blockingPcs[lot.id] || ''}
-                        onChange={(e) => handleBlockingPcsChange(lot.id, e.target.value)}
-                        disabled={!selectedOperator}
-                      />
-                    </TableCell>
-                    <TableCell className="font-bold">{finalPcs < 0 ? 'Invalid' : finalPcs}</TableCell>
-                    <TableCell className="font-bold text-green-600">₹{finalAmount < 0 ? '0.00' : finalAmount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{lot.techingOperator}</Badge>
-                      <div>₹{lot.techingAmount?.toFixed(2)}</div>
-                    </TableCell>
-                    <TableCell>
-                       <Button onClick={() => handleReturnLot(lot.id)} disabled={!selectedOperator || finalPcs < 0}>Return to 4P</Button>
+                       <Button onClick={() => handleReturnLot(lot.id)} disabled={!selectedOperator}>Return to 4P</Button>
                     </TableCell>
                   </TableRow>
                 )})}
-                {unreturnedLots.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No lots are pending return.</TableCell></TableRow>}
+                {unreturnedLots.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No lots are pending return.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>

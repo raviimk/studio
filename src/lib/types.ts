@@ -90,7 +90,9 @@ export interface FourPLot {
   id: string;
   kapan: string;
   lot: string;
-  pcs: number;
+  pcs: number; // Total PCS
+  blocking: number;
+  finalPcs: number;
   techingOperator: string;
   techingAmount: number;
   entryDate: string;
@@ -99,6 +101,4 @@ export interface FourPLot {
   fourPOperator?: string;
   returnDate?: string;
   fourPAmount?: number;
-  blocking?: number;
-  finalPcs?: number;
 }

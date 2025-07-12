@@ -32,6 +32,7 @@ export default function FourPTechingEntryPage() {
   
   const [techingOperator, setTechingOperator] = useState('');
   const [pcs, setPcs] = useState('');
+  const [blocking, setBlocking] = useState('');
 
   const pcsInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,29 +62,43 @@ export default function FourPTechingEntryPage() {
     }
 
     const numPcs = parseInt(pcs, 10);
+    const numBlocking = parseInt(blocking || '0', 10);
+
     if (isNaN(numPcs) || numPcs <= 0) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid number for PCS.' });
+        toast({ variant: 'destructive', title: 'Error', description: 'Please enter a valid number for Total PCS.' });
+        return;
+    }
+    if (isNaN(numBlocking) || numBlocking < 0) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Blocking PCS must be a positive number.' });
+        return;
+    }
+    if (numBlocking > numPcs) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Blocking PCS cannot be more than Total PCS.' });
         return;
     }
     
     const techingAmount = numPcs * priceMaster.fourPTeching;
+    const finalPcs = numPcs - numBlocking;
 
     const newLot: FourPLot = {
       id: uuidv4(),
       ...lotDetails,
       pcs: numPcs,
+      blocking: numBlocking,
+      finalPcs: finalPcs,
       techingOperator: techingOperator,
       techingAmount: techingAmount,
       entryDate: new Date().toISOString(),
       isReturnedToFourP: false,
     };
     setFourPTechingLots([...fourPTechingLots, newLot]);
-    toast({ title: 'Success', description: '4P Teching Lot created successfully.' });
+    toast({ title: 'Success', description: `Lot created. Total: ${numPcs}, Final: ${finalPcs}` });
 
     // Reset state
     setBarcode('');
     setLotDetails(null);
     setPcs('');
+    setBlocking('');
     if(fourPTechingOperators.length > 1) {
         setTechingOperator('');
     }
@@ -130,7 +145,7 @@ export default function FourPTechingEntryPage() {
                     <p className="text-sm text-muted-foreground">Creating entry for Kapan: <span className="font-bold">{lotDetails.kapan}</span>, Lot: <span className="font-bold">{lotDetails.lot}</span></p>
 
                     {/* Step 2 & 3: Operator and PCS */}
-                    <div className="grid md:grid-cols-2 gap-4 max-w-sm">
+                    <div className="grid md:grid-cols-3 gap-4 max-w-lg">
                          <div>
                             <Label htmlFor="teching-op">Step 2: Select Teching Operator</Label>
                              <Select onValueChange={setTechingOperator} value={techingOperator}>
@@ -142,9 +157,13 @@ export default function FourPTechingEntryPage() {
                             <Label htmlFor="pcs-entry">Step 3: Enter Total PCS</Label>
                             <Input id="pcs-entry" ref={pcsInputRef} value={pcs} onChange={e => setPcs(e.target.value)} type="number" placeholder="e.g., 25" className="mt-1"/>
                         </div>
+                        <div>
+                            <Label htmlFor="blocking-pcs-entry">Step 4: Blocking PCS</Label>
+                            <Input id="blocking-pcs-entry" value={blocking} onChange={e => setBlocking(e.target.value)} type="number" placeholder="e.g., 2" className="mt-1"/>
+                        </div>
                     </div>
 
-                    {/* Step 4: Save */}
+                    {/* Step 5: Save */}
                     <div className="flex gap-2">
                         <Button onClick={handleSaveLot}>Save Lot</Button>
                         <Button variant="outline" onClick={() => { setLotDetails(null); setBarcode(''); }}>Cancel</Button>
@@ -159,15 +178,17 @@ export default function FourPTechingEntryPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>PCS</TableHead><TableHead>Teching Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Total PCS</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {recentEntries.map(lot => (
                   <TableRow key={lot.id}>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell>{lot.pcs}</TableCell>
+                    <TableCell className="text-destructive">{lot.blocking}</TableCell>
+                    <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell>{lot.techingOperator}</TableCell>
-                    <TableCell>{lot.techingAmount?.toFixed(2)}</TableCell>
+                    <TableCell>₹{lot.techingAmount?.toFixed(2)}</TableCell>
                     <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="icon" onClick={() => handleDeleteLot(lot.id)}>
@@ -176,7 +197,7 @@ export default function FourPTechingEntryPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                 {recentEntries.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
+                 {recentEntries.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
