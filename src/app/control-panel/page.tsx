@@ -12,9 +12,9 @@ import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { 
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
-  FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY
+  FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,6 +49,10 @@ const priceMasterSchema = z.object({
   fourPTeching: z.coerce.number().min(0, 'Rate must be positive'),
 });
 
+const udhdaSettingsSchema = z.object({
+    returnTimeLimitMinutes: z.coerce.number().min(1, 'Time limit must be at least 1 minute'),
+});
+
 
 export default function ControlPanelPage() {
   const { toast } = useToast();
@@ -59,6 +63,7 @@ export default function ControlPanelPage() {
   const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
   const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
   const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
 
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
@@ -66,6 +71,7 @@ export default function ControlPanelPage() {
   const fourPForm = useForm<z.infer<typeof fourPOperatorSchema>>({ resolver: zodResolver(fourPOperatorSchema), defaultValues: { name: '' } });
   const fourPTechingForm = useForm<z.infer<typeof fourPTechingOperatorSchema>>({ resolver: zodResolver(fourPTechingOperatorSchema), defaultValues: { name: '' } });
   const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster });
+  const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
   
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
@@ -129,16 +135,22 @@ export default function ControlPanelPage() {
     setPriceMaster(values);
     toast({ title: 'Success', description: 'Price master updated.' });
   }
+  
+  function handleUpdateUdhdhaSettings(values: z.infer<typeof udhdaSettingsSchema>) {
+    setUdhdhaSettings(values);
+    toast({ title: 'Success', description: 'Udhda settings updated.' });
+  }
 
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
+          <TabsTrigger value="udhdha">Udhda</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
           <Card>
@@ -336,6 +348,28 @@ export default function ControlPanelPage() {
                     </Card>
                 </div>
             </div>
+        </TabsContent>
+        <TabsContent value="udhdha" className="space-y-6 mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Udhda Packet Settings</CardTitle>
+                    <CardDescription>Configure settings for individual packet tracking.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...udhdhaSettingsForm}>
+                        <form onSubmit={udhdhaSettingsForm.handleSubmit(handleUpdateUdhdhaSettings)} className="space-y-4 max-w-sm">
+                            <FormField control={udhdhaSettingsForm.control} name="returnTimeLimitMinutes" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Return Time Limit (Minutes)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <Button type="submit">Update Settings</Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>

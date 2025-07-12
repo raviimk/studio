@@ -9,6 +9,7 @@ import {
   BarChart2,
   ChevronRight,
   Diamond,
+  FileClock,
   Gem,
   LayoutGrid,
   ListTodo,
@@ -70,6 +71,14 @@ const menuItems = [
     subItems: [
       { label: '4P Teching Entry', href: '/fourp-teching/entry' },
       { label: '4P Return', href: '/fourp/return' },
+    ],
+  },
+  {
+    label: 'Udhda (Single Packet)',
+    icon: FileClock,
+    subItems: [
+      { label: 'Udhda Entry', href: '/udhdha/entry' },
+      { label: 'Udhda Report', href: '/udhdha/report' },
     ],
   },
   {

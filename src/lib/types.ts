@@ -103,3 +103,19 @@ export interface FourPLot {
   returnDate?: string;
   fourPAmount?: number;
 }
+
+
+// Udhda Types
+export interface UdhdaPacket {
+    id: string;
+    barcode: string;
+    type: 'sarin' | 'laser';
+    operator: string;
+    assignmentTime: string;
+    isReturned: boolean;
+    returnTime?: string;
+}
+
+export interface UdhdaSettings {
+    returnTimeLimitMinutes: number; // Time in minutes
+}
