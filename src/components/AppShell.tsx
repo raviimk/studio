@@ -11,6 +11,7 @@ import {
   Diamond,
   FileClock,
   Gem,
+  History,
   LayoutGrid,
   ListTodo,
   Puzzle,
@@ -86,6 +87,11 @@ const menuItems = [
     label: 'Packet Reassignment',
     href: '/reassignment',
     icon: Replace,
+  },
+  {
+    label: 'Packet History',
+    href: '/packet-history',
+    icon: History,
   },
    {
     label: 'Reports Center',
