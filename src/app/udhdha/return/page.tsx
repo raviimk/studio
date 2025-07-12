@@ -55,9 +55,15 @@ export default function UdhdaReturnPage() {
     }
 
     // Process the return
-    const updatedPackets = udhdhaPackets.map(p =>
-      p.id === existingPacket.id ? { ...p, isReturned: true, returnTime: new Date().toISOString() } : p
-    );
+    let returnedPacket: UdhdaPacket | undefined;
+    const updatedPackets = udhdhaPackets.map(p => {
+      if (p.id === existingPacket.id) {
+        returnedPacket = { ...p, isReturned: true, returnTime: new Date().toISOString() };
+        return returnedPacket;
+      }
+      return p;
+    });
+
     setUdhdhaPackets(updatedPackets);
 
     toast({ title: 'Packet Returned', description: `Barcode ${barcode} marked as returned.` });
@@ -65,7 +71,7 @@ export default function UdhdaReturnPage() {
         status: 'success',
         title: 'Return Successful',
         message: `Packet ${barcode} has been successfully marked as returned.`,
-        packet: updatedPackets.find(p => p.id === existingPacket.id)
+        packet: returnedPacket,
     });
     setBarcode('');
   };
@@ -112,7 +118,7 @@ export default function UdhdaReturnPage() {
           <AlertTitle>{lastScanResult.title}</AlertTitle>
           <AlertDescription>{lastScanResult.message}</AlertDescription>
            {lastScanResult.packet && (
-            <div className="mt-4 text-sm space-y-1 text-foreground/80">
+            <div className="mt-4 text-sm space-y-1 text-foreground/80 border-t pt-2">
               <p><strong>Barcode:</strong> {lastScanResult.packet.barcode}</p>
               <p><strong>Operator:</strong> {lastScanResult.packet.operator}</p>
               <p><strong>Assigned:</strong> {format(new Date(lastScanResult.packet.assignmentTime), 'PPp')}</p>
