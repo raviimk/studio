@@ -12,7 +12,7 @@ export default function AnalysisReportPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader
-        title="Production Analysis & Reports Center"
+        title="Production Analysis"
         description="A central dashboard to analyze all factory production data."
       />
       <Tabs defaultValue="sarin" className="w-full">

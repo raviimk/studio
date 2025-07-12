@@ -119,3 +119,11 @@ export interface UdhdaPacket {
 export interface UdhdaSettings {
     returnTimeLimitMinutes: number; // Time in minutes
 }
+
+// Jiram Report Types
+export interface JiramReportPacket {
+    id: string;
+    barcode: string;
+    kapanNumber: string;
+    scanTime: string;
+}

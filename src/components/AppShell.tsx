@@ -20,6 +20,7 @@ import {
   Sparkles,
   Users,
   Warehouse,
+  TestTubeDiagonal,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -95,8 +96,11 @@ const menuItems = [
   },
    {
     label: 'Reports Center',
-    href: '/analysis-report',
     icon: AreaChart,
+    subItems: [
+        { label: 'Production Analysis', href: '/analysis-report' },
+        { label: 'Jiram Report', href: '/jiram-report' },
+    ]
   },
    {
     label: 'AI Insights',

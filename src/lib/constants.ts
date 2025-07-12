@@ -16,3 +16,6 @@ export const FOURP_TECHING_LOTS_KEY = 'fourPTechingLots';
 // Udhda / Single Packet
 export const UHDHA_PACKETS_KEY = 'udhdhaPackets';
 export const UHDHA_SETTINGS_KEY = 'udhdhaSettings';
+
+// Jiram Report
+export const JIRAM_REPORT_PACKETS_KEY = 'jiramReportPackets';
