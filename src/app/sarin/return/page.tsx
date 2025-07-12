@@ -19,7 +19,6 @@ interface UnreturnedLot {
   machine: string;
   operator: string;
   entryDate: string;
-  packetIds: string[];
   mainPacketCount: number;
   totalPacketCount: number;
   totalJiramCount: number;
@@ -55,15 +54,13 @@ export default function ReturnSarinLotPage() {
             machine: p.machine,
             operator: p.operator,
             entryDate: p.date,
-            packetIds: [],
             mainPacketCount: 0,
             totalPacketCount: 0,
             totalJiramCount: 0,
           };
         }
         const lot = lots[p.lotNumber];
-        lot.packetIds.push(p.id);
-        lot.mainPacketCount += 1; // Correctly count each entry as one "main packet"
+        lot.mainPacketCount += 1;
         lot.totalPacketCount += p.packetCount;
         lot.totalJiramCount += p.jiramCount || 0;
       });
