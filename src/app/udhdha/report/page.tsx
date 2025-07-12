@@ -1,5 +1,6 @@
+
 'use client';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { UHDHA_PACKETS_KEY } from '@/lib/constants';
 import { UdhdaPacket } from '@/lib/types';
@@ -8,13 +9,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import PageHeader from '@/components/PageHeader';
 import { format, formatDistance } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 export default function UdhdaReportPage() {
   const [udhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const sortedPackets = useMemo(() => {
-    return [...udhdhaPackets].sort((a, b) => new Date(b.assignmentTime).getTime() - new Date(a.assignmentTime).getTime());
-  }, [udhdhaPackets]);
+    const searchLower = searchTerm.toLowerCase();
+    return [...udhdhaPackets]
+      .filter(p => !searchTerm || p.barcode.toLowerCase().includes(searchLower))
+      .sort((a, b) => new Date(b.assignmentTime).getTime() - new Date(a.assignmentTime).getTime());
+  }, [udhdhaPackets, searchTerm]);
 
   const getDuration = (start: string, end?: string) => {
     if (!end) return 'Pending';
@@ -28,6 +34,14 @@ export default function UdhdaReportPage() {
         <CardHeader>
           <CardTitle>Packet Log</CardTitle>
           <CardDescription>A complete log of all Udhda packet movements.</CardDescription>
+            <div className="pt-4">
+                <Input
+                    placeholder="Search by packet barcode..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                />
+            </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
