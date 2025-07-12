@@ -29,6 +29,7 @@ export default function ReturnLaserLotPage() {
   const [scannedBarcode, setScannedBarcode] = useState('');
   const [verifiedPackets, setVerifiedPackets] = useState<Set<string>>(new Set());
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const packetRowRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
 
   useEffect(() => {
     if (isDialogOpen) {
@@ -49,6 +50,7 @@ export default function ReturnLaserLotPage() {
       setSelectedLot(lotToReturn);
       setVerifiedPackets(new Set());
       setScannedBarcode('');
+      packetRowRefs.current.clear();
       setIsDialogOpen(true);
     }
   };
@@ -67,6 +69,9 @@ export default function ReturnLaserLotPage() {
         newVerified.add(targetPacket.id);
         setVerifiedPackets(newVerified);
         toast({ title: 'Packet Verified', description: `Packet ${targetPacket.fullBarcode} confirmed.`});
+        // Scroll to the verified packet
+        const rowElement = packetRowRefs.current.get(targetPacket.id);
+        rowElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     } else {
         toast({ variant: 'destructive', title: 'Wrong Packet', description: 'This packet does not belong to the current lot.' });
@@ -203,7 +208,11 @@ export default function ReturnLaserLotPage() {
                     </TableHeader>
                     <TableBody>
                         {selectedLot?.scannedPackets?.map(p => (
-                            <TableRow key={p.id} className={verifiedPackets.has(p.id) ? 'bg-green-100 dark:bg-green-900/30' : ''}>
+                            <TableRow
+                                key={p.id}
+                                ref={(el) => packetRowRefs.current.set(p.id, el)}
+                                className={verifiedPackets.has(p.id) ? 'bg-green-100 dark:bg-green-900/30' : ''}
+                            >
                                 <TableCell>
                                     {verifiedPackets.has(p.id) ? (
                                         <CheckCircle2 className="h-5 w-5 text-green-600" />
