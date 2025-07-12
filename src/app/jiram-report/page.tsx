@@ -91,7 +91,7 @@ export default function JiramReportPage() {
     const [, kapanNumber] = match;
 
     if (jiramPackets.some(p => p.barcode === barcode)) {
-        toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This barcode has already been scanned.' });
+        toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This packet has already been scanned.' });
         return;
     }
 
