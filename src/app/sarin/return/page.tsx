@@ -63,11 +63,11 @@ export default function ReturnSarinLotPage() {
         }
         const lot = lots[p.lotNumber];
         lot.packetIds.push(p.id);
-        lot.mainPacketCount += 1; 
+        lot.mainPacketCount += 1; // Correctly count each entry as one "main packet"
         lot.totalPacketCount += p.packetCount;
         lot.totalJiramCount += p.jiramCount || 0;
       });
-    return Object.values(lots);
+    return Object.values(lots).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
   }, [sarinPackets, searchTerm]);
 
   const handleReturn = (lotNumber: string) => {
