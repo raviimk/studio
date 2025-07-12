@@ -77,8 +77,8 @@ export default function FourPTechingEntryPage() {
         return;
     }
     
-    const techingAmount = numPcs * priceMaster.fourPTeching;
     const finalPcs = numPcs - numBlocking;
+    const techingAmount = finalPcs * priceMaster.fourPTeching;
 
     const newLot: FourPLot = {
       id: uuidv4(),
