@@ -78,6 +78,7 @@ const menuItems = [
     icon: FileClock,
     subItems: [
       { label: 'Udhda Entry', href: '/udhdha/entry' },
+      { label: 'Udhda Return', href: '/udhdha/return' },
       { label: 'Udhda Report', href: '/udhdha/report' },
     ],
   },

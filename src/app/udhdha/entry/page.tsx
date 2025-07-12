@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -44,17 +45,20 @@ export default function UdhdaEntryPage() {
     const existingPacket = udhdhaPackets.find(p => p.barcode === barcode && !p.isReturned);
 
     if (existingPacket) {
-      // This is a return scan
-      const updatedPackets = udhdhaPackets.map(p =>
-        p.id === existingPacket.id ? { ...p, isReturned: true, returnTime: new Date().toISOString() } : p
-      );
-      setUdhdhaPackets(updatedPackets);
-      toast({ title: 'Packet Returned', description: `Barcode ${barcode} marked as returned.` });
+      toast({ variant: 'destructive', title: 'Packet Already Assigned', description: `This packet is already assigned to ${existingPacket.operator}. Please use the Udhda Return page.` });
       setBarcode('');
-    } else {
-      // This is a new assignment
-      setScannedPacket(barcode);
+      return;
     }
+    
+    const returnedPacket = udhdhaPackets.find(p => p.barcode === barcode && p.isReturned);
+     if (returnedPacket) {
+      toast({ variant: 'destructive', title: 'Packet Already Returned', description: `This packet was already processed and returned.` });
+      setBarcode('');
+      return;
+    }
+
+    // This is a new assignment
+    setScannedPacket(barcode);
   };
   
   const handleAssignPacket = () => {
@@ -82,17 +86,17 @@ export default function UdhdaEntryPage() {
     setSelectedOperator('');
   };
 
-  const pendingPackets = udhdhaPackets.filter(p => !p.isReturned);
+  const pendingPackets = udhdhaPackets.filter(p => !p.isReturned).sort((a,b) => new Date(b.assignmentTime).getTime() - new Date(a.assignmentTime).getTime());
   const operatorList = processType === 'sarin' ? sarinOperators : laserOperators;
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-      <PageHeader title="Udhda Entry & Return" description="Assign or return individual packets." />
+      <PageHeader title="Udhda Entry" description="Assign individual packets to an operator." />
 
       <Card>
         <CardHeader>
-          <CardTitle>Scan Packet Barcode</CardTitle>
-          <CardDescription>Scan a barcode to assign a new packet or return an existing one.</CardDescription>
+          <CardTitle>Assign New Packet</CardTitle>
+          <CardDescription>Scan a barcode to begin the assignment process.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm">
