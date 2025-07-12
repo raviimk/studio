@@ -20,6 +20,9 @@ interface UnreturnedLot {
   operator: string;
   entryDate: string;
   packetIds: string[];
+  mainPacketNumbers: number;
+  totalPacketCount: number;
+  totalJiramCount: number;
 }
 
 export default function ReturnSarinLotPage() {
@@ -53,9 +56,16 @@ export default function ReturnSarinLotPage() {
             operator: p.operator,
             entryDate: p.date,
             packetIds: [],
+            mainPacketNumbers: 0,
+            totalPacketCount: 0,
+            totalJiramCount: 0,
           };
         }
         lots[p.lotNumber].packetIds.push(p.id);
+        // Assuming one entry per main packet number, we count unique entries.
+        lots[p.lotNumber].mainPacketNumbers += 1; 
+        lots[p.lotNumber].totalPacketCount += p.packetCount;
+        lots[p.lotNumber].totalJiramCount += p.jiramCount || 0;
       });
     return Object.values(lots);
   }, [sarinPackets, searchTerm]);
@@ -105,8 +115,8 @@ export default function ReturnSarinLotPage() {
               <TableRow>
                 <TableHead>Lot Number</TableHead>
                 <TableHead>Kapan Number</TableHead>
-                <TableHead>Machine</TableHead>
                 <TableHead>Operator</TableHead>
+                <TableHead>M / P / J</TableHead>
                 <TableHead>Entry Date</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -116,8 +126,12 @@ export default function ReturnSarinLotPage() {
                 <TableRow key={lot.lotNumber}>
                   <TableCell>{lot.lotNumber}</TableCell>
                   <TableCell>{lot.kapanNumber}</TableCell>
-                  <TableCell>{lot.machine}</TableCell>
                   <TableCell>{lot.operator}</TableCell>
+                  <TableCell>
+                    <div className="font-mono text-xs font-bold">
+                        {lot.mainPacketNumbers} / {lot.totalPacketCount} / {lot.totalJiramCount}
+                    </div>
+                  </TableCell>
                   <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                   <TableCell>
                     <Button onClick={() => handleReturn(lot.lotNumber)} disabled={!returningOperator || returningOperator !== lot.operator}>Return Lot</Button>
