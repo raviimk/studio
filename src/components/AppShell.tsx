@@ -107,7 +107,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Warehouse className="w-5 h-5 text-primary" />
               </Link>
             </Button>
-            <h1 className="font-headline text-lg font-semibold truncate">Gem Tracker</h1>
+            <h1 className="font-headline text-lg font-semibold truncate">GEM TRACKER</h1>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -164,7 +164,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="flex h-12 items-center justify-between border-b bg-card px-4 md:hidden">
           <Link href="/" className="flex items-center gap-2 font-headline font-semibold">
             <Warehouse className="w-5 h-5 text-primary" />
-            <span>Gem Tracker</span>
+            <span>GEM TRACKER</span>
           </Link>
           <SidebarTrigger>
             <MenuIcon className="h-6 w-6" />
