@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -97,6 +98,7 @@ export default function ReassignmentPage() {
           id: uuidv4(),
           operator: toOperator,
           packetCount: selection.quantity,
+          mainPacketNumber: 0, // Not transferring main packet count in partial
           date: new Date().toISOString(),
           time: new Date().toLocaleTimeString(),
         };
@@ -166,7 +168,7 @@ export default function ReassignmentPage() {
                 {availablePackets.map(p => (
                   <TableRow key={p.id} className="align-top">
                     <TableCell>
-                      <div className="font-medium">{p.mainPacketNumber}</div>
+                      <div className="font-medium">Main Packets: {p.mainPacketNumber}</div>
                       <div>Lot: {p.lotNumber} | Kapan: {p.kapanNumber}</div>
                       <div className="text-sm text-muted-foreground">Packets: {p.packetCount}</div>
                     </TableCell>

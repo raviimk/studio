@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect } from 'react';
@@ -24,7 +25,7 @@ const formSchema = z.object({
   machine: z.string(),
   kapanNumber: z.string().min(1, 'Kapan number is required.'),
   lotNumber: z.string().min(1, 'Lot number is required.'),
-  mainPacketNumber: z.string().min(1, 'Main packet number is required.'),
+  mainPacketNumber: z.coerce.number().min(1, 'Main packet count is required.'),
   packetCount: z.coerce.number().min(1, 'Packet count must be at least 1.'),
   hasJiram: z.boolean().default(false),
   jiramCount: z.coerce.number().optional(),
@@ -47,7 +48,7 @@ export default function SarinPacketEntryPage() {
       machine: '',
       kapanNumber: '',
       lotNumber: '',
-      mainPacketNumber: '',
+      mainPacketNumber: 0,
       packetCount: 0,
       hasJiram: false,
       jiramCount: 0,
@@ -83,7 +84,7 @@ export default function SarinPacketEntryPage() {
         ...form.getValues(),
         kapanNumber: '',
         lotNumber: '',
-        mainPacketNumber: '',
+        mainPacketNumber: 0,
         packetCount: 0,
         hasJiram: false,
         jiramCount: 0,
@@ -123,7 +124,7 @@ export default function SarinPacketEntryPage() {
                   <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="mainPacketNumber" render={({ field }) => (
-                  <FormItem><FormLabel>Main Packet Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Main Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="packetCount" render={({ field }) => (
                   <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>

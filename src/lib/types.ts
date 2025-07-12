@@ -1,4 +1,5 @@
 
+
 export interface SarinPacket {
   id: string;
   senderName: string;
@@ -6,7 +7,7 @@ export interface SarinPacket {
   machine: string;
   kapanNumber: string;
   lotNumber: string;
-  mainPacketNumber: string;
+  mainPacketNumber: number;
   packetCount: number;
   hasJiram: boolean;
   jiramCount?: number;
@@ -67,7 +68,7 @@ export interface ReassignLog {
   date: string;
   fromOperator: string;
   toOperator: string;
-  packets: { mainPacketNumber: string; lotNumber: string; quantityTransferred: number }[];
+  packets: { mainPacketNumber: number; lotNumber: string; quantityTransferred: number }[];
 }
 
 // 4P & 4P Teching Types

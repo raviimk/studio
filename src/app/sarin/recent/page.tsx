@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -41,7 +42,7 @@ export default function RecentSarinEntriesPage() {
                   <TableHead>Lot #</TableHead>
                   <TableHead>Machine</TableHead>
                   <TableHead>Kapan #</TableHead>
-                  <TableHead>Main Packet #</TableHead>
+                  <TableHead>Main Packet Count</TableHead>
                   <TableHead>Packets</TableHead>
                   <TableHead>Jiram</TableHead>
                   <TableHead>Date/Time</TableHead>
