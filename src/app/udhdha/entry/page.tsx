@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Clock, Diamond, Gem, Send } from 'lucide-react';
+import { Barcode, Clock, Diamond, Gem, Send, Trash2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -27,7 +27,7 @@ export default function UdhdaEntryPage() {
   const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
 
   const [barcode, setBarcode] = useState('');
-  const [scannedPacket, setScannedPacket] = useState<string | null>(null);
+  const [scannedPackets, setScannedPackets] = useState<string[]>([]);
   const [processType, setProcessType] = useState<'sarin' | 'laser' | ''>('');
   const [selectedOperator, setSelectedOperator] = useState('');
   
@@ -42,10 +42,15 @@ export default function UdhdaEntryPage() {
     e.preventDefault();
     if (!barcode) return;
 
-    const existingPacket = udhdhaPackets.find(p => p.barcode === barcode && !p.isReturned);
+    if (scannedPackets.includes(barcode)) {
+        toast({ variant: 'destructive', title: 'Duplicate Scan', description: `Barcode "${barcode}" is already in the list.` });
+        setBarcode('');
+        return;
+    }
 
+    const existingPacket = udhdhaPackets.find(p => p.barcode === barcode && !p.isReturned);
     if (existingPacket) {
-      toast({ variant: 'destructive', title: 'Packet Already Assigned', description: `This packet is already assigned to ${existingPacket.operator}. Please use the Udhda Return page.` });
+      toast({ variant: 'destructive', title: 'Packet Already Assigned', description: `This packet is already assigned to ${existingPacket.operator}. Use the Udhda Return page.` });
       setBarcode('');
       return;
     }
@@ -57,46 +62,50 @@ export default function UdhdaEntryPage() {
       return;
     }
 
-    // This is a new assignment
-    setScannedPacket(barcode);
+    setScannedPackets(prev => [...prev, barcode]);
+    setBarcode('');
   };
   
-  const handleAssignPacket = () => {
-    if (!scannedPacket || !processType || !selectedOperator) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select a process type and an operator.' });
+  const handleAssignPackets = () => {
+    if (scannedPackets.length === 0 || !processType || !selectedOperator) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please scan at least one packet and select a process type and an operator.' });
       return;
     }
+    
+    const newPackets: UdhdaPacket[] = scannedPackets.map(scannedBarcode => ({
+        id: uuidv4(),
+        barcode: scannedBarcode,
+        type: processType as 'sarin' | 'laser',
+        operator: selectedOperator,
+        assignmentTime: new Date().toISOString(),
+        isReturned: false,
+    }));
 
-    const newPacket: UdhdaPacket = {
-      id: uuidv4(),
-      barcode: scannedPacket,
-      type: processType,
-      operator: selectedOperator,
-      assignmentTime: new Date().toISOString(),
-      isReturned: false,
-    };
-
-    setUdhdhaPackets([...udhdhaPackets, newPacket]);
-    toast({ title: 'Packet Assigned', description: `Assigned ${scannedPacket} to ${selectedOperator}.` });
+    setUdhdhaPackets([...udhdhaPackets, ...newPackets]);
+    toast({ title: 'Packets Assigned', description: `Assigned ${newPackets.length} packets to ${selectedOperator}.` });
 
     // Reset form
     setBarcode('');
-    setScannedPacket(null);
+    setScannedPackets([]);
     setProcessType('');
     setSelectedOperator('');
   };
+
+  const handleRemovePacket = (barcodeToRemove: string) => {
+      setScannedPackets(prev => prev.filter(b => b !== barcodeToRemove));
+  }
 
   const pendingPackets = udhdhaPackets.filter(p => !p.isReturned).sort((a,b) => new Date(b.assignmentTime).getTime() - new Date(a.assignmentTime).getTime());
   const operatorList = processType === 'sarin' ? sarinOperators : laserOperators;
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-      <PageHeader title="Udhda Entry" description="Assign individual packets to an operator." />
+      <PageHeader title="Udhda Entry (Batch)" description="Scan and assign multiple individual packets to an operator." />
 
       <Card>
         <CardHeader>
-          <CardTitle>Assign New Packet</CardTitle>
-          <CardDescription>Scan a barcode to begin the assignment process.</CardDescription>
+          <CardTitle>Step 1: Scan Packets</CardTitle>
+          <CardDescription>Scan all packet barcodes you want to assign in this batch.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm">
@@ -104,19 +113,38 @@ export default function UdhdaEntryPage() {
               placeholder="Scan barcode..."
               value={barcode}
               onChange={e => setBarcode(e.target.value)}
-              disabled={!!scannedPacket}
             />
-            <Button type="submit" disabled={!!scannedPacket || !barcode}>
-              <Barcode className="mr-2 h-4 w-4" /> Scan
+            <Button type="submit" disabled={!barcode}>
+              <Barcode className="mr-2 h-4 w-4" /> Add to List
             </Button>
           </form>
+          
+          {scannedPackets.length > 0 && (
+            <div className="mt-6 space-y-4">
+                <h3 className="font-semibold">Scanned Packets for this Batch: {scannedPackets.length}</h3>
+                 <div className="border rounded-md max-h-60 overflow-y-auto">
+                    <Table>
+                        <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Barcode</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {scannedPackets.map((b, index) => (
+                                <TableRow key={b}>
+                                    <TableCell>{index + 1}</TableCell>
+                                    <TableCell className="font-mono">{b}</TableCell>
+                                    <TableCell>
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemovePacket(b)}><Trash2 className="h-4 w-4"/></Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                 </div>
+            </div>
+          )}
 
-          {scannedPacket && (
+          {scannedPackets.length > 0 && (
             <div className="mt-6 space-y-6 animate-in fade-in-50">
-              <p className="text-sm font-semibold">Assigning new packet: <span className="font-mono text-primary">{scannedPacket}</span></p>
-              
               <div className="space-y-2">
-                <Label>Step 1: Select Process Type</Label>
+                <Label>Step 2: Select Process Type</Label>
                 <RadioGroup value={processType} onValueChange={(val) => { setProcessType(val as 'sarin' | 'laser'); setSelectedOperator('')}} className="flex gap-4">
                    <Label htmlFor="type-sarin" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
                        <RadioGroupItem value="sarin" id="type-sarin" /> <Diamond className="h-4 w-4" /> Sarin
@@ -129,7 +157,7 @@ export default function UdhdaEntryPage() {
 
               {processType && (
                  <div className="space-y-2 max-w-sm">
-                    <Label>Step 2: Select Operator</Label>
+                    <Label>Step 3: Select Operator</Label>
                     <Select onValueChange={setSelectedOperator} value={selectedOperator}>
                         <SelectTrigger><SelectValue placeholder={`Select ${processType} operator`} /></SelectTrigger>
                         <SelectContent>{operatorList.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
@@ -138,10 +166,10 @@ export default function UdhdaEntryPage() {
               )}
 
               <div className="flex gap-2">
-                <Button onClick={handleAssignPacket} disabled={!processType || !selectedOperator}>
-                  <Send className="mr-2 h-4 w-4" /> Assign Packet
+                <Button onClick={handleAssignPackets} disabled={!processType || !selectedOperator}>
+                  <Send className="mr-2 h-4 w-4" /> Assign {scannedPackets.length} Packets
                 </Button>
-                <Button variant="outline" onClick={() => { setScannedPacket(null); setBarcode(''); }}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setScannedPackets([]); setBarcode(''); }}>Clear List</Button>
               </div>
             </div>
           )}
@@ -150,7 +178,7 @@ export default function UdhdaEntryPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Pending Return Packets</CardTitle>
+          <CardTitle>Pending Return Packets (All)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -193,3 +221,5 @@ export default function UdhdaEntryPage() {
     </div>
   );
 }
+
+    
