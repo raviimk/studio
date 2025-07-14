@@ -131,7 +131,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up">
                 ATIXE DIAMOND
               </h1>
-              <p className="text-xs text-muted-foreground font-mono animate-fade-in-slide-up" style={{animationDelay: '0.2s'}}>by RAVII</p>
+              <p 
+                className="text-xs italic text-muted-foreground animate-fade-in-slide-up tracking-wider" 
+                style={{animationDelay: '0.2s'}}>
+                  by <span className="animate-glow font-semibold text-foreground/80 hover:text-foreground transition-colors">RAVII</span>
+              </p>
             </div>
           </div>
         </SidebarHeader>
