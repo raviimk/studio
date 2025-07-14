@@ -119,15 +119,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar className="print:hidden">
         <SidebarHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 animate-fade-in-slide-up">
             <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/">
-                <Warehouse className="w-5 h-5 text-primary" />
+                <span className="text-2xl">💠</span>
               </Link>
             </Button>
-            <h1 className="font-headline text-lg font-semibold truncate">GEM TRACKER</h1>
+            <h1 className="font-display text-lg font-bold truncate">
+              ATIXE DIAMOND
+            </h1>
           </div>
         </SidebarHeader>
         <SidebarContent>
@@ -181,10 +183,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-12 items-center justify-between border-b bg-card px-4 md:hidden">
-          <Link href="/" className="flex items-center gap-2 font-headline font-semibold">
-            <Warehouse className="w-5 h-5 text-primary" />
-            <span>GEM TRACKER</span>
+        <header className="flex h-12 items-center justify-between border-b bg-card px-4 md:hidden print:hidden">
+          <Link href="/" className="flex items-center gap-2 font-display font-bold">
+            <span className="text-xl">💠</span>
+            <span>ATIXE DIAMOND</span>
           </Link>
           <SidebarTrigger>
             <MenuIcon className="h-6 w-6" />
