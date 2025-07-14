@@ -20,6 +20,7 @@ export default function RecentSarinEntriesPage() {
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<SarinPacket>>({});
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this entry?')) {
@@ -64,14 +65,28 @@ export default function RecentSarinEntriesPage() {
   };
 
   const sortedPackets = useMemo(() => {
-    return [...sarinPackets].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sarinPackets]);
+    const searchLower = searchTerm.toLowerCase();
+    const filtered = sarinPackets.filter(p =>
+      !searchLower || p.lotNumber.toLowerCase().includes(searchLower)
+    );
+    return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [sarinPackets, searchTerm]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
-      <PageHeader title="Recent Sarin Entries" description="View and edit all created Sarin packets." />
+      <PageHeader title="Recent Sarin Entries" description="View, search, and edit all created Sarin packets." />
       <Card>
-        <CardHeader><CardTitle>All Sarin Packets</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>All Sarin Packets</CardTitle>
+          <div className="pt-4">
+              <Input
+                  placeholder="Search by Lot Number..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+              />
+          </div>
+        </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
@@ -98,21 +113,21 @@ export default function RecentSarinEntriesPage() {
                     <TableCell>{p.kapanNumber}</TableCell>
                     <TableCell>
                       {editingId === p.id ? (
-                        <Input type="number" name="mainPacketNumber" value={editFormData.mainPacketNumber || ''} onChange={handleInputChange} className="h-8" />
+                        <Input type="number" name="mainPacketNumber" value={editFormData.mainPacketNumber || ''} onChange={handleInputChange} className="h-8 w-20" />
                       ) : (
                         p.mainPacketNumber
                       )}
                     </TableCell>
                     <TableCell>
                       {editingId === p.id ? (
-                        <Input type="number" name="packetCount" value={editFormData.packetCount || ''} onChange={handleInputChange} className="h-8" />
+                        <Input type="number" name="packetCount" value={editFormData.packetCount || ''} onChange={handleInputChange} className="h-8 w-20" />
                       ) : (
                         p.packetCount
                       )}
                     </TableCell>
                     <TableCell>
                       {editingId === p.id ? (
-                        <Input type="number" name="jiramCount" value={editFormData.jiramCount || ''} onChange={handleInputChange} className="h-8" />
+                        <Input type="number" name="jiramCount" value={editFormData.jiramCount || ''} onChange={handleInputChange} className="h-8 w-20" />
                       ) : (
                         p.jiramCount || 0
                       )}
