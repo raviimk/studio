@@ -121,15 +121,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar className="print:hidden">
         <SidebarHeader>
-          <div className="flex items-center gap-2 animate-fade-in-slide-up">
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="shrink-0" asChild>
               <Link href="/">
-                <span className="text-2xl">💠</span>
+                <span className="text-2xl animate-pulse">💠</span>
               </Link>
             </Button>
-            <h1 className="font-display text-lg font-bold truncate">
-              ATIXE DIAMOND
-            </h1>
+            <div className="flex flex-col">
+              <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up">
+                ATIXE DIAMOND
+              </h1>
+              <p className="text-xs text-muted-foreground font-mono animate-fade-in-slide-up" style={{animationDelay: '0.2s'}}>by RAVII</p>
+            </div>
           </div>
         </SidebarHeader>
         <SidebarContent>
