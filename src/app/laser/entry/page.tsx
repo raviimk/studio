@@ -74,14 +74,14 @@ export default function NewLaserLotPage() {
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
-      (lot) => lot.kapanNumber === values.kapanNumber && lot.lotNumber === values.lotNumber && !lot.isReturned
+      (lot) => lot.kapanNumber === values.kapanNumber && lot.lotNumber === values.lotNumber
     );
 
     if (existingLot) {
       toast({
         variant: 'destructive',
         title: 'Duplicate Lot Number',
-        description: `Lot Number ${values.lotNumber} already exists for Kapan ${values.kapanNumber}.`,
+        description: `Lot Number ${values.lotNumber} already exists for Kapan ${values.kapanNumber}. Please do not reuse lot numbers in the same kapan.`,
       });
       return;
     }

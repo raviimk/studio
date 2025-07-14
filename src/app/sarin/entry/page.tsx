@@ -72,13 +72,13 @@ export default function SarinPacketEntryPage() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const existingEntry = sarinPackets.find(
-        p => p.kapanNumber === values.kapanNumber && p.lotNumber === values.lotNumber && !p.isReturned
+        p => p.kapanNumber === values.kapanNumber && p.lotNumber === values.lotNumber
     );
     if (existingEntry) {
         toast({
             variant: 'destructive',
             title: 'Duplicate Lot Number',
-            description: `Lot Number ${values.lotNumber} already exists for Kapan ${values.kapanNumber}.`,
+            description: `Lot Number ${values.lotNumber} already exists for Kapan ${values.kapanNumber}. Please do not reuse lot numbers in the same kapan.`,
         });
         return;
     }

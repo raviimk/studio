@@ -53,13 +53,13 @@ export default function FourPTechingEntryPage() {
     const [, kapan, lot] = match;
 
     const existingLot = fourPTechingLots.find(
-      l => l.kapan === kapan && l.lot === lot && !l.isReturnedToFourP
+      l => l.kapan === kapan && l.lot === lot
     );
     if (existingLot) {
       toast({
         variant: 'destructive',
         title: 'Duplicate Lot Number',
-        description: `Lot Number ${lot} already exists for Kapan ${kapan}.`,
+        description: `Lot Number ${lot} already exists for Kapan ${kapan}. Please do not reuse lot numbers in the same kapan.`,
       });
       return;
     }
