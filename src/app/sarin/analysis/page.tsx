@@ -22,6 +22,7 @@ export default function LotAnalysisPage() {
 
     const firstPacket = packetsInLot[0];
     const totalEntries = packetsInLot.length;
+    const totalMainPacketCount = packetsInLot.reduce((sum, p) => sum + p.mainPacketNumber, 0);
     const totalPacketCount = packetsInLot.reduce((sum, p) => sum + p.packetCount, 0);
     const totalJiram = packetsInLot.reduce((sum, p) => sum + (p.jiramCount || 0), 0);
     const isReturned = packetsInLot.some(p => p.isReturned);
@@ -29,6 +30,7 @@ export default function LotAnalysisPage() {
 
     return {
       totalEntries,
+      totalMainPacketCount,
       totalPacketCount,
       totalJiram,
       isReturned,
@@ -82,6 +84,9 @@ export default function LotAnalysisPage() {
               <div className="font-medium">Total Entries:</div>
               <div>{lotData.totalEntries}</div>
               
+              <div className="font-medium">Total Main Packet Count:</div>
+              <div>{lotData.totalMainPacketCount}</div>
+
               <div className="font-medium">Total Packet Count:</div>
               <div>{lotData.totalPacketCount}</div>
 
