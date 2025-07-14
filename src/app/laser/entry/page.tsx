@@ -73,6 +73,19 @@ export default function NewLaserLotPage() {
   }, [selectedTension, laserMappings, form]);
 
   const handleInitialSubmit = (values: FormValues) => {
+    const existingLot = laserLots.find(
+      (lot) => lot.kapanNumber === values.kapanNumber && lot.lotNumber === values.lotNumber && !lot.isReturned
+    );
+
+    if (existingLot) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Lot Number',
+        description: `Lot Number ${values.lotNumber} already exists for Kapan ${values.kapanNumber}.`,
+      });
+      return;
+    }
+
     setCurrentLotDetails(values);
     setFormSubmitted(true);
     setTimeout(() => barcodeInputRef.current?.focus(), 100);

@@ -51,6 +51,19 @@ export default function FourPTechingEntryPage() {
       return;
     }
     const [, kapan, lot] = match;
+
+    const existingLot = fourPTechingLots.find(
+      l => l.kapan === kapan && l.lot === lot && !l.isReturnedToFourP
+    );
+    if (existingLot) {
+      toast({
+        variant: 'destructive',
+        title: 'Duplicate Lot Number',
+        description: `Lot Number ${lot} already exists for Kapan ${kapan}.`,
+      });
+      return;
+    }
+
     setLotDetails({ kapan, lot });
     setTimeout(() => pcsInputRef.current?.focus(), 100);
   };
