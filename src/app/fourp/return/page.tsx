@@ -112,7 +112,7 @@ export default function FourPReturnPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Teching Operator</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Teching Operator</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {unreturnedLots.map(lot => {
                   const fourPAmount = (lot.finalPcs || 0) * priceMaster.fourP;
@@ -121,6 +121,7 @@ export default function FourPReturnPage() {
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge>{lot.department}</Badge></TableCell>
+                    <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell className="font-bold text-green-600">₹{fourPAmount.toFixed(2)}</TableCell>
                     <TableCell><Badge variant="outline">{lot.techingOperator}</Badge></TableCell>
@@ -146,7 +147,7 @@ export default function FourPReturnPage() {
                     </TableCell>
                   </TableRow>
                 )})}
-                {unreturnedLots.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No lots are pending return.</TableCell></TableRow>}
+                {unreturnedLots.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No lots are pending return.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -158,20 +159,21 @@ export default function FourPReturnPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Operator</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Return Date</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Operator</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Return Date</TableHead></TableRow></TableHeader>
               <TableBody>
                 {returnedLots.map(lot => (
                   <TableRow key={lot.id}>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge>{lot.department}</Badge></TableCell>
+                    <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>
                     <TableCell>₹{lot.fourPAmount?.toFixed(2)}</TableCell>
                     <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
                   </TableRow>
                 ))}
-                 {returnedLots.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No lots returned yet.</TableCell></TableRow>}
+                 {returnedLots.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No lots returned yet.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
