@@ -60,7 +60,7 @@ export default function FourPDepartmentReport() {
         }
         
         const kapan = summary[lot.kapan];
-        const pcs = lot.finalPcs || 0;
+        const pcs = lot.pcs || 0;
         kapan.departments[lot.department] = (kapan.departments[lot.department] || 0) + pcs;
         kapan.totalPcs += pcs;
     });
@@ -79,7 +79,7 @@ export default function FourPDepartmentReport() {
       <Card>
         <CardHeader>
           <CardTitle>4P Department Production Report</CardTitle>
-          <CardDescription>Kapan-wise summary of pieces (Final PCS) assigned to different departments based on carat weight.</CardDescription>
+          <CardDescription>Kapan-wise summary of pieces (Total PCS) assigned to different departments based on carat weight.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
@@ -102,7 +102,7 @@ export default function FourPDepartmentReport() {
       </Card>
       
       <Card>
-        <CardHeader><CardTitle>Kapan Summary (by Final PCS)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Kapan Summary (by Total PCS)</CardTitle></CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
