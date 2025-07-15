@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Trash2, Tag, Weight } from 'lucide-react';
+import { Barcode, Trash2, Tag, Weight, Edit, Save, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -48,6 +48,11 @@ export default function FourPTechingEntryPage() {
   const hireInputRef = useRef<HTMLInputElement>(null);
   const pcsInputRef = useRef<HTMLInputElement>(null);
 
+  // State for editing
+  const [editingLotId, setEditingLotId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<FourPLot>>({});
+
+
   useEffect(() => {
       // Auto-select operator if only one exists
       if(fourPTechingOperators.length === 1) {
@@ -71,7 +76,7 @@ export default function FourPTechingEntryPage() {
       toast({
         variant: 'destructive',
         title: 'Duplicate Lot Number',
-        description: `Lot Number ${lot} already exists for Kapan ${kapan}. Please do not reuse lot numbers in the same kapan.`,
+        description: `This Lot Number already exists in Kapan No. ${kapan}. Please do not reuse the same Lot in the same Kapan, even if it was returned.`,
       });
       return;
     }
@@ -160,7 +165,50 @@ export default function FourPTechingEntryPage() {
     }
   };
 
+  const handleEditClick = (lot: FourPLot) => {
+    setEditingLotId(lot.id);
+    setEditFormData({
+        pcs: lot.pcs,
+        blocking: lot.blocking,
+        department: lot.department,
+        techingOperator: lot.techingOperator,
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingLotId(null);
+    setEditFormData({});
+  };
+
+  const handleSaveEdit = (lotId: string) => {
+    const updatedLotData = { ...editFormData };
+    const newPcs = updatedLotData.pcs || 0;
+    const newBlocking = updatedLotData.blocking || 0;
+    
+    if (newBlocking > newPcs) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Blocking PCS cannot be more than Total PCS.' });
+      return;
+    }
+
+    updatedLotData.finalPcs = newPcs - newBlocking;
+    updatedLotData.techingAmount = updatedLotData.finalPcs * priceMaster.fourPTeching;
+
+    setFourPTechingLots(prev =>
+      prev.map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
+    );
+    toast({ title: 'Success', description: 'Lot updated successfully.' });
+    handleCancelEdit();
+  };
+
+  const handleEditFormChange = (field: keyof FourPLot, value: string | number) => {
+      setEditFormData(prev => ({...prev, [field]: value}));
+  }
+
   const recentEntries = useMemo(() => fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()).slice(0, 10), [fourPTechingLots]);
+
+  const departmentNames = useMemo(() => {
+    return [deptSettings.belowThresholdDeptName, deptSettings.aboveThresholdDeptName];
+  },[deptSettings]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
@@ -262,25 +310,71 @@ export default function FourPTechingEntryPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Carat</TableHead><TableHead>Total PCS</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader>
+                  <TableRow>
+                      <TableHead>Kapan</TableHead>
+                      <TableHead>Lot</TableHead>
+                      <TableHead>Dept</TableHead>
+                      <TableHead>Carat</TableHead>
+                      <TableHead>Total PCS</TableHead>
+                      <TableHead>Blocking</TableHead>
+                      <TableHead>Final PCS</TableHead>
+                      <TableHead>Operator</TableHead>
+                      <TableHead>Amount (₹)</TableHead>
+                      <TableHead>Entry Date</TableHead>
+                      <TableHead>Actions</TableHead>
+                  </TableRow>
+              </TableHeader>
               <TableBody>
                 {recentEntries.map(lot => (
                   <TableRow key={lot.id}>
-                    <TableCell>{lot.kapan}</TableCell>
-                    <TableCell>{lot.lot}</TableCell>
-                    <TableCell><Badge>{lot.department}</Badge></TableCell>
-                    <TableCell>{lot.carat}</TableCell>
-                    <TableCell>{lot.pcs}</TableCell>
-                    <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
-                    <TableCell className="font-bold">{lot.finalPcs}</TableCell>
-                    <TableCell>{lot.techingOperator}</TableCell>
-                    <TableCell>₹{lot.techingAmount?.toFixed(2)}</TableCell>
-                    <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteLot(lot.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+                    {editingLotId === lot.id ? (
+                        <>
+                            <TableCell>{lot.kapan}</TableCell>
+                            <TableCell>{lot.lot}</TableCell>
+                            <TableCell>
+                                <Select value={editFormData.department} onValueChange={(val) => handleEditFormChange('department', val)}>
+                                    <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {departmentNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </TableCell>
+                            <TableCell>{lot.carat}</TableCell>
+                            <TableCell><Input type="number" value={editFormData.pcs} onChange={(e) => handleEditFormChange('pcs', parseInt(e.target.value))} className="w-20" /></TableCell>
+                            <TableCell><Input type="number" value={editFormData.blocking} onChange={(e) => handleEditFormChange('blocking', parseInt(e.target.value))} className="w-20" /></TableCell>
+                            <TableCell className="font-bold">{(editFormData.pcs || 0) - (editFormData.blocking || 0)}</TableCell>
+                            <TableCell>
+                                <Select value={editFormData.techingOperator} onValueChange={(val) => handleEditFormChange('techingOperator', val)}>
+                                    <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>{fourPTechingOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </TableCell>
+                            <TableCell>₹{(((editFormData.pcs || 0) - (editFormData.blocking || 0)) * priceMaster.fourPTeching).toFixed(2)}</TableCell>
+                            <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                            <TableCell className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(lot.id)}><Save className="h-4 w-4 text-green-600" /></Button>
+                                <Button variant="ghost" size="icon" onClick={handleCancelEdit}><X className="h-4 w-4 text-red-600" /></Button>
+                            </TableCell>
+                        </>
+                    ) : (
+                        <>
+                            <TableCell>{lot.kapan}</TableCell>
+                            <TableCell>{lot.lot}</TableCell>
+                            <TableCell><Badge>{lot.department}</Badge></TableCell>
+                            <TableCell>{lot.carat}</TableCell>
+                            <TableCell>{lot.pcs}</TableCell>
+                            <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
+                            <TableCell className="font-bold">{lot.finalPcs}</TableCell>
+                            <TableCell>{lot.techingOperator}</TableCell>
+                            <TableCell>₹{lot.techingAmount?.toFixed(2)}</TableCell>
+                            <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                            <TableCell className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(lot)}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteLot(lot.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </TableCell>
+                        </>
+                    )}
                   </TableRow>
                 ))}
                  {recentEntries.length === 0 && <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
