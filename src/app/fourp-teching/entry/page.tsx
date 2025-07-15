@@ -262,7 +262,7 @@ export default function FourPTechingEntryPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Carat</TableHead><TableHead>Final PCS</TableHead><TableHead>Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Carat</TableHead><TableHead>Total PCS</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {recentEntries.map(lot => (
                   <TableRow key={lot.id}>
@@ -270,6 +270,8 @@ export default function FourPTechingEntryPage() {
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge>{lot.department}</Badge></TableCell>
                     <TableCell>{lot.carat}</TableCell>
+                    <TableCell>{lot.pcs}</TableCell>
+                    <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell>{lot.techingOperator}</TableCell>
                     <TableCell>₹{lot.techingAmount?.toFixed(2)}</TableCell>
@@ -281,7 +283,7 @@ export default function FourPTechingEntryPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                 {recentEntries.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
+                 {recentEntries.length === 0 && <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground">No recent entries found.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
