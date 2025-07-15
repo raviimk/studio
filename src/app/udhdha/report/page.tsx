@@ -11,7 +11,8 @@ import { format, formatDistance } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface GroupedPacket {
     barcode: string;
@@ -55,7 +56,11 @@ export default function UdhdaReportPage() {
           return group;
       })
       .filter(g => !searchTerm || g.barcode.toLowerCase().includes(searchLower))
-      .sort((a, b) => b.history[0].assignmentTime.localeCompare(a.history[0].assignmentTime));
+      .sort((a, b) => {
+        const dateA = new Date(a.history[a.history.length - 1].assignmentTime);
+        const dateB = new Date(b.history[b.history.length - 1].assignmentTime);
+        return dateB.getTime() - dateA.getTime();
+      });
   }, [udhdhaPackets, searchTerm]);
 
   const getDuration = (start: string, end?: string) => {
@@ -70,13 +75,23 @@ export default function UdhdaReportPage() {
         <CardHeader>
           <CardTitle>Packet Log</CardTitle>
           <CardDescription>A complete log of all Udhda packet movements, grouped by barcode.</CardDescription>
-            <div className="pt-4">
+            <div className="pt-4 relative max-w-sm">
                 <Input
                     placeholder="Search by packet barcode..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="max-w-sm"
+                    className="pr-8"
                 />
+                {searchTerm && (
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="absolute right-1 top-1 h-7 w-7"
+                        onClick={() => setSearchTerm('')}
+                    >
+                        <X className="h-4 w-4 text-muted-foreground"/>
+                    </Button>
+                )}
             </div>
         </CardHeader>
         <CardContent>
