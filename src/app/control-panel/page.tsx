@@ -12,9 +12,10 @@ import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { 
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
-  FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY
+  FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
+  FOURP_DEPARTMENT_SETTINGS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,6 +50,12 @@ const priceMasterSchema = z.object({
   fourPTeching: z.coerce.number().min(0, 'Rate must be positive'),
 });
 
+const fourPDepartmentSettingsSchema = z.object({
+    caratThreshold: z.coerce.number().min(0, 'Threshold must be positive'),
+    aboveThresholdDeptName: z.string().min(1, 'Department name is required'),
+    belowThresholdDeptName: z.string().min(1, 'Department name is required'),
+});
+
 const udhdaSettingsSchema = z.object({
     returnTimeLimitMinutes: z.coerce.number().min(1, 'Time limit must be at least 1 minute'),
 });
@@ -64,6 +71,8 @@ export default function ControlPanelPage() {
   const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
   const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
+  const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+
 
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
@@ -71,6 +80,7 @@ export default function ControlPanelPage() {
   const fourPForm = useForm<z.infer<typeof fourPOperatorSchema>>({ resolver: zodResolver(fourPOperatorSchema), defaultValues: { name: '' } });
   const fourPTechingForm = useForm<z.infer<typeof fourPTechingOperatorSchema>>({ resolver: zodResolver(fourPTechingOperatorSchema), defaultValues: { name: '' } });
   const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster });
+  const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
   
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
@@ -136,6 +146,11 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Price master updated.' });
   }
   
+  function handleUpdateFourPDeptSettings(values: z.infer<typeof fourPDepartmentSettingsSchema>) {
+    setFourPDeptSettings(values);
+    toast({ title: 'Success', description: '4P department settings updated.' });
+  }
+
   function handleUpdateUdhdhaSettings(values: z.infer<typeof udhdaSettingsSchema>) {
     setUdhdhaSettings(values);
     toast({ title: 'Success', description: 'Udhda settings updated.' });
@@ -264,6 +279,31 @@ export default function ControlPanelPage() {
           </div>
         </TabsContent>
         <TabsContent value="4p" className="space-y-6 mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>4P Department Sorting</CardTitle>
+                    <CardDescription>Define rules for automatically sorting packets based on carat weight from hire barcodes.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...fourPDeptSettingsForm}>
+                        <form onSubmit={fourPDeptSettingsForm.handleSubmit(handleUpdateFourPDeptSettings)} className="space-y-4 max-w-lg">
+                             <div className="grid md:grid-cols-3 gap-4">
+                                <FormField control={fourPDeptSettingsForm.control} name="caratThreshold" render={({ field }) => (
+                                    <FormItem><FormLabel>Carat Threshold</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={fourPDeptSettingsForm.control} name="belowThresholdDeptName" render={({ field }) => (
+                                    <FormItem><FormLabel>&le; Threshold Dept Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={fourPDeptSettingsForm.control} name="aboveThresholdDeptName" render={({ field }) => (
+                                    <FormItem><FormLabel>&gt; Threshold Dept Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                             </div>
+                            <Button type="submit">Update Sorting Rules</Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Price Master</CardTitle>

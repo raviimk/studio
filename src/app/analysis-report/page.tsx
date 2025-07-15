@@ -7,6 +7,7 @@ import SarinReport from '@/components/reports/SarinReport';
 import LaserReport from '@/components/reports/LaserReport';
 import FourPTechingReport from '@/components/reports/FourPTechingReport';
 import FourPWorkReport from '@/components/reports/FourPWorkReport';
+import FourPDepartmentReport from '@/components/reports/FourPDepartmentReport';
 
 export default function AnalysisReportPage() {
   return (
@@ -16,11 +17,12 @@ export default function AnalysisReportPage() {
         description="A central dashboard to analyze all factory production data."
       />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 max-w-4xl">
           <TabsTrigger value="sarin">Sarin Report</TabsTrigger>
           <TabsTrigger value="laser">Laser Report</TabsTrigger>
           <TabsTrigger value="4p-teching">4P Teching Report</TabsTrigger>
           <TabsTrigger value="4p-work">4P Work Report</TabsTrigger>
+          <TabsTrigger value="4p-department">4P Department Report</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="mt-6">
           <SarinReport />
@@ -33,6 +35,9 @@ export default function AnalysisReportPage() {
         </TabsContent>
         <TabsContent value="4p-work" className="mt-6">
           <FourPWorkReport />
+        </TabsContent>
+         <TabsContent value="4p-department" className="mt-6">
+          <FourPDepartmentReport />
         </TabsContent>
       </Tabs>
     </div>

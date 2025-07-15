@@ -87,6 +87,12 @@ export interface PriceMaster {
   fourPTeching: number;
 }
 
+export interface FourPDepartmentSettings {
+  caratThreshold: number;
+  aboveThresholdDeptName: string;
+  belowThresholdDeptName: string;
+}
+
 export interface FourPLot {
   id: string;
   kapan: string;
@@ -98,6 +104,8 @@ export interface FourPLot {
   techingAmount: number;
   entryDate: string;
   isReturnedToFourP: boolean;
+  carat?: number;
+  department?: string;
   // Fields below are added on return
   fourPOperator?: string;
   returnDate?: string;

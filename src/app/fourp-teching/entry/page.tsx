@@ -1,39 +1,51 @@
 
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FOURP_TECHING_LOTS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY } from '@/lib/constants';
-import { FourPLot, FourPTechingOperator, PriceMaster } from '@/lib/types';
+import { FOURP_TECHING_LOTS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
+import { FourPLot, FourPTechingOperator, PriceMaster, FourPDepartmentSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Trash2 } from 'lucide-react';
+import { Barcode, Trash2, Tag, Weight } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type LotDetails = {
   kapan: string;
   lot: string;
 };
 
+type HireDetails = {
+    carat: number;
+    department: string;
+}
+
 export default function FourPTechingEntryPage() {
   const { toast } = useToast();
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
   const [fourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
   const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
 
-  const [barcode, setBarcode] = useState('');
+
+  const [lotBarcode, setLotBarcode] = useState('');
+  const [hireBarcode, setHireBarcode] = useState('');
   const [lotDetails, setLotDetails] = useState<LotDetails | null>(null);
+  const [hireDetails, setHireDetails] = useState<HireDetails | null>(null);
   
   const [techingOperator, setTechingOperator] = useState('');
   const [pcs, setPcs] = useState('');
   const [blocking, setBlocking] = useState('');
 
+  const hireInputRef = useRef<HTMLInputElement>(null);
   const pcsInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -43,11 +55,11 @@ export default function FourPTechingEntryPage() {
       }
   }, [fourPTechingOperators]);
 
-  const handleBarcodeScan = (e: React.FormEvent) => {
+  const handleLotBarcodeScan = (e: React.FormEvent) => {
     e.preventDefault();
-    const match = barcode.match(/^(\d+)-[A-Z]-(\d+)$/);
+    const match = lotBarcode.match(/^(\d+)-[A-Z]-(\d+)$/);
     if (!match) {
-      toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: 'Expected format: Kapan-Bunch-Lot (e.g., 61-B-1057)' });
+      toast({ variant: 'destructive', title: 'Invalid Lot Barcode', description: 'Expected format: Kapan-Bunch-Lot (e.g., 61-B-1057)' });
       return;
     }
     const [, kapan, lot] = match;
@@ -65,12 +77,33 @@ export default function FourPTechingEntryPage() {
     }
 
     setLotDetails({ kapan, lot });
+    setTimeout(() => hireInputRef.current?.focus(), 100);
+  };
+  
+  const handleHireBarcodeScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const values = hireBarcode.split(',');
+    if (values.length < 9) {
+      toast({ variant: 'destructive', title: 'Invalid Hire Barcode', description: 'Could not find at least 9 comma-separated values.' });
+      return;
+    }
+    
+    const caratWeight = parseFloat(values[8]);
+    if (isNaN(caratWeight)) {
+        toast({ variant: 'destructive', title: 'Invalid Carat Weight', description: 'The 9th value in the hire barcode is not a valid number.' });
+        return;
+    }
+    
+    const department = caratWeight > deptSettings.caratThreshold ? deptSettings.aboveThresholdDeptName : deptSettings.belowThresholdDeptName;
+    setHireDetails({ carat: caratWeight, department });
+    toast({ title: 'Hire Scanned', description: `Carat: ${caratWeight}. Assigned to ${department}`});
+
     setTimeout(() => pcsInputRef.current?.focus(), 100);
   };
   
   const handleSaveLot = () => {
-    if (!lotDetails || !techingOperator || !pcs) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields: barcode, operator, and PCS.' });
+    if (!lotDetails || !hireDetails || !techingOperator || !pcs) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please fill all fields: barcodes, operator, and PCS.' });
       return;
     }
 
@@ -96,6 +129,7 @@ export default function FourPTechingEntryPage() {
     const newLot: FourPLot = {
       id: uuidv4(),
       ...lotDetails,
+      ...hireDetails,
       pcs: numPcs,
       blocking: numBlocking,
       finalPcs: finalPcs,
@@ -108,8 +142,10 @@ export default function FourPTechingEntryPage() {
     toast({ title: 'Success', description: `Lot created. Total: ${numPcs}, Final: ${finalPcs}` });
 
     // Reset state
-    setBarcode('');
+    setLotBarcode('');
+    setHireBarcode('');
     setLotDetails(null);
+    setHireDetails(null);
     setPcs('');
     setBlocking('');
     if(fourPTechingOperators.length > 1) {
@@ -124,7 +160,7 @@ export default function FourPTechingEntryPage() {
     }
   };
 
-  const recentEntries = fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()).slice(0, 10);
+  const recentEntries = useMemo(() => fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()).slice(0, 10), [fourPTechingLots]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
@@ -133,18 +169,18 @@ export default function FourPTechingEntryPage() {
       <Card>
           <CardHeader>
             <CardTitle>Create New Lot</CardTitle>
-            <CardDescription>Scan barcode and enter details to create a new lot.</CardDescription>
+            <CardDescription>Follow the steps to scan barcodes and enter details to create a new lot.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-              {/* Step 1: Barcode */}
+              {/* Step 1: Lot Barcode */}
               <div>
                 <Label htmlFor="barcode-scan">Step 1: Scan Lot Barcode</Label>
-                <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm mt-1">
+                <form onSubmit={handleLotBarcodeScan} className="flex gap-2 max-w-sm mt-1">
                     <Input
                         id="barcode-scan"
-                        placeholder="Scan barcode (e.g., 61-B-1057)"
-                        value={barcode}
-                        onChange={e => setBarcode(e.target.value)}
+                        placeholder="Scan lot barcode (e.g., 61-B-1057)"
+                        value={lotBarcode}
+                        onChange={e => setLotBarcode(e.target.value)}
                         disabled={!!lotDetails}
                     />
                     <Button type="submit" disabled={!!lotDetails}>
@@ -155,32 +191,67 @@ export default function FourPTechingEntryPage() {
 
             {lotDetails && (
                 <div className="space-y-6 animate-in fade-in-50">
-                    <p className="text-sm text-muted-foreground">Creating entry for Kapan: <span className="font-bold">{lotDetails.kapan}</span>, Lot: <span className="font-bold">{lotDetails.lot}</span></p>
+                    <Alert variant="default">
+                        <Barcode className="h-4 w-4"/>
+                        <AlertTitle>Lot Scanned</AlertTitle>
+                        <AlertDescription>Creating entry for Kapan: <span className="font-bold">{lotDetails.kapan}</span>, Lot: <span className="font-bold">{lotDetails.lot}</span></AlertDescription>
+                    </Alert>
 
-                    {/* Step 2 & 3: Operator and PCS */}
-                    <div className="grid md:grid-cols-3 gap-4 max-w-lg">
-                         <div>
-                            <Label htmlFor="teching-op">Step 2: Select Teching Operator</Label>
-                             <Select onValueChange={setTechingOperator} value={techingOperator}>
-                                <SelectTrigger id="teching-op" className="mt-1"><SelectValue placeholder="Select Operator" /></SelectTrigger>
-                                <SelectContent>{fourPTechingOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                         <div>
-                            <Label htmlFor="pcs-entry">Step 3: Enter Total PCS</Label>
-                            <Input id="pcs-entry" ref={pcsInputRef} value={pcs} onChange={e => setPcs(e.target.value)} type="number" placeholder="e.g., 25" className="mt-1"/>
-                        </div>
-                        <div>
-                            <Label htmlFor="blocking-pcs-entry">Step 4: Blocking PCS</Label>
-                            <Input id="blocking-pcs-entry" value={blocking} onChange={e => setBlocking(e.target.value)} type="number" placeholder="e.g., 2" className="mt-1"/>
-                        </div>
+                     {/* Step 2: Hire Barcode */}
+                    <div>
+                        <Label htmlFor="hire-barcode-scan">Step 2: Scan Hire Barcode</Label>
+                        <form onSubmit={handleHireBarcodeScan} className="flex gap-2 max-w-sm mt-1">
+                            <Input
+                                id="hire-barcode-scan"
+                                ref={hireInputRef}
+                                placeholder="Scan hire barcode..."
+                                value={hireBarcode}
+                                onChange={e => setHireBarcode(e.target.value)}
+                                disabled={!!hireDetails}
+                            />
+                            <Button type="submit" disabled={!!hireDetails}>
+                                <Weight className="mr-2 h-4 w-4" /> Scan Hire
+                            </Button>
+                        </form>
                     </div>
 
-                    {/* Step 5: Save */}
-                    <div className="flex gap-2">
-                        <Button onClick={handleSaveLot}>Save Lot</Button>
-                        <Button variant="outline" onClick={() => { setLotDetails(null); setBarcode(''); }}>Cancel</Button>
-                    </div>
+                    {hireDetails && (
+                        <div className="space-y-6 animate-in fade-in-50">
+                            <Alert variant="default">
+                                <Tag className="h-4 w-4"/>
+                                <AlertTitle>Hire Scanned & Processed</AlertTitle>
+                                <AlertDescription>
+                                    Carat Weight: <span className="font-bold">{hireDetails.carat}</span>. 
+                                    Assigned to Department: <Badge>{hireDetails.department}</Badge>
+                                </AlertDescription>
+                            </Alert>
+
+                            {/* Step 3 & 4: Operator and PCS */}
+                            <div className="grid md:grid-cols-3 gap-4 max-w-lg">
+                                <div>
+                                    <Label htmlFor="teching-op">Step 3: Select Teching Operator</Label>
+                                    <Select onValueChange={setTechingOperator} value={techingOperator}>
+                                        <SelectTrigger id="teching-op" className="mt-1"><SelectValue placeholder="Select Operator" /></SelectTrigger>
+                                        <SelectContent>{fourPTechingOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div>
+                                    <Label htmlFor="pcs-entry">Step 4: Enter Total PCS</Label>
+                                    <Input id="pcs-entry" ref={pcsInputRef} value={pcs} onChange={e => setPcs(e.target.value)} type="number" placeholder="e.g., 25" className="mt-1"/>
+                                </div>
+                                <div>
+                                    <Label htmlFor="blocking-pcs-entry">Step 5: Blocking PCS</Label>
+                                    <Input id="blocking-pcs-entry" value={blocking} onChange={e => setBlocking(e.target.value)} type="number" placeholder="e.g., 2" className="mt-1"/>
+                                </div>
+                            </div>
+
+                            {/* Step 6: Save */}
+                            <div className="flex gap-2">
+                                <Button onClick={handleSaveLot}>Save Lot</Button>
+                                <Button variant="outline" onClick={() => { setLotDetails(null); setHireDetails(null); setLotBarcode(''); setHireBarcode(''); }}>Cancel</Button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
           </CardContent>
@@ -191,14 +262,14 @@ export default function FourPTechingEntryPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Total PCS</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Carat</TableHead><TableHead>Final PCS</TableHead><TableHead>Operator</TableHead><TableHead>Amount (₹)</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {recentEntries.map(lot => (
                   <TableRow key={lot.id}>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
-                    <TableCell>{lot.pcs}</TableCell>
-                    <TableCell className="text-destructive">{lot.blocking}</TableCell>
+                    <TableCell><Badge>{lot.department}</Badge></TableCell>
+                    <TableCell>{lot.carat}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell>{lot.techingOperator}</TableCell>
                     <TableCell>₹{lot.techingAmount?.toFixed(2)}</TableCell>

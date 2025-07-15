@@ -12,6 +12,8 @@ export const FOURP_TECHING_OPERATORS_KEY = 'fourPTechingOperators';
 export const PRICE_MASTER_KEY = 'priceMaster';
 export const FOURP_LOTS_KEY = 'fourPLots';
 export const FOURP_TECHING_LOTS_KEY = 'fourPTechingLots';
+export const FOURP_DEPARTMENT_SETTINGS_KEY = 'fourPDepartmentSettings';
+
 
 // Udhda / Single Packet
 export const UHDHA_PACKETS_KEY = 'udhdhaPackets';
