@@ -14,6 +14,18 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 export default function FourPReturnPage() {
   const { toast } = useToast();
@@ -23,23 +35,18 @@ export default function FourPReturnPage() {
 
   const [selectedOperator, setSelectedOperator] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [lotToReturn, setLotToReturn] = useState<FourPLot | null>(null);
 
-  const handleReturnLot = (lotId: string) => {
-     if (!selectedOperator) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select a 4P operator.' });
-      return;
-    }
-
-    const lotToReturn = fourPTechingLots.find(lot => lot.id === lotId);
-    if (!lotToReturn) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Lot not found.' });
+  const handleConfirmReturn = () => {
+     if (!selectedOperator || !lotToReturn) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Operator or Lot not selected.' });
       return;
     }
 
     const fourPAmount = (lotToReturn.finalPcs || 0) * priceMaster.fourP;
     
     const updatedLots = fourPTechingLots.map(lot =>
-      lot.id === lotId
+      lot.id === lotToReturn.id
         ? {
             ...lot,
             isReturnedToFourP: true,
@@ -51,6 +58,7 @@ export default function FourPReturnPage() {
     );
     setFourPTechingLots(updatedLots);
     toast({ title: `Lot Returned`, description: `Assigned to ${selectedOperator}. Amount: ₹${fourPAmount.toFixed(2)}` });
+    setLotToReturn(null);
   };
   
   const unreturnedLots = useMemo(() => {
@@ -117,7 +125,23 @@ export default function FourPReturnPage() {
                     <TableCell><Badge variant="outline">{lot.techingOperator}</Badge></TableCell>
                     <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                     <TableCell>
-                       <Button onClick={() => handleReturnLot(lot.id)} disabled={!selectedOperator}>Return to 4P</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                           <Button onClick={() => setLotToReturn(lot)} disabled={!selectedOperator}>Return to 4P</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Confirm Lot Return</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Are you sure you want to return Lot <span className="font-bold">{lot.lot}</span> to the operator <span className="font-bold">{selectedOperator}</span>? This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleConfirmReturn}>Confirm Return</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 )})}
