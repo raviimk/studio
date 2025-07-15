@@ -16,7 +16,7 @@ import { Input } from '../ui/input';
 type KapanSummary = {
     kapanNumber: string;
     departments: Record<string, number>;
-    totalPackets: number;
+    totalPcs: number;
 }
 
 export default function FourPDepartmentReport() {
@@ -55,13 +55,14 @@ export default function FourPDepartmentReport() {
             summary[lot.kapan] = {
                 kapanNumber: lot.kapan,
                 departments: {},
-                totalPackets: 0
+                totalPcs: 0
             };
         }
         
         const kapan = summary[lot.kapan];
-        kapan.departments[lot.department] = (kapan.departments[lot.department] || 0) + 1;
-        kapan.totalPackets += 1;
+        const pcs = lot.finalPcs || 0;
+        kapan.departments[lot.department] = (kapan.departments[lot.department] || 0) + pcs;
+        kapan.totalPcs += pcs;
     });
 
     return Object.values(summary).sort((a,b) => parseInt(a.kapanNumber) - parseInt(b.kapanNumber));
@@ -78,7 +79,7 @@ export default function FourPDepartmentReport() {
       <Card>
         <CardHeader>
           <CardTitle>4P Department Production Report</CardTitle>
-          <CardDescription>Kapan-wise summary of packets assigned to different departments based on carat weight.</CardDescription>
+          <CardDescription>Kapan-wise summary of pieces (Final PCS) assigned to different departments based on carat weight.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
@@ -101,7 +102,7 @@ export default function FourPDepartmentReport() {
       </Card>
       
       <Card>
-        <CardHeader><CardTitle>Kapan Summary</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Kapan Summary (by Final PCS)</CardTitle></CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
@@ -109,7 +110,7 @@ export default function FourPDepartmentReport() {
                 <TableRow>
                   <TableHead>Kapan</TableHead>
                   {departmentNames.map(name => <TableHead key={name}>{name}</TableHead>)}
-                  <TableHead>Total Packets</TableHead>
+                  <TableHead>Total PCS</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -117,7 +118,7 @@ export default function FourPDepartmentReport() {
                   <TableRow key={summary.kapanNumber}>
                     <TableCell className="font-bold">{summary.kapanNumber}</TableCell>
                     {departmentNames.map(name => <TableCell key={name}>{summary.departments[name] || 0}</TableCell>)}
-                    <TableCell className="font-semibold">{summary.totalPackets}</TableCell>
+                    <TableCell className="font-semibold">{summary.totalPcs}</TableCell>
                   </TableRow>
                 ))}
                 {kapanSummary.length === 0 && <TableRow><TableCell colSpan={departmentNames.length + 2} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
