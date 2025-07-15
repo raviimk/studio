@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 export default function FourPReturnPage() {
   const { toast } = useToast();
@@ -21,6 +22,7 @@ export default function FourPReturnPage() {
   const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
 
   const [selectedOperator, setSelectedOperator] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleReturnLot = (lotId: string) => {
      if (!selectedOperator) {
@@ -52,8 +54,14 @@ export default function FourPReturnPage() {
   };
   
   const unreturnedLots = useMemo(() => {
-      return fourPTechingLots.filter(lot => !lot.isReturnedToFourP);
-  }, [fourPTechingLots]);
+    const searchLower = searchTerm.toLowerCase();
+    return fourPTechingLots.filter(lot => {
+        if (lot.isReturnedToFourP) return false;
+        if (!searchTerm) return true;
+        return lot.lot.toLowerCase().includes(searchLower) ||
+               lot.kapan.toLowerCase().includes(searchLower);
+    });
+  }, [fourPTechingLots, searchTerm]);
 
   const returnedLots = useMemo(() => {
     return fourPTechingLots
@@ -69,16 +77,28 @@ export default function FourPReturnPage() {
       <Card>
         <CardHeader>
             <CardTitle>Lots Pending 4P Return</CardTitle>
-            <div className='pt-4'>
-                <Label htmlFor="4p-operator-select">Select 4P Operator to Assign Return</Label>
-                <Select onValueChange={setSelectedOperator} value={selectedOperator}>
-                    <SelectTrigger id="4p-operator-select" className="max-w-sm mt-1">
-                        <SelectValue placeholder="Select 4P Operator" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
-                    </SelectContent>
-                </Select>
+            <div className='pt-4 grid md:grid-cols-2 gap-4'>
+                <div>
+                    <Label htmlFor="search-lot">Search Lot or Kapan</Label>
+                    <Input
+                        id="search-lot"
+                        placeholder="Enter lot or kapan number..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="mt-1"
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="4p-operator-select">Select 4P Operator to Assign Return</Label>
+                    <Select onValueChange={setSelectedOperator} value={selectedOperator}>
+                        <SelectTrigger id="4p-operator-select" className="mt-1">
+                            <SelectValue placeholder="Select 4P Operator" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
         </CardHeader>
         <CardContent>
