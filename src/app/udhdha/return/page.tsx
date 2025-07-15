@@ -31,33 +31,33 @@ export default function UdhdaReturnPage() {
     e.preventDefault();
     if (!barcode) return;
 
-    const existingPacket = udhdhaPackets.find(p => p.barcode === barcode);
+    const activePacket = udhdhaPackets.find(p => p.barcode === barcode && !p.isReturned);
 
-    if (!existingPacket) {
-      setLastScanResult({
-        status: 'error',
-        title: 'Packet Not Found',
-        message: `Barcode "${barcode}" was not found in the Udhda assignment log.`,
-      });
+    if (!activePacket) {
+      // Check if it was ever entered, even if returned
+      const anyPacketForBarcode = udhdhaPackets.find(p => p.barcode === barcode);
+      if (anyPacketForBarcode) {
+        setLastScanResult({
+          status: 'warning',
+          title: 'Packet Not Active',
+          message: `This packet has already been returned and is not currently assigned to an operator.`,
+          packet: anyPacketForBarcode,
+        });
+      } else {
+         setLastScanResult({
+          status: 'error',
+          title: 'Packet Not Found',
+          message: `Barcode "${barcode}" was not found in the Udhda assignment log.`,
+        });
+      }
       setBarcode('');
       return;
     }
 
-    if (existingPacket.isReturned) {
-      setLastScanResult({
-        status: 'warning',
-        title: 'Already Returned',
-        message: `This packet was already returned on ${format(new Date(existingPacket.returnTime!), 'PPp')}.`,
-        packet: existingPacket,
-      });
-      setBarcode('');
-      return;
-    }
-
-    // Process the return
+    // Process the return for the active packet
     let returnedPacket: UdhdaPacket | undefined;
     const updatedPackets = udhdhaPackets.map(p => {
-      if (p.id === existingPacket.id) {
+      if (p.id === activePacket.id) {
         returnedPacket = { ...p, isReturned: true, returnTime: new Date().toISOString() };
         return returnedPacket;
       }
