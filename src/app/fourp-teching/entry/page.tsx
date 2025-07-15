@@ -51,6 +51,9 @@ export default function FourPTechingEntryPage() {
   // State for editing
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<FourPLot>>({});
+  
+  // State for searching
+  const [searchTerm, setSearchTerm] = useState('');
 
 
   useEffect(() => {
@@ -204,7 +207,17 @@ export default function FourPTechingEntryPage() {
       setEditFormData(prev => ({...prev, [field]: value}));
   }
 
-  const recentEntries = useMemo(() => fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()), [fourPTechingLots]);
+  const recentEntries = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    return fourPTechingLots
+      .filter(lot => {
+          if (lot.isReturnedToFourP) return false;
+          if (!searchTerm) return true;
+          return lot.lot.toLowerCase().includes(searchLower) ||
+                 lot.kapan.toLowerCase().includes(searchLower);
+      })
+      .sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime());
+  }, [fourPTechingLots, searchTerm]);
 
   const departmentNames = useMemo(() => {
     return [deptSettings.belowThresholdDeptName, deptSettings.aboveThresholdDeptName];
@@ -306,7 +319,17 @@ export default function FourPTechingEntryPage() {
         </Card>
      
        <Card>
-        <CardHeader><CardTitle>Recent Teching Entries (Pending Return)</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Recent Teching Entries (Pending Return)</CardTitle>
+           <div className="pt-4">
+              <Input
+                  placeholder="Search by Lot or Kapan Number..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+              />
+          </div>
+        </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
