@@ -204,7 +204,7 @@ export default function FourPTechingEntryPage() {
       setEditFormData(prev => ({...prev, [field]: value}));
   }
 
-  const recentEntries = useMemo(() => fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()).slice(0, 10), [fourPTechingLots]);
+  const recentEntries = useMemo(() => fourPTechingLots.filter(lot => !lot.isReturnedToFourP).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate!).getTime()), [fourPTechingLots]);
 
   const departmentNames = useMemo(() => {
     return [deptSettings.belowThresholdDeptName, deptSettings.aboveThresholdDeptName];
