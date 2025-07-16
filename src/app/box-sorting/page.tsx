@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Box, Package, Scale, Trash2, Copy } from 'lucide-react';
+import { Barcode, Box, Package, Scale, Trash2, Copy, Printer } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -172,8 +172,8 @@ export default function BoxSortingPage() {
   }
 
   const handleCopyToClipboard = (packetsToCopy: BoxSortingPacket[]) => {
-    const csvHeader = "Packet Number,Rough Weight,Polish Weight\n";
-    const csvBody = packetsToCopy.map(p => `${p.packetNumber},${p.roughWeight},${p.polishWeight}`).join('\n');
+    const csvHeader = "Packet Number,Rough Weight,Polish Weight,Shape,Box\n";
+    const csvBody = packetsToCopy.map(p => `${p.packetNumber},${p.roughWeight},${p.polishWeight},${p.shape},${p.boxLabel}`).join('\n');
     navigator.clipboard.writeText(csvHeader + csvBody);
     toast({ title: 'Copied to Clipboard', description: `${packetsToCopy.length} packets copied as CSV.`});
   }
@@ -228,108 +228,84 @@ export default function BoxSortingPage() {
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {shapeSummary.map(summary => (
-              <Card key={summary.shape}>
-                  <CardHeader>
-                      <div className="flex justify-between items-start">
-                          <div>
-                              <CardTitle className="flex items-center gap-2">
-                                  <Box /> {summary.shape}
-                              </CardTitle>
-                              <CardDescription className="grid grid-cols-3 gap-x-4 pt-2">
-                                  <div className="flex items-center gap-1.5 text-xs text-foreground">
-                                      <Package className="h-4 w-4 text-muted-foreground"/> 
-                                      <div>
-                                          <strong>{summary.totalPackets}</strong>
-                                          <span className="text-muted-foreground"> pkts</span>
-                                      </div>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-xs text-foreground">
-                                      <Scale className="h-4 w-4 text-muted-foreground"/> 
-                                      <div>
-                                          <strong>{summary.totalRoughWeight.toFixed(3)}</strong>
-                                          <span className="text-muted-foreground"> rgh</span>
-                                      </div>
-                                  </div>
-                                  <div className="flex items-center gap-1.5 text-xs text-foreground">
-                                      <Scale className="h-4 w-4 text-muted-foreground"/> 
-                                      <div>
-                                          <strong>{summary.totalPolishWeight.toFixed(3)}</strong>
-                                          <span className="text-muted-foreground"> pol</span>
-                                      </div>
-                                  </div>
-                              </CardDescription>
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                              <Button variant="outline" size="sm" onClick={() => handleCopyShapeToClipboard(summary.shape)}>
-                                  <Copy className="h-3 w-3 mr-1.5" /> Copy All
-                              </Button>
-                               <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                      <Button variant="destructive" size="sm">
-                                          <Trash2 className="h-3 w-3 mr-1.5" /> Delete All
-                                      </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete all packets for {summary.shape}?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            This will permanently delete all {summary.totalPackets} packets for the shape {summary.shape}. This action cannot be undone.
-                                          </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteShape(summary.shape)}>Confirm Delete</AlertDialogAction>
-                                      </AlertDialogFooter>
-                                  </AlertDialogContent>
-                              </AlertDialog>
-                          </div>
-                      </div>
-                  </CardHeader>
-                  <CardContent>
-                      <Table>
-                          <TableHeader>
-                              <TableRow>
-                                  <TableHead>Box</TableHead>
-                                  <TableHead>Packets</TableHead>
-                                  <TableHead>Polish Wt.</TableHead>
-                                  <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {Object.entries(summary.boxes).map(([label, data]) => (
-                                  <Fragment key={label}>
-                                      <TableRow onClick={() => setViewingBox({ shape: summary.shape, boxLabel: label })} className="cursor-pointer hover:bg-muted/50">
-                                          <TableCell><Badge variant="secondary">{label}</Badge></TableCell>
-                                          <TableCell>{data.count}</TableCell>
-                                          <TableCell>{data.polishWeight.toFixed(3)}</TableCell>
-                                          <TableCell className="text-right">
-                                               <AlertDialog>
-                                                  <AlertDialogTrigger asChild>
-                                                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
-                                                          <Trash2 className="h-4 w-4 text-destructive/70" />
-                                                      </Button>
-                                                  </AlertDialogTrigger>
-                                                  <AlertDialogContent>
-                                                      <AlertDialogHeader>
-                                                          <AlertDialogTitle>Delete all packets in this box?</AlertDialogTitle>
-                                                          <AlertDialogDescription>
-                                                            This will permanently delete all {data.count} packets from "{label}" in the {summary.shape} category. This action cannot be undone.
-                                                          </AlertDialogDescription>
-                                                      </AlertDialogHeader>
-                                                      <AlertDialogFooter>
-                                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                          <AlertDialogAction onClick={() => handleDeleteBox(summary.shape, label)}>Confirm Delete</AlertDialogAction>
-                                                      </AlertDialogFooter>
-                                                  </AlertDialogContent>
-                                              </AlertDialog>
-                                          </TableCell>
-                                      </TableRow>
-                                  </Fragment>
-                              ))}
-                          </TableBody>
-                      </Table>
-                  </CardContent>
-              </Card>
+             <div key={summary.shape} className="bg-card shadow-sm rounded-lg border border-l-4 border-l-green-400 p-4 space-y-3">
+                 <div className="flex justify-between items-start">
+                     <h3 className="text-lg font-bold text-green-600">{summary.shape}</h3>
+                     <div className="flex items-center gap-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete all packets for {summary.shape}?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                    This will permanently delete all {summary.totalPackets} packets for the shape {summary.shape}. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteShape(summary.shape)}>Confirm Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyShapeToClipboard(summary.shape)}>
+                             <Printer className="h-4 w-4" />
+                         </Button>
+                     </div>
+                 </div>
+
+                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                     <div className="flex justify-between"><span className="text-muted-foreground">Total Pkts</span> <span className="font-semibold">{summary.totalPackets}</span></div>
+                     <div className="flex justify-between"><span className="text-muted-foreground">Total Rgh Wt</span> <span className="font-semibold">{summary.totalRoughWeight.toFixed(3)}</span></div>
+                     <div className="flex justify-between col-span-2"><span className="text-muted-foreground">Total Pls Wt</span> <span className="font-semibold">{summary.totalPolishWeight.toFixed(3)}</span></div>
+                 </div>
+                 
+                 <div className="border-t pt-2">
+                     <Table>
+                         <TableHeader>
+                             <TableRow>
+                                 <TableHead className="h-8">Box</TableHead>
+                                 <TableHead className="h-8">Pkts</TableHead>
+                                 <TableHead className="h-8">Pls Wt</TableHead>
+                                 <TableHead className="h-8 text-right"></TableHead>
+                             </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                             {Object.entries(summary.boxes).sort((a,b) => a[0].localeCompare(b[0])).map(([label, data]) => (
+                                 <TableRow key={label} onClick={() => setViewingBox({ shape: summary.shape, boxLabel: label })} className="cursor-pointer hover:bg-muted/50 h-10">
+                                     <TableCell><Badge variant="secondary">{label}</Badge></TableCell>
+                                     <TableCell>{data.count}</TableCell>
+                                     <TableCell>{data.polishWeight.toFixed(3)}</TableCell>
+                                     <TableCell className="text-right p-1">
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                                                        <Trash2 className="h-3.5 w-3.5 text-destructive/60" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Delete all packets in this box?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                        This will permanently delete all {data.count} packets from "{label}" in the {summary.shape} category. This action cannot be undone.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteBox(summary.shape, label)}>Confirm Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                     </TableCell>
+                                 </TableRow>
+                             ))}
+                         </TableBody>
+                     </Table>
+                 </div>
+             </div>
           ))}
           {shapeSummary.length === 0 && (
               <div className="md:col-span-2 lg:col-span-3 text-center py-12 text-muted-foreground">
