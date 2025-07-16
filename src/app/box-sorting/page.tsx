@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Box, Package, Scale, Trash2, Copy, Printer } from 'lucide-react';
+import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 
 
 type ShapeSummary = {
@@ -46,6 +48,13 @@ type ViewingBox = {
     boxLabel: string;
 } | null;
 
+type ManualEntry = {
+    packetNumber: string;
+    shape: string;
+    roughWeight: string;
+    polishWeight: string;
+}
+
 export default function BoxSortingPage() {
   const { toast } = useToast();
   const [ranges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
@@ -53,22 +62,64 @@ export default function BoxSortingPage() {
   
   const [barcode, setBarcode] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  
+  const [manualEntry, setManualEntry] = useState<ManualEntry>({
+      packetNumber: '',
+      shape: '',
+      roughWeight: '',
+      polishWeight: ''
+  });
 
   const [viewingBox, setViewingBox] = useState<ViewingBox>(null);
-
-  const handleBarcodeScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcode) return;
-
+  
+  const sortPacket = (packetData: Omit<BoxSortingPacket, 'id' | 'scanTime' | 'boxLabel'>) => {
     if (ranges.length === 0) {
       toast({
         variant: 'destructive',
         title: 'Setup Required',
         description: 'Please define box sorting ranges in the Control Panel first.',
       });
-      return;
+      return false;
     }
     
+    if (packets.some(p => p.packetNumber === packetData.packetNumber)) {
+        toast({
+            variant: 'destructive',
+            title: 'Duplicate Packet',
+            description: `Packet ${packetData.packetNumber} has already been scanned.`,
+        });
+        return false;
+    }
+
+    const matchedRange = ranges.find(r => packetData.polishWeight >= r.from && packetData.polishWeight <= r.to);
+    if (!matchedRange) {
+        toast({
+            variant: 'destructive',
+            title: 'No Matching Box',
+            description: `No box range configured for polish weight ${packetData.polishWeight}.`,
+        });
+        return false;
+    }
+
+    const newPacket: BoxSortingPacket = {
+      id: uuidv4(),
+      ...packetData,
+      boxLabel: matchedRange.label,
+      scanTime: new Date().toISOString(),
+    };
+
+    setPackets(prev => [...prev, newPacket]);
+    toast({
+        title: `Packet Added to ${packetData.shape} / ${matchedRange.label}`,
+        description: `Packet ${packetData.packetNumber} sorted successfully.`,
+    });
+    return true;
+  }
+
+  const handleBarcodeScan = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barcode) return;
+
     const values = barcode.split(',');
     if (values.length < 15) {
       toast({
@@ -93,45 +144,44 @@ export default function BoxSortingPage() {
         return;
     }
 
-    if (packets.some(p => p.packetNumber === packetNumber)) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Packet',
-            description: `Packet ${packetNumber} has already been scanned.`,
-        });
-        setBarcode('');
+    if (sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight })) {
+      setBarcode('');
+      barcodeInputRef.current?.focus();
+    }
+  };
+  
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const { packetNumber, shape, roughWeight, polishWeight } = manualEntry;
+
+    if (!packetNumber || !shape || !roughWeight || !polishWeight) {
+        toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all fields for manual entry.' });
         return;
     }
     
-    const matchedRange = ranges.find(r => polishWeight >= r.from && polishWeight <= r.to);
-    if (!matchedRange) {
-        toast({
-            variant: 'destructive',
-            title: 'No Matching Box',
-            description: `No box range configured for polish weight ${polishWeight}.`,
-        });
+    const parsedRoughWeight = parseFloat(roughWeight);
+    const parsedPolishWeight = parseFloat(polishWeight);
+
+    if (isNaN(parsedRoughWeight) || isNaN(parsedPolishWeight)) {
+        toast({ variant: 'destructive', title: 'Invalid Weight', description: 'Rough and Polish weight must be valid numbers.' });
         return;
     }
+    
+    if(sortPacket({
+        barcode: `manual-${packetNumber}`,
+        packetNumber: packetNumber.trim(),
+        shape: shape.trim().toUpperCase(),
+        roughWeight: parsedRoughWeight,
+        polishWeight: parsedPolishWeight
+    })) {
+        setManualEntry({ packetNumber: '', shape: '', roughWeight: '', polishWeight: '' });
+    }
+  }
 
-    const newPacket: BoxSortingPacket = {
-      id: uuidv4(),
-      barcode,
-      packetNumber,
-      shape,
-      roughWeight,
-      polishWeight,
-      boxLabel: matchedRange.label,
-      scanTime: new Date().toISOString(),
-    };
-
-    setPackets(prev => [...prev, newPacket]);
-    toast({
-        title: `Packet Added to ${shape} / ${matchedRange.label}`,
-        description: `Packet ${packetNumber} sorted successfully.`,
-    });
-    setBarcode('');
-    barcodeInputRef.current?.focus();
-  };
+  const handleManualInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setManualEntry(prev => ({...prev, [name]: value}));
+  }
 
   const shapeSummary: ShapeSummary[] = useMemo(() => {
     const summary: Record<string, ShapeSummary> = {};
@@ -197,24 +247,58 @@ export default function BoxSortingPage() {
   return (
     <>
       <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-        <PageHeader title="Auto Box Sorting" description="Scan packet barcodes to automatically sort them into boxes." />
+        <PageHeader title="Auto Box Sorting" description="Scan or manually enter packet details to automatically sort them into boxes." />
 
         <Card>
           <CardHeader>
-            <CardTitle>Scan Packet Barcode</CardTitle>
+            <CardTitle>Packet Entry</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm">
-              <Input
-                ref={barcodeInputRef}
-                placeholder="Scan barcode..."
-                value={barcode}
-                onChange={e => setBarcode(e.target.value)}
-              />
-              <Button type="submit" disabled={!barcode}>
-                <Barcode className="mr-2 h-4 w-4" /> Scan & Sort
-              </Button>
-            </form>
+            <Tabs defaultValue="scan">
+              <TabsList className="grid w-full grid-cols-2 max-w-sm">
+                <TabsTrigger value="scan"><Barcode className="mr-2 h-4 w-4" />Scan Barcode</TabsTrigger>
+                <TabsTrigger value="manual"><Pencil className="mr-2 h-4 w-4" />Manual Entry</TabsTrigger>
+              </TabsList>
+              <TabsContent value="scan" className="mt-4">
+                 <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm">
+                  <Input
+                    ref={barcodeInputRef}
+                    placeholder="Scan barcode..."
+                    value={barcode}
+                    onChange={e => setBarcode(e.target.value)}
+                  />
+                  <Button type="submit" disabled={!barcode}>
+                    <Barcode className="mr-2 h-4 w-4" /> Scan & Sort
+                  </Button>
+                </form>
+              </TabsContent>
+              <TabsContent value="manual" className="mt-4">
+                 <form onSubmit={handleManualSubmit} className="space-y-4 max-w-sm">
+                   <div className="grid grid-cols-2 gap-4">
+                       <div>
+                           <Label htmlFor="packetNumber">Packet Number</Label>
+                           <Input id="packetNumber" name="packetNumber" value={manualEntry.packetNumber} onChange={handleManualInputChange} />
+                       </div>
+                       <div>
+                           <Label htmlFor="shape">Shape</Label>
+                           <Input id="shape" name="shape" value={manualEntry.shape} onChange={handleManualInputChange} />
+                       </div>
+                       <div>
+                           <Label htmlFor="roughWeight">Rough Wt.</Label>
+                           <Input id="roughWeight" name="roughWeight" type="number" step="0.001" value={manualEntry.roughWeight} onChange={handleManualInputChange} />
+                       </div>
+                       <div>
+                           <Label htmlFor="polishWeight">Polish Wt.</Label>
+                           <Input id="polishWeight" name="polishWeight" type="number" step="0.001" value={manualEntry.polishWeight} onChange={handleManualInputChange} />
+                       </div>
+                   </div>
+                  <Button type="submit">
+                    Add Manually & Sort
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+            
             {ranges.length === 0 && (
               <Alert variant="destructive" className="mt-4">
                   <AlertTitle>Configuration Needed</AlertTitle>
@@ -230,7 +314,7 @@ export default function BoxSortingPage() {
           {shapeSummary.map(summary => (
              <div key={summary.shape} className="bg-card shadow-sm rounded-lg border border-l-4 border-l-green-400 p-4 space-y-3">
                  <div className="flex justify-between items-start">
-                     <h3 className="text-lg font-bold text-green-600">{summary.shape}</h3>
+                     <h3 className="text-lg font-bold text-green-600 flex items-center gap-2"><Box /> {summary.shape}</h3>
                      <div className="flex items-center gap-2">
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -258,9 +342,9 @@ export default function BoxSortingPage() {
                  </div>
 
                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                     <div className="flex justify-between"><span className="text-muted-foreground">Total Pkts</span> <span className="font-semibold">{summary.totalPackets}</span></div>
-                     <div className="flex justify-between"><span className="text-muted-foreground">Total Rgh Wt</span> <span className="font-semibold">{summary.totalRoughWeight.toFixed(3)}</span></div>
-                     <div className="flex justify-between col-span-2"><span className="text-muted-foreground">Total Pls Wt</span> <span className="font-semibold">{summary.totalPolishWeight.toFixed(3)}</span></div>
+                     <div className="flex justify-between items-center"><span className="text-muted-foreground flex items-center gap-1.5"><Package size={14}/>Total Pkts</span> <span className="font-semibold">{summary.totalPackets}</span></div>
+                     <div className="flex justify-between items-center"><span className="text-muted-foreground flex items-center gap-1.5"><Scale size={14}/>Total Rgh Wt</span> <span className="font-semibold">{summary.totalRoughWeight.toFixed(3)}</span></div>
+                     <div className="flex justify-between items-center col-span-2"><span className="text-muted-foreground flex items-center gap-1.5"><Scale size={14}/>Total Pls Wt</span> <span className="font-semibold">{summary.totalPolishWeight.toFixed(3)}</span></div>
                  </div>
                  
                  <div className="border-t pt-2">
@@ -309,7 +393,7 @@ export default function BoxSortingPage() {
           ))}
           {shapeSummary.length === 0 && (
               <div className="md:col-span-2 lg:col-span-3 text-center py-12 text-muted-foreground">
-                  <p>Scan a packet to begin sorting.</p>
+                  <p>Scan or enter a packet to begin sorting.</p>
               </div>
           )}
         </div>
