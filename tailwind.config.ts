@@ -105,12 +105,17 @@ export default {
           '0%, 100%': { textShadow: '0 0 2px hsl(var(--primary-foreground) / 0.7)' },
           '50%': { textShadow: '0 0 5px hsl(var(--primary-foreground) / 0.9)' },
         },
+        'spin-slow': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in-slide-up': 'fade-in-slide-up 0.4s ease-out',
         'glow': 'glow 3s ease-in-out infinite',
+        'spin-slow': 'spin-slow 20s linear infinite',
       },
     },
   },

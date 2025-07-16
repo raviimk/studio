@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil } from 'lucide-react';
+import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil, Gem } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -60,6 +60,36 @@ type HighlightedItem = {
     shape: string;
     boxLabel: string;
 } | null;
+
+// Shape-specific animated icons
+const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) => {
+    const shapeUpper = shape.toUpperCase();
+    const iconProps = {
+        className: cn("w-6 h-6 animate-spin-slow text-green-600", className),
+        fill: "currentColor",
+        viewBox: "0 0 24 24",
+        xmlns: "http://www.w3.org/2000/svg"
+    };
+
+    if (shapeUpper.includes('ROUND')) {
+        return <svg {...iconProps}><path d="M12 2L6.25 6.5H17.75L12 2ZM5.5 7.5L3 12L12 22L21 12L18.5 7.5H5.5ZM7.5 7.5L12 11L16.5 7.5H7.5Z"/></svg>;
+    }
+    if (shapeUpper.includes('PRINCESS') || shapeUpper.includes('CHOKI') || shapeUpper.includes('SQUARE')) {
+         return <svg {...iconProps}><path d="M5 3H19L21 5V19L19 21H5L3 19V5L5 3ZM5 5V19H19V5H5ZM7 7H17V17H7V7Z"/></svg>;
+    }
+    if (shapeUpper.includes('EMERALD')) {
+        return <svg {...iconProps}><path d="M6 4H18L20 6V18L18 20H6L4 18V6L6 4ZM6 6V18H18V6H6Z"/></svg>;
+    }
+    if (shapeUpper.includes('PEAR')) {
+        return <svg {...iconProps}><path d="M12 2C7.5 2 4 8 4 12C4 16.5 7.5 22 12 22C16.5 22 20 16.5 20 12C20 8 16.5 2 12 2ZM12 4.15L17.15 12H6.85L12 4.15Z"/></svg>;
+    }
+    if (shapeUpper.includes('MARQUISE')) {
+        return <svg {...iconProps}><path d="M12 2L2 12L12 22L22 12L12 2ZM4.5 12L12 5.5L19.5 12L12 18.5L4.5 12Z"/></svg>;
+    }
+    
+    return <Gem className={cn("w-6 h-6 text-green-600", className)} />;
+}
+
 
 export default function BoxSortingPage() {
   const { toast } = useToast();
@@ -336,7 +366,10 @@ export default function BoxSortingPage() {
                   )}
               >
                  <div className="flex justify-between items-start">
-                     <h3 className="text-lg font-bold text-green-600 flex items-center gap-2"><Box /> {summary.shape}</h3>
+                     <h3 className="text-lg font-bold text-green-600 flex items-center gap-2">
+                        <ShapeIcon shape={summary.shape} />
+                        {summary.shape}
+                     </h3>
                      <div className="flex items-center gap-2">
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
