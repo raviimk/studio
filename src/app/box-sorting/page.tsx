@@ -178,6 +178,16 @@ export default function BoxSortingPage() {
     toast({ title: 'Copied to Clipboard', description: `${packetsToCopy.length} packets copied as CSV.`});
   }
 
+  const handleDeleteShape = (shape: string) => {
+    setPackets(prev => prev.filter(p => p.shape !== shape));
+    toast({ title: 'Shape Cleared', description: `All packets for shape ${shape} have been deleted.` });
+  }
+
+  const handleCopyShapeToClipboard = (shape: string) => {
+      const packetsToCopy = packets.filter(p => p.shape === shape);
+      handleCopyToClipboard(packetsToCopy);
+  }
+
   const packetsInViewingBox = useMemo(() => {
     if (!viewingBox) return [];
     return packets.filter(p => p.shape === viewingBox.shape && p.boxLabel === viewingBox.boxLabel);
@@ -220,32 +230,60 @@ export default function BoxSortingPage() {
           {shapeSummary.map(summary => (
               <Card key={summary.shape}>
                   <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                          <Box /> {summary.shape}
-                      </CardTitle>
-                      <CardDescription className="grid grid-cols-3 gap-x-4 pt-2">
-                          <div className="flex items-center gap-1.5 text-xs text-foreground">
-                              <Package className="h-4 w-4 text-muted-foreground"/> 
-                              <div>
-                                  <strong>{summary.totalPackets}</strong>
-                                  <span className="text-muted-foreground"> pkts</span>
-                              </div>
+                      <div className="flex justify-between items-start">
+                          <div>
+                              <CardTitle className="flex items-center gap-2">
+                                  <Box /> {summary.shape}
+                              </CardTitle>
+                              <CardDescription className="grid grid-cols-3 gap-x-4 pt-2">
+                                  <div className="flex items-center gap-1.5 text-xs text-foreground">
+                                      <Package className="h-4 w-4 text-muted-foreground"/> 
+                                      <div>
+                                          <strong>{summary.totalPackets}</strong>
+                                          <span className="text-muted-foreground"> pkts</span>
+                                      </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-foreground">
+                                      <Scale className="h-4 w-4 text-muted-foreground"/> 
+                                      <div>
+                                          <strong>{summary.totalRoughWeight.toFixed(3)}</strong>
+                                          <span className="text-muted-foreground"> rgh</span>
+                                      </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-foreground">
+                                      <Scale className="h-4 w-4 text-muted-foreground"/> 
+                                      <div>
+                                          <strong>{summary.totalPolishWeight.toFixed(3)}</strong>
+                                          <span className="text-muted-foreground"> pol</span>
+                                      </div>
+                                  </div>
+                              </CardDescription>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-foreground">
-                              <Scale className="h-4 w-4 text-muted-foreground"/> 
-                              <div>
-                                  <strong>{summary.totalRoughWeight.toFixed(3)}</strong>
-                                  <span className="text-muted-foreground"> rgh</span>
-                              </div>
+                          <div className="flex flex-col gap-1.5">
+                              <Button variant="outline" size="sm" onClick={() => handleCopyShapeToClipboard(summary.shape)}>
+                                  <Copy className="h-3 w-3 mr-1.5" /> Copy All
+                              </Button>
+                               <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                      <Button variant="destructive" size="sm">
+                                          <Trash2 className="h-3 w-3 mr-1.5" /> Delete All
+                                      </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete all packets for {summary.shape}?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will permanently delete all {summary.totalPackets} packets for the shape {summary.shape}. This action cannot be undone.
+                                          </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteShape(summary.shape)}>Confirm Delete</AlertDialogAction>
+                                      </AlertDialogFooter>
+                                  </AlertDialogContent>
+                              </AlertDialog>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-foreground">
-                              <Scale className="h-4 w-4 text-muted-foreground"/> 
-                              <div>
-                                  <strong>{summary.totalPolishWeight.toFixed(3)}</strong>
-                                  <span className="text-muted-foreground"> pol</span>
-                              </div>
-                          </div>
-                      </CardDescription>
+                      </div>
                   </CardHeader>
                   <CardContent>
                       <Table>
@@ -345,4 +383,3 @@ export default function BoxSortingPage() {
     </>
   );
 }
-
