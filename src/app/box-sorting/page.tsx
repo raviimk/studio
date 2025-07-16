@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useMemo, useRef, Fragment } from 'react';
+import React, { useState, useMemo, useRef, Fragment, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { BOX_SORTING_RANGES_KEY, BOX_SORTING_PACKETS_KEY } from '@/lib/constants';
 import { BoxSortingRange, BoxSortingPacket } from '@/lib/types';
@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 
 type ShapeSummary = {
@@ -55,6 +56,11 @@ type ManualEntry = {
     polishWeight: string;
 }
 
+type HighlightedItem = {
+    shape: string;
+    boxLabel: string;
+} | null;
+
 export default function BoxSortingPage() {
   const { toast } = useToast();
   const [ranges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
@@ -71,6 +77,16 @@ export default function BoxSortingPage() {
   });
 
   const [viewingBox, setViewingBox] = useState<ViewingBox>(null);
+  const [highlightedItem, setHighlightedItem] = useState<HighlightedItem>(null);
+
+  useEffect(() => {
+    if (highlightedItem) {
+      const timer = setTimeout(() => {
+        setHighlightedItem(null);
+      }, 2000); // Highlight for 2 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedItem]);
   
   const sortPacket = (packetData: Omit<BoxSortingPacket, 'id' | 'scanTime' | 'boxLabel'>) => {
     if (ranges.length === 0) {
@@ -109,8 +125,9 @@ export default function BoxSortingPage() {
     };
 
     setPackets(prev => [...prev, newPacket]);
+    setHighlightedItem({ shape: newPacket.shape, boxLabel: newPacket.boxLabel });
     toast({
-        title: `Packet Added to ${packetData.shape} / ${matchedRange.label}`,
+        title: `Packet Added to ${newPacket.shape} / ${matchedRange.label}`,
         description: `Packet ${packetData.packetNumber} sorted successfully.`,
     });
     return true;
@@ -312,7 +329,12 @@ export default function BoxSortingPage() {
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {shapeSummary.map(summary => (
-             <div key={summary.shape} className="bg-card shadow-sm rounded-lg border border-l-4 border-l-green-400 p-4 space-y-3">
+             <div key={summary.shape} 
+                  className={cn(
+                      "bg-card shadow-sm rounded-lg border border-l-4 border-l-green-400 p-4 space-y-3 transition-all duration-300",
+                      highlightedItem?.shape === summary.shape && "animate-pulse border-yellow-400 border-2"
+                  )}
+              >
                  <div className="flex justify-between items-start">
                      <h3 className="text-lg font-bold text-green-600 flex items-center gap-2"><Box /> {summary.shape}</h3>
                      <div className="flex items-center gap-2">
@@ -359,7 +381,14 @@ export default function BoxSortingPage() {
                          </TableHeader>
                          <TableBody>
                              {Object.entries(summary.boxes).sort((a,b) => a[0].localeCompare(b[0])).map(([label, data]) => (
-                                 <TableRow key={label} onClick={() => setViewingBox({ shape: summary.shape, boxLabel: label })} className="cursor-pointer hover:bg-muted/50 h-10">
+                                 <TableRow 
+                                    key={label} 
+                                    onClick={() => setViewingBox({ shape: summary.shape, boxLabel: label })} 
+                                    className={cn(
+                                        "cursor-pointer hover:bg-muted/50 h-10 transition-colors duration-300",
+                                        highlightedItem?.shape === summary.shape && highlightedItem?.boxLabel === label && "bg-yellow-100 dark:bg-yellow-900/30"
+                                    )}
+                                  >
                                      <TableCell><Badge variant="secondary">{label}</Badge></TableCell>
                                      <TableCell>{data.count}</TableCell>
                                      <TableCell>{data.polishWeight.toFixed(3)}</TableCell>
