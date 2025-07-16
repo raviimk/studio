@@ -13,9 +13,9 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { 
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
-  FOURP_DEPARTMENT_SETTINGS_KEY
+  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,6 +60,15 @@ const udhdaSettingsSchema = z.object({
     returnTimeLimitMinutes: z.coerce.number().min(1, 'Time limit must be at least 1 minute'),
 });
 
+const boxSortingRangeSchema = z.object({
+    from: z.coerce.number(),
+    to: z.coerce.number(),
+    label: z.string().min(1, 'Box label is required'),
+}).refine(data => data.to > data.from, {
+    message: 'To must be greater than From.',
+    path: ['to'],
+});
+
 
 export default function ControlPanelPage() {
   const { toast } = useToast();
@@ -72,6 +81,7 @@ export default function ControlPanelPage() {
   const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
 
 
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
@@ -82,6 +92,8 @@ export default function ControlPanelPage() {
   const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster });
   const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
+  const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
+
   
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
@@ -156,16 +168,28 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Udhda settings updated.' });
   }
 
+  function handleAddBoxSortingRange(values: z.infer<typeof boxSortingRangeSchema>) {
+    setBoxSortingRanges([...boxSortingRanges, { id: uuidv4(), ...values }]);
+    toast({ title: 'Success', description: 'Box sorting range added.' });
+    boxSortingForm.reset();
+  }
+
+  function handleDeleteBoxSortingRange(id: string) {
+    setBoxSortingRanges(boxSortingRanges.filter(range => range.id !== id));
+    toast({ title: 'Success', description: 'Box sorting range deleted.' });
+  }
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
           <TabsTrigger value="udhdha">Udhda</TabsTrigger>
+          <TabsTrigger value="box-sorting">Box Sorting</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
           <Card>
@@ -410,6 +434,52 @@ export default function ControlPanelPage() {
                     </Form>
                 </CardContent>
             </Card>
+        </TabsContent>
+        <TabsContent value="box-sorting" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Box Sorting Range</CardTitle>
+              <CardDescription>Define Polish Weight ranges to automatically sort packets into boxes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...boxSortingForm}>
+                <form onSubmit={boxSortingForm.handleSubmit(handleAddBoxSortingRange)} className="space-y-4 max-w-lg">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <FormField control={boxSortingForm.control} name="from" render={({ field }) => (
+                        <FormItem><FormLabel>From (Polish Wt.)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={boxSortingForm.control} name="to" render={({ field }) => (
+                        <FormItem><FormLabel>To (Polish Wt.)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={boxSortingForm.control} name="label" render={({ field }) => (
+                        <FormItem><FormLabel>Box Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <Button type="submit">Add Range</Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Manage Box Sorting Ranges</CardTitle></CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {boxSortingRanges.sort((a, b) => a.from - b.from).map(range => (
+                            <TableRow key={range.id}>
+                                <TableCell>{range.from.toFixed(3)}</TableCell>
+                                <TableCell>{range.to.toFixed(3)}</TableCell>
+                                <TableCell>{range.label}</TableCell>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteBoxSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -135,3 +135,22 @@ export interface JiramReportPacket {
     kapanNumber: string;
     scanTime: string;
 }
+
+// Box Sorting Types
+export interface BoxSortingRange {
+    id: string;
+    from: number;
+    to: number;
+    label: string;
+}
+
+export interface BoxSortingPacket {
+    id: string;
+    barcode: string;
+    packetNumber: string;
+    shape: string;
+    roughWeight: number;
+    polishWeight: number;
+    boxLabel: string;
+    scanTime: string;
+}

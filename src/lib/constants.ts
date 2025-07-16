@@ -21,3 +21,7 @@ export const UHDHA_SETTINGS_KEY = 'udhdhaSettings';
 
 // Jiram Report
 export const JIRAM_REPORT_PACKETS_KEY = 'jiramReportPackets';
+
+// Box Sorting
+export const BOX_SORTING_RANGES_KEY = 'boxSortingRanges';
+export const BOX_SORTING_PACKETS_KEY = 'boxSortingPackets';
