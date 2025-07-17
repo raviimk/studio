@@ -47,7 +47,11 @@ export default function ReturnLaserLotPage() {
     }
     const lotToReturn = laserLots.find(lot => lot.id === lotId);
     if (lotToReturn) {
-      setSelectedLot(lotToReturn);
+      // Filter scanned packets to only include those with 'R'
+      const filteredScannedPackets = lotToReturn.scannedPackets?.filter(p => p.fullBarcode.includes('R')) || [];
+      const lotWithFilteredPackets = { ...lotToReturn, scannedPackets: filteredScannedPackets };
+
+      setSelectedLot(lotWithFilteredPackets);
       setVerifiedPackets(new Set());
       setScannedBarcode('');
       packetRowRefs.current.clear();
@@ -59,6 +63,7 @@ export default function ReturnLaserLotPage() {
     e.preventDefault();
     if (!scannedBarcode || !selectedLot) return;
     
+    // Live scans are not filtered by 'R'
     const targetPacket = selectedLot.scannedPackets?.find(p => p.fullBarcode === scannedBarcode);
 
     if (targetPacket) {
@@ -106,6 +111,11 @@ export default function ReturnLaserLotPage() {
     const searchLower = searchTerm.toLowerCase();
     return laserLots.filter(lot => {
         if (lot.isReturned) return false;
+        
+        // Filter the lots themselves by checking if they contain at least one 'R' packet
+        const hasRPacket = lot.scannedPackets?.some(p => p.fullBarcode.includes('R'));
+        if (!hasRPacket) return false;
+
         if (!searchTerm) return true;
         return lot.lotNumber.toLowerCase().includes(searchLower) ||
                lot.kapanNumber.toLowerCase().includes(searchLower);
@@ -180,7 +190,7 @@ export default function ReturnLaserLotPage() {
           <DialogHeader>
             <DialogTitle>Return Lot: {selectedLot?.lotNumber}</DialogTitle>
             <DialogDescription>
-              Scan all packets to verify they are present before confirming the return.
+              Scan all packets to verify they are present before confirming the return. Only packets with "R" are shown.
             </DialogDescription>
           </DialogHeader>
           

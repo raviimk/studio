@@ -62,20 +62,21 @@ export default function UdhdaEntryPage() {
     e.preventDefault();
     if (!barcode) return;
 
+    // The "R" filter does not apply to live scanned packets
     if (scannedPackets.includes(barcode)) {
         toast({ variant: 'destructive', title: 'Duplicate Scan', description: `Barcode "${barcode}" is already in the list.` });
         setBarcode('');
         return;
     }
 
-    const activePacket = udhdhaPackets.find(p => p.barcode === barcode && !p.isReturned);
+    const activePacket = udhdhaPackets.find(p => p.barcode === barcode && !p.isReturned && p.barcode.includes('R'));
     if (activePacket) {
       toast({ variant: 'destructive', title: 'Packet Already Assigned', description: `This packet is already active with ${activePacket.operator}. Use the Udhda Return page.` });
       setBarcode('');
       return;
     }
     
-    const returnedPacket = udhdhaPackets.find(p => p.barcode === barcode && p.isReturned);
+    const returnedPacket = udhdhaPackets.find(p => p.barcode === barcode && p.isReturned && p.barcode.includes('R'));
     if (returnedPacket) {
       setPacketToReEnter(barcode);
       reEnterDialogTriggerRef.current?.click();
@@ -126,8 +127,7 @@ export default function UdhdaEntryPage() {
     setBarcode('');
   };
 
-
-  const pendingPackets = udhdhaPackets.filter(p => !p.isReturned).sort((a,b) => new Date(b.assignmentTime).getTime() - new Date(a.assignmentTime).getTime());
+  const pendingPackets = udhdhaPackets.filter(p => !p.isReturned && p.barcode.includes('R')).sort((a,b) => new Date(b.assignmentTime).getTime() - new Date(a.assignmentTime).getTime());
   const operatorList = processType === 'sarin' ? sarinOperators : laserOperators;
 
   return (

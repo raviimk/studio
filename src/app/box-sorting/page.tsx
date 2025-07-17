@@ -94,7 +94,26 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
 export default function BoxSortingPage() {
   const { toast } = useToast();
   const [ranges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
-  const [packets, setPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  
+  // Apply filtering logic when reading from localStorage
+  const [allPackets, setAllPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  const [packets, setPackets] = useState<BoxSortingPacket[]>([]);
+
+  useEffect(() => {
+    // On mount, filter the packets from localStorage
+    const filteredOldPackets = allPackets.filter(p => p.packetNumber.includes('R'));
+    setPackets(filteredOldPackets);
+  }, []); // Run only once on mount
+
+  const updatePackets = (newPackets: BoxSortingPacket[] | ((prev: BoxSortingPacket[]) => BoxSortingPacket[])) => {
+    const updater = (currentPackets: BoxSortingPacket[]) => {
+      const updated = typeof newPackets === 'function' ? newPackets(currentPackets) : newPackets;
+      setPackets(updated); // Update the session state
+      setAllPackets(updated); // Update the persistent localStorage state
+      return updated;
+    };
+    setPackets(updater);
+  };
   
   const [barcode, setBarcode] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +147,7 @@ export default function BoxSortingPage() {
       return false;
     }
     
+    // Check against all packets in memory for duplicates
     if (packets.some(p => p.packetNumber === packetData.packetNumber)) {
         toast({
             variant: 'destructive',
@@ -154,7 +174,7 @@ export default function BoxSortingPage() {
       scanTime: new Date().toISOString(),
     };
 
-    setPackets(prev => [...prev, newPacket]);
+    updatePackets(prev => [...prev, newPacket]);
     setHighlightedItem({ shape: newPacket.shape, boxLabel: newPacket.boxLabel });
     toast({
         title: `Packet Added to ${newPacket.shape} / ${matchedRange.label}`,
@@ -259,12 +279,12 @@ export default function BoxSortingPage() {
   }, [packets]);
 
   const handleDeletePacket = (packetId: string) => {
-    setPackets(prev => prev.filter(p => p.id !== packetId));
+    updatePackets(prev => prev.filter(p => p.id !== packetId));
     toast({ title: 'Packet Deleted' });
   };
 
   const handleDeleteBox = (shape: string, boxLabel: string) => {
-    setPackets(prev => prev.filter(p => !(p.shape === shape && p.boxLabel === boxLabel)));
+    updatePackets(prev => prev.filter(p => !(p.shape === shape && p.boxLabel === boxLabel)));
     toast({ title: 'Box Cleared', description: `All packets from ${boxLabel} in ${shape} have been deleted.`});
   }
 
@@ -276,7 +296,7 @@ export default function BoxSortingPage() {
   }
 
   const handleDeleteShape = (shape: string) => {
-    setPackets(prev => prev.filter(p => p.shape !== shape));
+    updatePackets(prev => prev.filter(p => p.shape !== shape));
     toast({ title: 'Shape Cleared', description: `All packets for shape ${shape} have been deleted.` });
   }
 
