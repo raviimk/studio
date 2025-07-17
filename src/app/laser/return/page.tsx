@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
 import { LaserLot, LaserOperator, ScannedPacket } from '@/lib/types';
@@ -30,6 +30,16 @@ export default function ReturnLaserLotPage() {
   const [selectedLot, setSelectedLot] = useState<LaserLot | null>(null);
   const [scannedInDialog, setScannedInDialog] = useState<Set<string>>(new Set());
   const [scanInput, setScanInput] = useState('');
+  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
+
+
+  useEffect(() => {
+    if (lastScanned && itemRefs.current.has(lastScanned)) {
+        const item = itemRefs.current.get(lastScanned);
+        item?.scrollIntoView({ behavior: 'smooth', block: 'nearest'});
+    }
+  }, [lastScanned, scannedInDialog]);
 
   const unreturnedLots = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
@@ -52,6 +62,8 @@ export default function ReturnLaserLotPage() {
     setSelectedLot(lot);
     setScannedInDialog(new Set());
     setScanInput('');
+    setLastScanned(null);
+    itemRefs.current.clear();
     setIsDialogOpen(true);
   };
   
@@ -65,6 +77,7 @@ export default function ReturnLaserLotPage() {
             toast({variant: 'destructive', title: 'Already Scanned', description: 'This packet has already been verified for this lot.'})
         } else {
             setScannedInDialog(prev => new Set(prev).add(scanInput));
+            setLastScanned(scanInput);
             toast({title: 'Packet Verified', description: scanInput});
         }
     } else {
@@ -198,7 +211,10 @@ export default function ReturnLaserLotPage() {
                        </TableHeader>
                        <TableBody>
                            {selectedLot?.scannedPackets?.map(packet => (
-                               <TableRow key={packet.id}>
+                               <TableRow key={packet.id} ref={node => {
+                                   if(node) itemRefs.current.set(packet.fullBarcode, node);
+                                   else itemRefs.current.delete(packet.fullBarcode);
+                               }}>
                                    <TableCell className="font-mono">{packet.fullBarcode}</TableCell>
                                    <TableCell>
                                        {scannedInDialog.has(packet.fullBarcode) ? 
