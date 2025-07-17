@@ -139,48 +139,56 @@ export default function ReturnLaserLotPage() {
               </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Lot No.</TableHead>
-                  <TableHead>Kapan No.</TableHead>
-                  <TableHead>Tension</TableHead>
-                  <TableHead>Packets</TableHead>
-                  <TableHead>Entry Time</TableHead>
-                  <TableHead>Select Operator</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {unreturnedLots.map(lot => (
-                  <TableRow key={lot.id}>
-                    <TableCell>{lot.lotNumber}</TableCell>
-                    <TableCell>{lot.kapanNumber}</TableCell>
-                    <TableCell>{lot.tensionType}</TableCell>
-                    <TableCell>{lot.packetCount}</TableCell>
-                    <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
-                    <TableCell>
-                      <Select onValueChange={(value) => setSelectedOperators(prev => ({ ...prev, [lot.id]: value }))}>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select Operator" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {laserOperators.map(op => (
-                            <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Button onClick={() => handleOpenReturnDialog(lot.id)} disabled={!selectedOperators[lot.id]}>
-                        Return Lot
-                      </Button>
-                    </TableCell>
+            <div className="border rounded-md max-h-[60vh] overflow-y-auto">
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead>Lot No.</TableHead>
+                    <TableHead>Kapan No.</TableHead>
+                    <TableHead>Tension</TableHead>
+                    <TableHead>Packets</TableHead>
+                    <TableHead>Entry Time</TableHead>
+                    <TableHead>Select Operator</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {unreturnedLots.length === 0 && <p className="text-center text-muted-foreground p-4">No unreturned lots found.</p>}
+                </TableHeader>
+                <TableBody>
+                  {unreturnedLots.map(lot => (
+                    <TableRow key={lot.id}>
+                      <TableCell>{lot.lotNumber}</TableCell>
+                      <TableCell>{lot.kapanNumber}</TableCell>
+                      <TableCell>{lot.tensionType}</TableCell>
+                      <TableCell>{lot.packetCount}</TableCell>
+                      <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                      <TableCell>
+                        <Select onValueChange={(value) => setSelectedOperators(prev => ({ ...prev, [lot.id]: value }))}>
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select Operator" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {laserOperators.map(op => (
+                              <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button onClick={() => handleOpenReturnDialog(lot.id)} disabled={!selectedOperators[lot.id]}>
+                          Return Lot
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {unreturnedLots.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                            No unreturned lots found.
+                        </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
