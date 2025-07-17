@@ -191,8 +191,9 @@ export default function ReturnLaserLotPage() {
                            value={scanInput}
                            onChange={e => setScanInput(e.target.value)}
                            autoFocus
+                           disabled={allPacketsScanned}
                         />
-                       <Button type="submit">Scan Packet</Button>
+                       <Button type="submit" disabled={allPacketsScanned}>Scan Packet</Button>
                    </form>
                    <div className="mt-4">
                        <Progress value={(scannedInDialog.size / (selectedLot?.packetCount || 1)) * 100} />
