@@ -1,9 +1,9 @@
 
 'use client';
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
-import { LaserLot, LaserOperator, ScannedPacket } from '@/lib/types';
+import { LaserLot, LaserOperator } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,132 +11,81 @@ import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Barcode, CheckCircle2, Circle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 export default function ReturnLaserLotPage() {
   const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
-  const [selectedOperators, setSelectedOperators] = useState<{ [key: string]: string }>({});
+  const [returningOperator, setReturningOperator] = useState('');
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-
-  // State for the return verification dialog
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedLot, setSelectedLot] = useState<LaserLot | null>(null);
-  const [scannedBarcode, setScannedBarcode] = useState('');
-  const [verifiedPackets, setVerifiedPackets] = useState<Set<string>>(new Set());
-  const barcodeInputRef = useRef<HTMLInputElement>(null);
-  const packetRowRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
-
-  useEffect(() => {
-    if (isDialogOpen) {
-      setTimeout(() => {
-        barcodeInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isDialogOpen]);
-  
-  const handleOpenReturnDialog = (lotId: string) => {
-    const operatorName = selectedOperators[lotId];
-    if (!operatorName) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select an operator.' });
-      return;
-    }
-    const lotToReturn = laserLots.find(lot => lot.id === lotId);
-    if (lotToReturn) {
-      // Filter scanned packets to only include those with 'R'
-      const filteredScannedPackets = lotToReturn.scannedPackets?.filter(p => p.fullBarcode.includes('R')) || [];
-      const lotWithFilteredPackets = { ...lotToReturn, scannedPackets: filteredScannedPackets };
-
-      setSelectedLot(lotWithFilteredPackets);
-      setVerifiedPackets(new Set());
-      setScannedBarcode('');
-      packetRowRefs.current.clear();
-      setIsDialogOpen(true);
-    }
-  };
-
-  const handleBarcodeScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scannedBarcode || !selectedLot) return;
-    
-    // Live scans are not filtered by 'R'
-    const targetPacket = selectedLot.scannedPackets?.find(p => p.fullBarcode === scannedBarcode);
-
-    if (targetPacket) {
-      if(verifiedPackets.has(targetPacket.id)) {
-        toast({ variant: 'destructive', title: 'Already Verified', description: 'This packet has already been scanned.' });
-      } else {
-        const newVerified = new Set(verifiedPackets);
-        newVerified.add(targetPacket.id);
-        setVerifiedPackets(newVerified);
-        toast({ title: 'Packet Verified', description: `Packet ${targetPacket.fullBarcode} confirmed.`});
-        // Scroll to the verified packet
-        const rowElement = packetRowRefs.current.get(targetPacket.id);
-        rowElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    } else {
-        toast({ variant: 'destructive', title: 'Wrong Packet', description: 'This packet does not belong to the current lot.' });
-    }
-    setScannedBarcode('');
-  };
-
-  const handleConfirmReturn = () => {
-    if (!selectedLot) return;
-
-    const operatorName = selectedOperators[selectedLot.id];
-
-    const updatedLots = laserLots.map(lot =>
-      lot.id === selectedLot.id
-        ? { ...lot, isReturned: true, returnedBy: operatorName, returnDate: new Date().toISOString() }
-        : lot
-    );
-    setLaserLots(updatedLots);
-    toast({ title: 'Success', description: 'Lot has been marked as returned.' });
-    
-    // Close dialog and reset state
-    setIsDialogOpen(false);
-    setSelectedLot(null);
-  };
-  
-  const allPacketsVerified = useMemo(() => {
-    if (!selectedLot || !selectedLot.scannedPackets) return false;
-    return verifiedPackets.size === selectedLot.scannedPackets.length;
-  }, [selectedLot, verifiedPackets]);
 
   const unreturnedLots = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
     return laserLots.filter(lot => {
         if (lot.isReturned) return false;
         
-        // Filter the lots themselves by checking if they contain at least one 'R' packet
-        const hasRPacket = lot.scannedPackets?.some(p => p.fullBarcode.includes('R'));
-        if (!hasRPacket) return false;
-
         if (!searchTerm) return true;
+        
         return lot.lotNumber.toLowerCase().includes(searchLower) ||
-               lot.kapanNumber.toLowerCase().includes(searchLower);
-    });
+               lot.kapanNumber.toLowerCase().includes(searchLower) ||
+               lot.tensionType.toLowerCase().includes(searchLower);
+    }).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
   }, [laserLots, searchTerm]);
 
+
+  const handleReturnLot = (lotToReturn: LaserLot) => {
+    if (!returningOperator) {
+        toast({ variant: 'destructive', title: 'Operator Not Selected', description: 'Please select the operator who is returning the lot.' });
+        return;
+    }
+
+    const updatedLots = laserLots.map(lot =>
+      lot.id === lotToReturn.id
+        ? { ...lot, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() }
+        : lot
+    );
+    setLaserLots(updatedLots);
+    toast({ title: 'Success', description: 'Lot has been marked as returned.' });
+  };
+
+
   return (
-    <>
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="Return Laser Lot" description="Mark laser lots as returned after packet verification." />
         <Card>
           <CardHeader>
               <CardTitle>Unreturned Lots</CardTitle>
-              <div className="mt-4">
+               <div className="mt-4 flex flex-col sm:flex-row gap-4">
                   <Input
-                      placeholder="Search by Lot or Kapan Number..."
+                      placeholder="Search by Lot, Kapan, or Tension..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="max-w-sm"
                   />
-              </div>
+                  <Select onValueChange={setReturningOperator} value={returningOperator}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                      <SelectValue placeholder="Select Returning Operator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {laserOperators.map(op => (
+                        <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+               </div>
           </CardHeader>
           <CardContent>
             <div className="border rounded-md max-h-[60vh] overflow-y-auto">
@@ -148,7 +97,6 @@ export default function ReturnLaserLotPage() {
                     <TableHead>Tension</TableHead>
                     <TableHead>Packets</TableHead>
                     <TableHead>Entry Time</TableHead>
-                    <TableHead>Select Operator</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -161,21 +109,25 @@ export default function ReturnLaserLotPage() {
                       <TableCell>{lot.packetCount}</TableCell>
                       <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                       <TableCell>
-                        <Select onValueChange={(value) => setSelectedOperators(prev => ({ ...prev, [lot.id]: value }))}>
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select Operator" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {laserOperators.map(op => (
-                              <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <Button onClick={() => handleOpenReturnDialog(lot.id)} disabled={!selectedOperators[lot.id]}>
-                          Return Lot
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button disabled={!returningOperator}>Return Lot</Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirm Lot Return</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  Are you sure you want to return Lot <span className="font-bold">{lot.lotNumber}</span>? 
+                                  This will be marked as returned by <span className="font-bold">{returningOperator}</span>.
+                                  This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleReturnLot(lot)}>Confirm Return</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -192,71 +144,5 @@ export default function ReturnLaserLotPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Return Lot: {selectedLot?.lotNumber}</DialogTitle>
-            <DialogDescription>
-              Scan all packets to verify they are present before confirming the return. Only packets with "R" are shown.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <form onSubmit={handleBarcodeScan} className="flex gap-2">
-                <Input
-                    ref={barcodeInputRef}
-                    placeholder="Scan packet barcode..."
-                    value={scannedBarcode}
-                    onChange={(e) => setScannedBarcode(e.target.value)}
-                />
-                <Button type="submit" disabled={!scannedBarcode}>
-                    <Barcode className="mr-2 h-4 w-4" /> Verify
-                </Button>
-            </form>
-
-            <div className="border rounded-md max-h-[300px] overflow-y-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Barcode</TableHead>
-                            <TableHead>Packet #</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {selectedLot?.scannedPackets?.map(p => (
-                            <TableRow
-                                key={p.id}
-                                ref={(el) => packetRowRefs.current.set(p.id, el)}
-                                className={verifiedPackets.has(p.id) ? 'bg-green-100 dark:bg-green-900/30' : ''}
-                            >
-                                <TableCell>
-                                    {verifiedPackets.has(p.id) ? (
-                                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                    ) : (
-                                        <Circle className="h-5 w-5 text-muted-foreground" />
-                                    )}
-                                </TableCell>
-                                <TableCell className="font-mono">{p.fullBarcode}</TableCell>
-                                <TableCell>{p.packetNumber}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-          </div>
-
-          <DialogFooter className='sm:justify-between items-center pt-4'>
-            <Badge>
-                Verified: {verifiedPackets.size} / {selectedLot?.scannedPackets?.length || 0}
-            </Badge>
-            <Button onClick={handleConfirmReturn} disabled={!allPacketsVerified}>
-              Confirm Return
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   );
 }
