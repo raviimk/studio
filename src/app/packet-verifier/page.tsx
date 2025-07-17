@@ -13,8 +13,27 @@ import { Badge } from '@/components/ui/badge';
 import { Barcode, CheckCircle2, ClipboardCopy, List, ListX, Lock, Unlock, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Helper function to normalize packet numbers by removing the 'R' prefix
-const normalizePacketNumber = (packet: string): string => {
+// Helper function to find a packet number in a string and normalize it by removing the 'R' prefix
+const findAndNormalizePacketNumber = (line: string): string | null => {
+  const trimmedLine = line.trim();
+  // Regex to find patterns like R77-185-D or 77-114-C
+  const match = trimmedLine.match(/(R?\d+-\d+(?:-[A-Z])?)/);
+
+  if (!match) {
+    return null;
+  }
+
+  let packetNumber = match[1];
+  if (packetNumber.toUpperCase().startsWith('R')) {
+    packetNumber = packetNumber.substring(1);
+  }
+  
+  return packetNumber;
+};
+
+
+// Helper function to normalize a scanned barcode
+const normalizeScannedBarcode = (packet: string): string => {
   const trimmed = packet.trim();
   if (trimmed.toUpperCase().startsWith('R')) {
     return trimmed.substring(1);
@@ -38,11 +57,11 @@ export default function PacketVerifierPage() {
     }
     const lines = pastedData.trim().split('\n');
     const parsedPackets = new Set(
-        lines.map(normalizePacketNumber).filter(p => p) // Normalize and filter empty lines
+      lines.map(findAndNormalizePacketNumber).filter((p): p is string => p !== null)
     );
     
     if(parsedPackets.size === 0) {
-        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not parse any valid packets.' });
+        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not parse any valid packets from the pasted data.' });
         return;
     }
 
@@ -62,7 +81,7 @@ export default function PacketVerifierPage() {
     e.preventDefault();
     if (!scanInput.trim()) return;
     
-    const normalizedScannedPacket = normalizePacketNumber(scanInput);
+    const normalizedScannedPacket = normalizeScannedBarcode(scanInput);
 
     if (scannedBarcodes.has(normalizedScannedPacket)) {
         toast({ variant: 'destructive', title: 'Already Scanned', description: `Packet ${normalizedScannedPacket} has already been scanned.`});
@@ -100,14 +119,14 @@ export default function PacketVerifierPage() {
         <Card>
           <CardHeader>
             <CardTitle>Step 1: Provide Expected Packet List</CardTitle>
-            <CardDescription>Paste your list of packet numbers, one per line.</CardDescription>
+            <CardDescription>Paste your list of packets, one per line. The tool will automatically extract the packet number (e.g., 77-114-C).</CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
               value={pastedData}
               onChange={(e) => setPastedData(e.target.value)}
               rows={10}
-              placeholder={'R77-185-D\n77-114-C\n77-279-C'}
+              placeholder={'Example:\nR77-185-D, 1, 0.033, 0.011\n77-114-C  1  0.042  0.016'}
               className="font-mono"
             />
             <Button onClick={handleLockList} className="mt-4"><Lock className="mr-2" /> Lock List & Begin Scanning</Button>
