@@ -13,16 +13,6 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
-interface UnreturnedLot {
-  lotNumber: string;
-  kapanNumber: string;
-  machine: string;
-  operator: string;
-  entryDate: string;
-  totalMainPacketCount: number;
-  totalPacketCount: number;
-  totalJiramCount: number;
-}
 
 export default function ReturnSarinLotPage() {
   const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
@@ -32,52 +22,35 @@ export default function ReturnSarinLotPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
 
-  const unreturnedLots: UnreturnedLot[] = useMemo(() => {
-    const lots: Record<string, UnreturnedLot> = {};
+  const unreturnedEntries: SarinPacket[] = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
 
-    sarinPackets
+    return sarinPackets
       .filter(p => {
-        if (!p.isReturned) {
-            if (!searchTerm) return true;
-            return p.lotNumber.toLowerCase().includes(searchLower) ||
-                   p.kapanNumber.toLowerCase().includes(searchLower) ||
-                   p.operator.toLowerCase().includes(searchLower);
-        }
-        return false;
+        if (p.isReturned) return false;
+        
+        if (!searchTerm) return true;
+        
+        return p.lotNumber.toLowerCase().includes(searchLower) ||
+               p.kapanNumber.toLowerCase().includes(searchLower) ||
+               p.operator.toLowerCase().includes(searchLower);
       })
-      .forEach(p => {
-        if (!lots[p.lotNumber]) {
-          lots[p.lotNumber] = {
-            lotNumber: p.lotNumber,
-            kapanNumber: p.kapanNumber,
-            machine: p.machine,
-            operator: p.operator,
-            entryDate: p.date,
-            totalMainPacketCount: 0,
-            totalPacketCount: 0,
-            totalJiramCount: 0,
-          };
-        }
-        const lot = lots[p.lotNumber];
-        lot.totalMainPacketCount += p.mainPacketNumber || 0;
-        lot.totalPacketCount += p.packetCount;
-        lot.totalJiramCount += p.jiramCount || 0;
-      });
-    return Object.values(lots).sort((a,b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sarinPackets, searchTerm]);
 
-  const handleReturn = (lotNumber: string) => {
+  const handleReturn = (packetId: string) => {
     if (!returningOperator) {
         toast({ variant: 'destructive', title: 'Error', description: 'Please select who is returning the lot.' });
         return;
     }
-    if (window.confirm('Are you sure you want to return this lot?')) {
+    const packetToReturn = sarinPackets.find(p => p.id === packetId);
+
+    if (window.confirm(`Are you sure you want to return Lot ${packetToReturn?.lotNumber} (Kapan: ${packetToReturn?.kapanNumber})?`)) {
       const updatedPackets = sarinPackets.map(p =>
-        p.lotNumber === lotNumber ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : p
+        p.id === packetId ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : p
       );
       setSarinPackets(updatedPackets);
-      toast({ title: 'Success', description: `Lot ${lotNumber} has been marked as returned.` });
+      toast({ title: 'Success', description: `Lot entry has been marked as returned.` });
     }
   };
 
@@ -86,7 +59,7 @@ export default function ReturnSarinLotPage() {
       <PageHeader title="Return Sarin Lot" description="Mark Sarin lots as returned." />
       <Card>
         <CardHeader>
-            <CardTitle>Unreturned Lots</CardTitle>
+            <CardTitle>Unreturned Entries</CardTitle>
             <div className="mt-4 flex flex-col sm:flex-row gap-4">
                 <Input
                     placeholder="Search by Lot, Kapan, or Operator..."
@@ -119,25 +92,27 @@ export default function ReturnSarinLotPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {unreturnedLots.map(lot => (
-                <TableRow key={lot.lotNumber}>
-                  <TableCell>{lot.lotNumber}</TableCell>
-                  <TableCell>{lot.kapanNumber}</TableCell>
-                  <TableCell>{lot.operator}</TableCell>
+              {unreturnedEntries.map(entry => (
+                <TableRow key={entry.id}>
+                  <TableCell>{entry.lotNumber}</TableCell>
+                  <TableCell>{entry.kapanNumber}</TableCell>
+                  <TableCell>{entry.operator}</TableCell>
                   <TableCell>
                     <div className="font-mono text-xs font-bold">
-                        {lot.totalMainPacketCount} / {lot.totalPacketCount} / {lot.totalJiramCount}
+                        {entry.mainPacketNumber} / {entry.packetCount} / {entry.jiramCount || 0}
                     </div>
                   </TableCell>
-                  <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                  <TableCell>{format(new Date(entry.date), 'PPp')}</TableCell>
                   <TableCell>
-                    <Button onClick={() => handleReturn(lot.lotNumber)} disabled={!returningOperator || returningOperator !== lot.operator}>Return Lot</Button>
+                    <Button onClick={() => handleReturn(entry.id)} disabled={!returningOperator || returningOperator !== entry.operator}>
+                        Return Entry
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {unreturnedLots.length === 0 && <p className="text-center text-muted-foreground p-4">No unreturned lots found.</p>}
+          {unreturnedEntries.length === 0 && <p className="text-center text-muted-foreground p-4">No unreturned entries found.</p>}
         </CardContent>
       </Card>
     </div>
