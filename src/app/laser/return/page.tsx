@@ -13,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Check, X } from 'lucide-react';
+import { Check, X, ThumbsUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 
 export default function ReturnLaserLotPage() {
@@ -32,6 +33,7 @@ export default function ReturnLaserLotPage() {
   const [scanInput, setScanInput] = useState('');
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
+  const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
 
 
   useEffect(() => {
@@ -107,10 +109,25 @@ export default function ReturnLaserLotPage() {
     if (!selectedLot) return false;
     return selectedLot.packetCount === scannedInDialog.size;
   }, [selectedLot, scannedInDialog]);
+  
+  useEffect(() => {
+    if (allPacketsScanned) {
+      setShowVictoryAnimation(true);
+      const timer = setTimeout(() => {
+        setShowVictoryAnimation(false);
+      }, 3000); // Animation lasts for 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [allPacketsScanned]);
 
 
   return (
       <div className="container mx-auto py-8 px-4 md:px-6">
+        {showVictoryAnimation && (
+          <div className="fixed bottom-8 left-8 z-[100] animate-thumbs-up">
+            <ThumbsUp className="h-24 w-24 text-green-500" fill="currentColor" />
+          </div>
+        )}
         <PageHeader title="Return Laser Lot" description="Verify all packets for a lot before marking it as returned." />
         <Card>
           <CardHeader>
@@ -215,7 +232,7 @@ export default function ReturnLaserLotPage() {
                                <TableRow key={packet.id} ref={node => {
                                    if(node) itemRefs.current.set(packet.fullBarcode, node);
                                    else itemRefs.current.delete(packet.fullBarcode);
-                               }}>
+                               }} className={cn(lastScanned === packet.fullBarcode && 'bg-green-100 dark:bg-green-900/30')}>
                                    <TableCell className="font-mono">{packet.fullBarcode}</TableCell>
                                    <TableCell>
                                        {scannedInDialog.has(packet.fullBarcode) ? 
