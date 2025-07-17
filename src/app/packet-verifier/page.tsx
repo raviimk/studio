@@ -13,18 +13,20 @@ import { Badge } from '@/components/ui/badge';
 import { Barcode, CheckCircle2, ClipboardCopy, List, ListX, Lock, Unlock, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type ExpectedPacket = {
-  packetNumber: string;
-  quantity: string;
-  weight: string;
-  polishWeight: string;
+// Helper function to normalize packet numbers by removing the 'R' prefix
+const normalizePacketNumber = (packet: string): string => {
+  const trimmed = packet.trim();
+  if (trimmed.toUpperCase().startsWith('R')) {
+    return trimmed.substring(1);
+  }
+  return trimmed;
 };
 
 export default function PacketVerifierPage() {
   const { toast } = useToast();
 
   const [pastedData, setPastedData] = useState('');
-  const [expectedPackets, setExpectedPackets] = useState<ExpectedPacket[]>([]);
+  const [expectedPackets, setExpectedPackets] = useState<Set<string>>(new Set());
   const [scannedBarcodes, setScannedBarcodes] = useState<Set<string>>(new Set());
   const [isLocked, setIsLocked] = useState(false);
   const [scanInput, setScanInput] = useState('');
@@ -35,36 +37,23 @@ export default function PacketVerifierPage() {
       return;
     }
     const lines = pastedData.trim().split('\n');
-    const parsedPackets: ExpectedPacket[] = [];
+    const parsedPackets = new Set(
+        lines.map(normalizePacketNumber).filter(p => p) // Normalize and filter empty lines
+    );
     
-    for (const line of lines) {
-        const parts = line.split(/[,\t]/); // Split by comma or tab
-        if (parts.length >= 4) {
-            const [packetNumber, quantity, weight, polishWeight] = parts;
-            if (packetNumber.trim()) {
-                 parsedPackets.push({
-                    packetNumber: packetNumber.trim(),
-                    quantity: quantity.trim(),
-                    weight: weight.trim(),
-                    polishWeight: polishWeight.trim(),
-                });
-            }
-        }
-    }
-    
-    if(parsedPackets.length === 0) {
-        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not parse any valid packets. Ensure format is: Packet,Qty,Wt,PolishWt' });
+    if(parsedPackets.size === 0) {
+        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not parse any valid packets.' });
         return;
     }
 
     setExpectedPackets(parsedPackets);
     setIsLocked(true);
-    toast({ title: 'List Locked', description: `Loaded ${parsedPackets.length} packets. You can now start scanning.`});
+    toast({ title: 'List Locked', description: `Loaded ${parsedPackets.size} packets. You can now start scanning.`});
   };
 
   const handleUnlockList = () => {
     setIsLocked(false);
-    setExpectedPackets([]);
+    setExpectedPackets(new Set());
     setScannedBarcodes(new Set());
     setPastedData('');
   };
@@ -73,44 +62,30 @@ export default function PacketVerifierPage() {
     e.preventDefault();
     if (!scanInput.trim()) return;
     
-    // Logic to extract packet number from various barcode formats
-    let packetNumber = scanInput.trim();
-    const match = packetNumber.match(/^(?:R)?\d+-\d+(?:-(.+))?$/); // For "Kapan-Packet-Suffix"
-    if (match) {
-        const [, , mainPart, suffix] = match;
-        // Reconstruct a key if needed, or assume the full string is the key. 
-        // For this generic verifier, we'll use the full barcode string.
-    } else {
-        const commaParts = packetNumber.split(',');
-        if (commaParts.length > 14) { // Heuristic for the long barcode
-            packetNumber = commaParts[14].trim();
-        }
-    }
+    const normalizedScannedPacket = normalizePacketNumber(scanInput);
 
-    if (scannedBarcodes.has(packetNumber)) {
-        toast({ variant: 'destructive', title: 'Already Scanned', description: `Packet ${packetNumber} has already been scanned.`});
+    if (scannedBarcodes.has(normalizedScannedPacket)) {
+        toast({ variant: 'destructive', title: 'Already Scanned', description: `Packet ${normalizedScannedPacket} has already been scanned.`});
     } else {
-        setScannedBarcodes(new Set(scannedBarcodes).add(packetNumber));
-        toast({ title: 'Packet Scanned', description: packetNumber });
+        setScannedBarcodes(new Set(scannedBarcodes).add(normalizedScannedPacket));
+        toast({ title: 'Packet Scanned', description: normalizedScannedPacket });
     }
     setScanInput('');
   };
 
   const { matched, missing, extra } = useMemo(() => {
-    const expectedSet = new Set(expectedPackets.map(p => p.packetNumber));
-    
-    const matchedPackets = expectedPackets.filter(p => scannedBarcodes.has(p.packetNumber));
-    const missingPackets = expectedPackets.filter(p => !scannedBarcodes.has(p.packetNumber));
-    const extraPackets = [...scannedBarcodes].filter(b => !expectedSet.has(b));
+    const matchedPackets = new Set([...expectedPackets].filter(p => scannedBarcodes.has(p)));
+    const missingPackets = new Set([...expectedPackets].filter(p => !scannedBarcodes.has(p)));
+    const extraPackets = new Set([...scannedBarcodes].filter(b => !expectedPackets.has(b)));
 
-    return { matched: matchedPackets, missing: missingPackets, extra: extraPackets };
+    return { matched: [...matchedPackets], missing: [...missingPackets], extra: [...extraPackets] };
   }, [expectedPackets, scannedBarcodes]);
 
   const handleCopyReport = () => {
     let report = '--- PACKET VERIFICATION REPORT ---\n\n';
     report += `--- MISSING (${missing.length}) ---\n`;
-    missing.forEach(p => report += `${p.packetNumber}\n`);
-    report += `\n--- EXTRA (${extra.length}) ---\n`;
+    missing.forEach(p => report += `${p}\n`);
+    report += `\n--- EXTRA SCANNED (${extra.length}) ---\n`;
     extra.forEach(b => report += `${b}\n`);
     
     navigator.clipboard.writeText(report);
@@ -125,14 +100,14 @@ export default function PacketVerifierPage() {
         <Card>
           <CardHeader>
             <CardTitle>Step 1: Provide Expected Packet List</CardTitle>
-            <CardDescription>Paste your data from Excel or another source. The format should be: <span className="font-mono text-xs">Packet Number, Quantity, Weight, Polish Wt</span> per line.</CardDescription>
+            <CardDescription>Paste your list of packet numbers, one per line.</CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
               value={pastedData}
               onChange={(e) => setPastedData(e.target.value)}
               rows={10}
-              placeholder="78-246-E,1,0.021,0.004..."
+              placeholder={'R77-185-D\n77-114-C\n77-279-C'}
               className="font-mono"
             />
             <Button onClick={handleLockList} className="mt-4"><Lock className="mr-2" /> Lock List & Begin Scanning</Button>
@@ -143,7 +118,7 @@ export default function PacketVerifierPage() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Total in List</CardTitle><List/></CardHeader>
-                    <CardContent><div className="text-2xl font-bold">{expectedPackets.length}</div></CardContent>
+                    <CardContent><div className="text-2xl font-bold">{expectedPackets.size}</div></CardContent>
                 </Card>
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium">Matched</CardTitle><CheckCircle2 className="text-green-600"/></CardHeader>
@@ -186,15 +161,15 @@ export default function PacketVerifierPage() {
             <div className="grid lg:grid-cols-3 gap-6">
                 <Card className={cn(missing.length === 0 && "border-green-500")}>
                     <CardHeader><CardTitle>Missing ({missing.length})</CardTitle></CardHeader>
-                    <CardContent><PacketTable packets={missing} /></CardContent>
+                    <CardContent><PacketList barcodes={missing} /></CardContent>
                 </Card>
                 <Card className={cn(extra.length > 0 && "border-red-500")}>
                     <CardHeader><CardTitle>Extra ({extra.length})</CardTitle></CardHeader>
-                    <CardContent><BarePacketTable barcodes={extra} /></CardContent>
+                    <CardContent><PacketList barcodes={extra} /></CardContent>
                 </Card>
                  <Card>
                     <CardHeader><CardTitle>Matched ({matched.length})</CardTitle></CardHeader>
-                    <CardContent><PacketTable packets={matched} /></CardContent>
+                    <CardContent><PacketList barcodes={matched} /></CardContent>
                 </Card>
             </div>
         </div>
@@ -204,8 +179,8 @@ export default function PacketVerifierPage() {
 }
 
 
-function PacketTable({ packets }: { packets: ExpectedPacket[] }) {
-    if (packets.length === 0) return <p className="text-sm text-center text-muted-foreground py-4">None</p>;
+function PacketList({ barcodes }: { barcodes: string[] }) {
+    if (barcodes.length === 0) return <p className="text-sm text-center text-muted-foreground py-4">None</p>;
 
     return (
         <div className="max-h-96 overflow-y-auto">
@@ -213,39 +188,12 @@ function PacketTable({ packets }: { packets: ExpectedPacket[] }) {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Packet #</TableHead>
-                        <TableHead>Qty</TableHead>
-                        <TableHead>Polish Wt</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {packets.map(p => (
-                        <TableRow key={p.packetNumber}>
-                            <TableCell className="font-mono text-xs">{p.packetNumber}</TableCell>
-                            <TableCell>{p.quantity}</TableCell>
-                            <TableCell>{p.polishWeight}</TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
-    );
-}
-
-function BarePacketTable({ barcodes }: { barcodes: string[] }) {
-    if (barcodes.length === 0) return <p className="text-sm text-center text-muted-foreground py-4">None</p>;
-
-    return (
-        <div className="max-h-96 overflow-y-auto">
-            <Table>
-                 <TableHeader>
-                    <TableRow>
-                        <TableHead>Scanned Barcode</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {barcodes.map(b => (
-                        <TableRow key={b}>
-                            <TableCell className="font-mono text-xs">{b}</TableCell>
+                    {barcodes.sort().map(p => (
+                        <TableRow key={p}>
+                            <TableCell className="font-mono text-xs">{p}</TableCell>
                         </TableRow>
                     ))}
                 </TableBody>
