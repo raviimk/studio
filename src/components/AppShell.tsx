@@ -91,6 +91,11 @@ const menuItems = [
     icon: Box,
   },
   {
+    label: 'Packet Verifier',
+    href: '/packet-verifier',
+    icon: ListTodo,
+  },
+  {
     label: 'Packet Reassignment',
     href: '/reassignment',
     icon: Replace,
