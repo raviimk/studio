@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { 
+  ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
   FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY
@@ -21,6 +22,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/PageHeader';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { format } from 'date-fns';
 
 // Schemas
 const sarinOperatorSchema = z.object({
@@ -179,17 +182,80 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Box sorting range deleted.' });
   }
 
+  const handleBackup = () => {
+    try {
+      const backupData: { [key: string]: any } = {};
+      ALL_APP_KEYS.forEach(key => {
+        const data = localStorage.getItem(key);
+        if (data) {
+          backupData[key] = JSON.parse(data);
+        }
+      });
+      
+      const jsonString = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Backup Successful', description: 'All application data has been saved.' });
+    } catch (error) {
+      console.error('Backup failed:', error);
+      toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
+    }
+  };
+  
+  const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') throw new Error('Invalid file content');
+        
+        const backupData = JSON.parse(text);
+
+        // Clear existing data and restore from backup
+        localStorage.clear();
+        Object.keys(backupData).forEach(key => {
+          if (ALL_APP_KEYS.includes(key)) {
+            localStorage.setItem(key, JSON.stringify(backupData[key]));
+          }
+        });
+
+        toast({ title: 'Restore Successful', description: 'Data restored. The app will now reload.' });
+        setTimeout(() => window.location.reload(), 1500);
+
+      } catch (error) {
+        console.error('Restore failed:', error);
+        toast({ variant: 'destructive', title: 'Restore Failed', description: 'The selected file is not a valid backup.' });
+      } finally {
+        // Reset the file input so the same file can be re-uploaded if needed
+        event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
           <TabsTrigger value="udhdha">Udhda</TabsTrigger>
           <TabsTrigger value="box-sorting">Box Sorting</TabsTrigger>
+          <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
           <Card>
@@ -478,6 +544,61 @@ export default function ControlPanelPage() {
                         ))}
                     </TableBody>
                 </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="backup" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manual Backup</CardTitle>
+              <CardDescription>
+                Download a single JSON file containing all your application data. 
+                Store this file in a safe place.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleBackup}>Backup Now</Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Restore from Backup</CardTitle>
+              <CardDescription>
+                Restore your application data from a previously saved backup file.
+                Warning: This will overwrite all current data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">Restore Backup</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. Restoring from a backup will permanently
+                      delete all current data in your browser and replace it with the
+                      data from the backup file.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <label htmlFor="restore-file" className="cursor-pointer">
+                        Proceed and Choose File
+                        <input
+                          id="restore-file"
+                          type="file"
+                          accept=".json"
+                          className="hidden"
+                          onChange={handleRestore}
+                        />
+                      </label>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </TabsContent>
