@@ -218,27 +218,44 @@ export default function ControlPanelPage() {
     reader.onload = (e) => {
       try {
         const text = e.target?.result;
-        if (typeof text !== 'string') throw new Error('Invalid file content');
+        if (typeof text !== 'string') {
+          throw new Error('Invalid file content');
+        }
         
         const backupData = JSON.parse(text);
 
-        // Clear existing data and restore from backup
+        // Simple validation: check if at least one known key exists
+        const hasKnownKey = ALL_APP_KEYS.some(key => key in backupData);
+        if (!hasKnownKey) {
+            throw new Error("File does not appear to be a valid backup.");
+        }
+
+        // Clear existing data from local storage
         localStorage.clear();
+
+        // Restore all data from the backup file
         Object.keys(backupData).forEach(key => {
-          if (ALL_APP_KEYS.includes(key)) {
+            // We write all keys from the backup, not just the ones in ALL_APP_KEYS,
+            // to ensure future-proofing if new keys are added and old backups are used.
             localStorage.setItem(key, JSON.stringify(backupData[key]));
-          }
         });
 
         toast({ title: 'Restore Successful', description: 'Data restored. The app will now reload.' });
-        setTimeout(() => window.location.reload(), 1500);
+        
+        // Use a timeout to ensure the toast is visible before reloading
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
 
       } catch (error) {
         console.error('Restore failed:', error);
-        toast({ variant: 'destructive', title: 'Restore Failed', description: 'The selected file is not a valid backup.' });
+        const errorMessage = error instanceof Error ? error.message : 'The selected file is not a valid backup.';
+        toast({ variant: 'destructive', title: 'Restore Failed', description: errorMessage });
       } finally {
         // Reset the file input so the same file can be re-uploaded if needed
-        event.target.value = '';
+        if (event.target) {
+            event.target.value = '';
+        }
       }
     };
     reader.readAsText(file);
