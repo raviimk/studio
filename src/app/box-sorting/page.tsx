@@ -37,6 +37,7 @@ type ShapeSummary = {
   totalPackets: number;
   totalRoughWeight: number;
   totalPolishWeight: number;
+  kapanNumber: string;
   boxes: Record<string, {
     count: number;
     roughWeight: number;
@@ -179,8 +180,6 @@ export default function BoxSortingPage() {
     e.preventDefault();
     if (!barcode) return;
 
-    const values = barcode.split(',');
-    
     // Check against all packets in memory for duplicates before parsing
     if (packets.some(p => p.barcode === barcode)) {
         toast({
@@ -188,10 +187,12 @@ export default function BoxSortingPage() {
             title: 'Duplicate Packet',
             description: `Packet barcode has already been scanned.`,
         });
-        setBarcode('');
+        setBarcode(''); // Clear the input on duplicate scan
         barcodeInputRef.current?.focus();
         return;
     }
+    
+    const values = barcode.split(',');
 
     if (values.length < 15) {
       toast({
@@ -265,7 +266,8 @@ export default function BoxSortingPage() {
   }
 
   const shapeSummary: ShapeSummary[] = useMemo(() => {
-    const summary: Record<string, ShapeSummary> = {};
+    const summary: Record<string, Omit<ShapeSummary, 'kapanNumber'> & {kapanNumbers: Set<string>}> = {};
+    
     packets.forEach(packet => {
         if (!summary[packet.shape]) {
             summary[packet.shape] = {
@@ -273,13 +275,19 @@ export default function BoxSortingPage() {
                 totalPackets: 0,
                 totalRoughWeight: 0,
                 totalPolishWeight: 0,
-                boxes: {}
+                boxes: {},
+                kapanNumbers: new Set()
             };
         }
         const shapeGroup = summary[packet.shape];
         shapeGroup.totalPackets++;
         shapeGroup.totalRoughWeight += packet.roughWeight;
         shapeGroup.totalPolishWeight += packet.polishWeight;
+        
+        // Extract kapan from packetNumber (e.g., 'R61-1057' -> '61')
+        const kapanPart = packet.packetNumber.split('-')[0].replace('R', '');
+        if(kapanPart) shapeGroup.kapanNumbers.add(kapanPart);
+
 
         if (!shapeGroup.boxes[packet.boxLabel]) {
             shapeGroup.boxes[packet.boxLabel] = { count: 0, roughWeight: 0, polishWeight: 0 };
@@ -289,7 +297,12 @@ export default function BoxSortingPage() {
         boxGroup.roughWeight += packet.roughWeight;
         boxGroup.polishWeight += packet.polishWeight;
     });
-    return Object.values(summary).sort((a,b) => a.shape.localeCompare(b.shape));
+
+    return Object.values(summary).map(s => ({
+        ...s,
+        kapanNumber: [...s.kapanNumbers].join(', ') || 'N/A'
+    })).sort((a,b) => a.shape.localeCompare(b.shape));
+
   }, [packets]);
 
   const handleDeletePacket = (packetId: string) => {
@@ -302,21 +315,92 @@ export default function BoxSortingPage() {
     toast({ title: 'Box Cleared', description: `All packets from ${boxLabel} in ${shape} have been deleted.`});
   }
 
-  const handleCopyToClipboard = (packetsToCopy: BoxSortingPacket[]) => {
-    const csvHeader = "Packet Number,Rough Weight,Polish Weight,Shape,Box\n";
-    const csvBody = packetsToCopy.map(p => `${p.packetNumber},${p.roughWeight},${p.polishWeight},${p.shape},${p.boxLabel}`).join('\n');
-    navigator.clipboard.writeText(csvHeader + csvBody);
-    toast({ title: 'Copied to Clipboard', description: `${packetsToCopy.length} packets copied as CSV.`});
+  const handlePrintReceipt = (packetsToPrint: BoxSortingPacket[], title: string) => {
+     if (packetsToPrint.length === 0) {
+        toast({ variant: 'destructive', title: 'No Packets', description: 'There are no packets to print.' });
+        return;
+    }
+    
+    const firstPacket = packetsToPrint[0];
+    const kapan = firstPacket.packetNumber.split('-')[0].replace('R', '') || 'N/A';
+    
+    const shapeMap: Record<string, string> = {
+        'ROUND': 'રાઉન્ડ 4P',
+        'PEAR': 'પાન',
+        'EMERALD': 'ચોકી',
+        'MARQUISE': 'માર્કિસ',
+        'PRINCESS': 'પ્રિન્સેસ',
+        'SQUARE': 'ચોકી',
+        'CHOKI': 'ચોકી',
+    };
+    const gujaratiShape = shapeMap[firstPacket.shape.toUpperCase()] || firstPacket.shape;
+
+    const totalPolishWeight = packetsToPrint.reduce((sum, p) => sum + p.polishWeight, 0);
+    const totalRoughWeight = packetsToPrint.reduce((sum, p) => sum + p.roughWeight, 0);
+    const totalPackets = packetsToPrint.length;
+
+    const html = `
+        <html>
+        <head>
+            <title>Receipt</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
+                body {
+                    font-family: 'Noto Sans Gujarati', sans-serif;
+                    font-size: 16px;
+                    padding: 10px 15px;
+                    box-sizing: border-box;
+                    width: 300px;
+                }
+                .top, .bottom {
+                    display: flex;
+                    justify-content: space-between;
+                    font-weight: bold;
+                }
+                .top { margin-bottom: 40px; }
+                .bottom { margin-top: 60px; }
+                .left-block, .right-block { line-height: 1.6; }
+                .left-block { text-align: left; }
+                .right-block { text-align: right; }
+            </style>
+        </head>
+        <body>
+            <div class="top">
+                <div>કાપન: ${kapan}</div>
+                <div>${gujaratiShape} ${title}</div>
+            </div>
+            <div class="bottom">
+                <div class="left-block">
+                    <div>તૈ.વજન: ${totalPolishWeight.toFixed(3)}</div>
+                </div>
+                <div class="right-block">
+                    <div>થાન: ${totalPackets}</div>
+                    <div>કા.વજન: ${totalRoughWeight.toFixed(3)}</div>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', '', 'width=400,height=600');
+    if(printWindow) {
+        printWindow.document.write(html);
+        printWindow.document.close();
+        printWindow.print();
+    } else {
+        toast({variant: 'destructive', title: 'Print Error', description: 'Could not open print window. Check popup blocker.'})
+    }
   }
+
 
   const handleDeleteShape = (shape: string) => {
     updatePackets(prev => prev.filter(p => p.shape !== shape));
     toast({ title: 'Shape Cleared', description: `All packets for shape ${shape} have been deleted.` });
   }
-
-  const handleCopyShapeToClipboard = (shape: string) => {
-      const packetsToCopy = packets.filter(p => p.shape === shape);
-      handleCopyToClipboard(packetsToCopy);
+  
+  const handlePrintShapeReceipt = (shape: string) => {
+      const packetsToPrint = packets.filter(p => p.shape === shape);
+      handlePrintReceipt(packetsToPrint, "");
   }
 
   const packetsInViewingBox = useMemo(() => {
@@ -424,7 +508,7 @@ export default function BoxSortingPage() {
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
-                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopyShapeToClipboard(summary.shape)}>
+                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePrintShapeReceipt(summary.shape)}>
                              <Printer className="h-4 w-4" />
                          </Button>
                      </div>
@@ -530,8 +614,8 @@ export default function BoxSortingPage() {
                 </Table>
             </div>
             <DialogFooter>
-                <Button variant="outline" onClick={() => handleCopyToClipboard(packetsInViewingBox)}>
-                    <Copy className="mr-2 h-4 w-4" /> Copy as CSV
+                <Button variant="outline" onClick={() => handlePrintReceipt(packetsInViewingBox, `(Box: ${viewingBox?.boxLabel})`)}>
+                    <Printer className="mr-2 h-4 w-4" /> Print Receipt
                 </Button>
             </DialogFooter>
         </DialogContent>
@@ -539,3 +623,4 @@ export default function BoxSortingPage() {
     </>
   );
 }
+
