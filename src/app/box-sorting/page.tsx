@@ -366,7 +366,7 @@ export default function BoxSortingPage() {
         </head>
         <body>
             <div class="top">
-                <div>કાપન: ${kapan}</div>
+                <div>કાપણ: ${kapan}</div>
                 <div>${gujaratiShape} ${title}</div>
             </div>
             <div class="bottom">
