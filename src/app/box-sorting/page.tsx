@@ -147,15 +147,7 @@ export default function BoxSortingPage() {
       return false;
     }
     
-    // Check against all packets in memory for duplicates
-    if (packets.some(p => p.packetNumber === packetData.packetNumber)) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Packet',
-            description: `Packet ${packetData.packetNumber} has already been scanned.`,
-        });
-        return false;
-    }
+    // Check moved to handleBarcodeScan to provide immediate feedback
 
     const matchedRange = ranges.find(r => packetData.polishWeight >= r.from && packetData.polishWeight <= r.to);
     if (!matchedRange) {
@@ -188,6 +180,19 @@ export default function BoxSortingPage() {
     if (!barcode) return;
 
     const values = barcode.split(',');
+    
+    // Check against all packets in memory for duplicates before parsing
+    if (packets.some(p => p.barcode === barcode)) {
+        toast({
+            variant: 'destructive',
+            title: 'Duplicate Packet',
+            description: `Packet barcode has already been scanned.`,
+        });
+        setBarcode('');
+        barcodeInputRef.current?.focus();
+        return;
+    }
+
     if (values.length < 15) {
       toast({
         variant: 'destructive',
@@ -226,6 +231,15 @@ export default function BoxSortingPage() {
         return;
     }
     
+    if (packets.some(p => p.packetNumber === packetNumber.trim())) {
+        toast({
+            variant: 'destructive',
+            title: 'Duplicate Packet',
+            description: `Packet ${packetNumber.trim()} has already been sorted.`,
+        });
+        return;
+    }
+
     const parsedRoughWeight = parseFloat(roughWeight);
     const parsedPolishWeight = parseFloat(polishWeight);
 
