@@ -120,7 +120,7 @@ export default function ControlPanelPage() {
   const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
   const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
-  const firebaseForm = useForm<z.infer<typeof firebaseConfigSchema>>({ resolver: zodResolver(firebaseConfigSchema), values: firebaseConfig || { connectionCode: '', apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' } });
+  const firebaseForm = useForm<z.infer<typeof firebaseConfigSchema>>({ resolver: zodResolver(firebaseConfigSchema), values: firebaseConfig || { connectionCode: '', apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '', databaseURL: '' } });
 
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
@@ -652,6 +652,9 @@ export default function ControlPanelPage() {
                             )} />
                              <FormField control={firebaseForm.control} name="projectId" render={({ field }) => (
                                 <FormItem><FormLabel>Project ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={firebaseForm.control} name="databaseURL" render={({ field }) => (
+                                <FormItem><FormLabel>Database URL (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
                             <FormField control={firebaseForm.control} name="storageBucket" render={({ field }) => (
                                 <FormItem><FormLabel>Storage Bucket</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
