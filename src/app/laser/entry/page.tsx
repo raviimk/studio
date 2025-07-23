@@ -11,7 +11,7 @@ import { Barcode, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY } from '@/lib/constants';
 import { LaserLot, LaserMapping, ScannedPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -33,8 +33,8 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function NewLaserLotPage() {
   const { toast } = useToast();
-  const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-  const [laserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [laserLots, setLaserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [laserMappings] = useSyncedStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
 
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [currentLotDetails, setCurrentLotDetails] = useState<FormValues | null>(null);

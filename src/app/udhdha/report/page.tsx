@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useMemo, useState } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { UHDHA_PACKETS_KEY } from '@/lib/constants';
 import { UdhdaPacket } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +23,7 @@ interface GroupedPacket {
 }
 
 export default function UdhdaReportPage() {
-  const [udhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+  const [udhdhaPackets] = useSyncedStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
   const [searchTerm, setSearchTerm] = useState('');
 
   const groupedPackets = useMemo(() => {

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,8 @@ import { format } from 'date-fns';
 import { Input } from '../ui/input';
 
 export default function SarinReport() {
-  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [returnStatus, setReturnStatus] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -40,7 +40,7 @@ export default function SarinReport() {
       const isSearchMatch = !searchTerm ||
         p.lotNumber.toLowerCase().includes(searchLower) ||
         p.kapanNumber.toLowerCase().includes(searchLower) ||
-        p.mainPacketNumber.toLowerCase().includes(searchLower);
+        p.mainPacketNumber.toString().toLowerCase().includes(searchLower);
 
       return isOperatorMatch && isStatusMatch && isDateMatch && isSearchMatch;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());

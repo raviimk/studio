@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { LASER_LOTS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
 import { LaserLot, LaserOperator, ScannedPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -20,8 +20,8 @@ import { cn } from '@/lib/utils';
 
 
 export default function ReturnLaserLotPage() {
-  const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-  const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [laserLots, setLaserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [laserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
   const [returningOperator, setReturningOperator] = useState('');
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');

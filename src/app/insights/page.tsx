@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { generateOperationalInsights, OperationalInsightsOutput } from '@/ai/flows/operational-insights-generator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +16,13 @@ import { SARIN_PACKETS_KEY, LASER_LOTS_KEY, REASSIGN_LOGS_KEY, SARIN_OPERATORS_K
 import { LaserLot, LaserMapping, LaserOperator, ReassignLog, SarinMapping, SarinOperator, SarinPacket } from '@/lib/types';
 
 export default function InsightsPage() {
-  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-  const [reassignLogs] = useLocalStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
-  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
-  const [sarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
-  const [laserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [laserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [reassignLogs] = useSyncedStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
+  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [laserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [sarinMappings] = useSyncedStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [laserMappings] = useSyncedStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
 
   const [isLoading, setIsLoading] = useState(false);
   const [insights, setInsights] = useState<OperationalInsightsOutput | null>(null);
@@ -76,7 +77,7 @@ export default function InsightsPage() {
                   <Terminal className="h-4 w-4" />
                   <AlertTitle>No Data Found</AlertTitle>
                   <AlertDescription>
-                    The application has not detected any production data in your browser. Please add some Sarin or Laser entries to generate insights.
+                    The application has not detected any production data. Please add some Sarin or Laser entries to generate insights.
                   </AlertDescription>
               </Alert>
           )}

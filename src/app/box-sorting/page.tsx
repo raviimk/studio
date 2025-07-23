@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo, useRef, Fragment, useEffect } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { BOX_SORTING_RANGES_KEY, BOX_SORTING_PACKETS_KEY } from '@/lib/constants';
 import { BoxSortingRange, BoxSortingPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -94,27 +94,10 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
 
 export default function BoxSortingPage() {
   const { toast } = useToast();
-  const [ranges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [ranges] = useSyncedStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
   
   // Apply filtering logic when reading from localStorage
-  const [allPackets, setAllPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
-  const [packets, setPackets] = useState<BoxSortingPacket[]>([]);
-
-  useEffect(() => {
-    // On mount, filter the packets from localStorage
-    const filteredOldPackets = allPackets.filter(p => p.packetNumber.includes('R'));
-    setPackets(filteredOldPackets);
-  }, []); // Run only once on mount
-
-  const updatePackets = (newPackets: BoxSortingPacket[] | ((prev: BoxSortingPacket[]) => BoxSortingPacket[])) => {
-    const updater = (currentPackets: BoxSortingPacket[]) => {
-      const updated = typeof newPackets === 'function' ? newPackets(currentPackets) : newPackets;
-      setPackets(updated); // Update the session state
-      setAllPackets(updated); // Update the persistent localStorage state
-      return updated;
-    };
-    setPackets(updater);
-  };
+  const [packets, setPackets] = useSyncedStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
   
   const [barcode, setBarcode] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -167,7 +150,7 @@ export default function BoxSortingPage() {
       scanTime: new Date().toISOString(),
     };
 
-    updatePackets(prev => [...prev, newPacket]);
+    setPackets(prev => [...prev, newPacket]);
     setHighlightedItem({ shape: newPacket.shape, boxLabel: newPacket.boxLabel });
     toast({
         title: `Packet Added to ${newPacket.shape} / ${matchedRange.label}`,
@@ -306,12 +289,12 @@ export default function BoxSortingPage() {
   }, [packets]);
 
   const handleDeletePacket = (packetId: string) => {
-    updatePackets(prev => prev.filter(p => p.id !== packetId));
+    setPackets(prev => prev.filter(p => p.id !== packetId));
     toast({ title: 'Packet Deleted' });
   };
 
   const handleDeleteBox = (shape: string, boxLabel: string) => {
-    updatePackets(prev => prev.filter(p => !(p.shape === shape && p.boxLabel === boxLabel)));
+    setPackets(prev => prev.filter(p => !(p.shape === shape && p.boxLabel === boxLabel)));
     toast({ title: 'Box Cleared', description: `All packets from ${boxLabel} in ${shape} have been deleted.`});
   }
 
@@ -394,7 +377,7 @@ export default function BoxSortingPage() {
 
 
   const handleDeleteShape = (shape: string) => {
-    updatePackets(prev => prev.filter(p => p.shape !== shape));
+    setPackets(prev => prev.filter(p => p.shape !== shape));
     toast({ title: 'Shape Cleared', description: `All packets for shape ${shape} have been deleted.` });
   }
   
@@ -623,4 +606,3 @@ export default function BoxSortingPage() {
     </>
   );
 }
-

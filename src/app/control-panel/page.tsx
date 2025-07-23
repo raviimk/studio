@@ -1,21 +1,22 @@
 
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Trash2 } from 'lucide-react';
+import { Trash2, CheckCircle, XCircle, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { initializeApp, getApps, deleteApp } from 'firebase/app';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { 
   ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
-  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY
+  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, FIREBASE_CONFIG_KEY
 } from '@/lib/constants';
 import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import PageHeader from '@/components/PageHeader';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
+import { isFirebaseConnected } from '@/lib/firebase';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 // Schemas
 const sarinOperatorSchema = z.object({
@@ -73,20 +77,39 @@ const boxSortingRangeSchema = z.object({
     path: ['to'],
 });
 
+const firebaseConfigSchema = z.object({
+  connectionCode: z.string().min(3, 'Connection code is required.'),
+  apiKey: z.string().min(1, 'API Key is required.'),
+  authDomain: z.string().min(1, 'Auth Domain is required.'),
+  projectId: z.string().min(1, 'Project ID is required.'),
+  storageBucket: z.string().min(1, 'Storage Bucket is required.'),
+  messagingSenderId: z.string().min(1, 'Messaging Sender ID is required.'),
+  appId: z.string().min(1, 'App ID is required.'),
+  databaseURL: z.string().optional(),
+});
+
 
 export default function ControlPanelPage() {
   const { toast } = useToast();
-  const [sarinOperators, setSarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [sarinMappings, setSarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
-  const [laserOperators, setLaserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
-  const [laserMappings, setLaserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
-  const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
-  const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
-  const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
-  const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
-  const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [sarinOperators, setSarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinMappings, setSarinMappings] = useSyncedStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [laserOperators, setLaserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [laserMappings, setLaserMappings] = useSyncedStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [fourPOperators, setFourPOperators] = useSyncedStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [fourPTechingOperators, setFourPTechingOperators] = useSyncedStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
+  const [priceMaster, setPriceMaster] = useSyncedStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [udhdhaSettings, setUdhdhaSettings] = useSyncedStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
+  const [fourPDeptSettings, setFourPDeptSettings] = useSyncedStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [boxSortingRanges, setBoxSortingRanges] = useSyncedStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [firebaseConfig, setFirebaseConfig] = useSyncedStorage(FIREBASE_CONFIG_KEY, null);
 
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  useEffect(() => {
+    setConnectionStatus(isFirebaseConnected() ? 'connected' : 'disconnected');
+  }, [firebaseConfig]);
 
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
@@ -97,8 +120,8 @@ export default function ControlPanelPage() {
   const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
   const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
+  const firebaseForm = useForm<z.infer<typeof firebaseConfigSchema>>({ resolver: zodResolver(firebaseConfigSchema), values: firebaseConfig || { connectionCode: '', apiKey: '', authDomain: '', projectId: '', storageBucket: '', messagingSenderId: '', appId: '' } });
 
-  
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
     setSarinOperators([...sarinOperators, { id: operatorId, name: values.name }]);
@@ -181,6 +204,37 @@ export default function ControlPanelPage() {
   function handleDeleteBoxSortingRange(id: string) {
     setBoxSortingRanges(boxSortingRanges.filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Box sorting range deleted.' });
+  }
+
+  const handleTestFirebase = async () => {
+    setIsTesting(true);
+    setTestResult(null);
+    const config = firebaseForm.getValues();
+    try {
+        const tempApp = initializeApp(config, 'test-app');
+        await tempApp.options.projectId;
+        setTestResult('success');
+        toast({ title: 'Success', description: 'Connection successful!' });
+        deleteApp(tempApp);
+    } catch (error) {
+        console.error("Firebase test failed:", error);
+        setTestResult('error');
+        toast({ variant: 'destructive', title: 'Connection Failed', description: 'Please check your configuration and try again.' });
+    } finally {
+        setIsTesting(false);
+    }
+  }
+
+  const handleSaveFirebaseConfig = (values: z.infer<typeof firebaseConfigSchema>) => {
+    setFirebaseConfig(values);
+    toast({ title: 'Configuration Saved', description: 'Please reload the page for changes to take full effect.' });
+    setTimeout(() => window.location.reload(), 1500);
+  }
+
+  const handleDisconnectFirebase = () => {
+      setFirebaseConfig(null);
+      toast({ title: 'Disconnected', description: 'Firebase connection has been removed. Reloading...' });
+      setTimeout(() => window.location.reload(), 1500);
   }
 
   const handleBackup = () => {
@@ -267,12 +321,13 @@ export default function ControlPanelPage() {
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
           <TabsTrigger value="udhdha">Udhda</TabsTrigger>
           <TabsTrigger value="box-sorting">Box Sorting</TabsTrigger>
+          <TabsTrigger value="firebase">Firebase Sync</TabsTrigger>
           <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
@@ -564,6 +619,71 @@ export default function ControlPanelPage() {
                 </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="firebase" className="space-y-6 mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Firebase Real-time Sync</CardTitle>
+                    <CardDescription>Connect to a Firebase project to enable live data synchronization across devices.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="mb-4">
+                        <Badge variant={connectionStatus === 'connected' ? 'default' : 'secondary'}>
+                            {connectionStatus === 'connected' ? <><Wifi className="mr-2 h-4 w-4" />Connected</> : <><WifiOff className="mr-2 h-4 w-4" />Offline Mode</>}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground mt-2">
+                           {connectionStatus === 'connected' 
+                                ? `Live sync is active for connection code: ${firebaseConfig?.connectionCode || 'N/A'}`
+                                : "App is running in local storage mode. Connect to Firebase for live sync."
+                           }
+                        </p>
+                    </div>
+
+                    <Form {...firebaseForm}>
+                        <form onSubmit={firebaseForm.handleSubmit(handleSaveFirebaseConfig)} className="space-y-4">
+                            <FormField control={firebaseForm.control} name="connectionCode" render={({ field }) => (
+                                <FormItem><FormLabel>Connection Code</FormLabel><FormControl><Input {...field} placeholder="A unique code to share data" /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={firebaseForm.control} name="apiKey" render={({ field }) => (
+                                <FormItem><FormLabel>API Key</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                             <FormField control={firebaseForm.control} name="authDomain" render={({ field }) => (
+                                <FormItem><FormLabel>Auth Domain</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                             <FormField control={firebaseForm.control} name="projectId" render={({ field }) => (
+                                <FormItem><FormLabel>Project ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={firebaseForm.control} name="storageBucket" render={({ field }) => (
+                                <FormItem><FormLabel>Storage Bucket</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                             <FormField control={firebaseForm.control} name="messagingSenderId" render={({ field }) => (
+                                <FormItem><FormLabel>Messaging Sender ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <FormField control={firebaseForm.control} name="appId" render={({ field }) => (
+                                <FormItem><FormLabel>App ID</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            
+                            <div className="flex flex-wrap gap-2">
+                                <Button type="button" variant="outline" onClick={handleTestFirebase} disabled={isTesting}>
+                                    {isTesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Test Connection
+                                </Button>
+                                <Button type="submit">Save & Connect</Button>
+                                {firebaseConfig && <Button variant="destructive" type="button" onClick={handleDisconnectFirebase}>Disconnect</Button>}
+                            </div>
+                            {testResult && (
+                                <Alert variant={testResult === 'success' ? 'default' : 'destructive'} className="mt-4">
+                                    {testResult === 'success' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                                    <AlertTitle>{testResult === 'success' ? 'Connection Successful' : 'Connection Failed'}</AlertTitle>
+                                    <AlertDescription>
+                                        {testResult === 'success' ? 'Your credentials are valid.' : 'Please check the console for errors and verify your config.'}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
         </TabsContent>
         <TabsContent value="backup" className="space-y-6 mt-6">
           <Card>

@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { LaserLot, LaserOperator } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,8 +15,8 @@ import { subDays } from 'date-fns';
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 export default function LaserPerformance() {
-  const [laserLots] = useLocalStorage<LaserLot[]>('laserLots', []);
-  const [laserOperators] = useLocalStorage<LaserOperator[]>('laserOperators', []);
+  const [laserLots] = useSyncedStorage<LaserLot[]>('laserLots', []);
+  const [laserOperators] = useSyncedStorage<LaserOperator[]>('laserOperators', []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),

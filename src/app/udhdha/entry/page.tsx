@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { UHDHA_PACKETS_KEY, UHDHA_SETTINGS_KEY, SARIN_OPERATORS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
 import { UdhdaPacket, UdhdaSettings, SarinOperator, LaserOperator } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -32,10 +32,10 @@ import {
 
 export default function UdhdaEntryPage() {
   const { toast } = useToast();
-  const [udhdhaPackets, setUdhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
-  const [settings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
-  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [udhdhaPackets, setUdhdhaPackets] = useSyncedStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+  const [settings] = useSyncedStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
+  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [laserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
 
   const [barcode, setBarcode] = useState('');
   const [scannedPackets, setScannedPackets] = useState<string[]>([]);
