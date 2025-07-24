@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { Trash2 } from 'lucide-react';
-import { initializeApp, getApps, deleteApp } from 'firebase/app';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';

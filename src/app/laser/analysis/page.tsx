@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY } from '@/lib/constants';
 import { LaserLot } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function LaserLotAnalysisPage() {
-  const [laserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [searchTerm, setSearchTerm] = useState('');
 
   const lotData = useMemo(() => {
