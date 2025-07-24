@@ -89,7 +89,7 @@ export default function ControlPanelPage() {
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
-  const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0 });
+  const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -252,15 +252,19 @@ export default function ControlPanelPage() {
   };
   
   const handleAutoBackupChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const hours = parseInt(event.target.value, 10);
-    if (isNaN(hours) || hours < 0) {
-        return; 
+    const { name, value } = event.target;
+    const hours = name === 'intervalHours' ? parseInt(value, 10) : autoBackupSettings.intervalHours;
+    
+    if (name === 'intervalHours' && (isNaN(hours) || hours < 0)) {
+        return;
     }
-    setAutoBackupSettings({
-        intervalHours: hours,
-        lastBackupTimestamp: hours > 0 ? Date.now() : undefined,
-    });
-    toast({ title: 'Settings Saved', description: `Auto backup set to ${hours > 0 ? `every ${hours} hour(s)` : 'disabled'}.` });
+
+    setAutoBackupSettings(prev => ({
+        ...prev,
+        [name]: name === 'intervalHours' ? hours : value,
+        lastBackupTimestamp: name === 'intervalHours' && hours > 0 ? Date.now() : prev.lastBackupTimestamp,
+    }));
+    toast({ title: 'Settings Saved' });
   }
 
 
@@ -571,21 +575,33 @@ export default function ControlPanelPage() {
             <CardHeader>
                 <CardTitle>Auto Backup Settings</CardTitle>
                 <CardDescription>
-                    Automatically create a backup of your data at a set interval.
-                    The backup will be downloaded to your computer.
+                    Automatically create a backup of your data at a set interval and at the end of the day.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                 <div className="max-w-sm space-y-2">
-                    <Label htmlFor="auto-backup-interval">Backup Frequency (in hours)</Label>
-                    <Input
-                        id="auto-backup-interval"
-                        type="number"
-                        min="0"
-                        value={String(autoBackupSettings.intervalHours)}
-                        onChange={handleAutoBackupChange}
-                        placeholder="0 for disabled"
-                     />
+                 <div className="max-w-sm space-y-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="auto-backup-interval">Backup Frequency (in hours)</Label>
+                        <Input
+                            id="auto-backup-interval"
+                            name="intervalHours"
+                            type="number"
+                            min="0"
+                            value={String(autoBackupSettings.intervalHours)}
+                            onChange={handleAutoBackupChange}
+                            placeholder="0 for disabled"
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="office-end-time">Office End Time (24h format)</Label>
+                        <Input
+                            id="office-end-time"
+                            name="officeEndTime"
+                            type="time"
+                            value={autoBackupSettings.officeEndTime || ''}
+                            onChange={handleAutoBackupChange}
+                        />
+                    </div>
                  </div>
             </CardContent>
           </Card>

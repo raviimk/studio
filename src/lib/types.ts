@@ -159,4 +159,6 @@ export interface BoxSortingPacket {
 export interface AutoBackupSettings {
     intervalHours: number; // 0 for disabled
     lastBackupTimestamp?: number;
+    officeEndTime?: string; // e.g. "18:30"
+    lastMasterBackupDate?: string; // e.g. "2023-10-27"
 }
