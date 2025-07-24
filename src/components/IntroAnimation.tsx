@@ -11,29 +11,29 @@ const SHOW_INTRO = true;
 const INTRO_SESSION_KEY = 'introPlayed';
 
 export default function IntroAnimation() {
-  const [showAnimation, setShowAnimation] = useState(false);
-  const [hideComponent, setHideComponent] = useState(false);
+  const [isAnimationActive, setIsAnimationActive] = useState(false);
+  const [isComponentVisible, setIsComponentVisible] = useState(true);
 
   useEffect(() => {
     const introHasPlayed = sessionStorage.getItem(INTRO_SESSION_KEY);
 
     if (SHOW_INTRO && !introHasPlayed) {
-      setShowAnimation(true);
+      setIsAnimationActive(true);
       sessionStorage.setItem(INTRO_SESSION_KEY, 'true');
 
-      // Timer to hide the component after animation
+      // Timer to hide the component after animation completes
       const timer = setTimeout(() => {
-        setHideComponent(true);
-      }, 4000); // Total duration before it's removed from DOM
+        setIsComponentVisible(false);
+      }, 4000); // This duration should match the total animation time
 
       return () => clearTimeout(timer);
     } else {
       // If intro is disabled or already played, hide it immediately
-      setHideComponent(true);
+      setIsComponentVisible(false);
     }
   }, []);
 
-  if (hideComponent) {
+  if (!isComponentVisible) {
     return null;
   }
 
@@ -41,10 +41,10 @@ export default function IntroAnimation() {
     <div
       className={cn(
         'fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black transition-opacity duration-1000',
-        showAnimation ? 'opacity-100' : 'opacity-0'
+        isAnimationActive ? 'opacity-100' : 'opacity-0'
       )}
       style={{
-        animation: 'fadeOut 1s ease-out 3s forwards',
+        animation: isAnimationActive ? 'fadeOut 1s ease-out 3s forwards' : 'none',
       }}
     >
       <style jsx>{`
