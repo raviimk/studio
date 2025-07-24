@@ -223,25 +223,19 @@ export default function ControlPanelPage() {
         
         const backupData = JSON.parse(text);
 
-        // Simple validation: check if at least one known key exists
         const hasKnownKey = ALL_APP_KEYS.some(key => key in backupData);
         if (!hasKnownKey) {
             throw new Error("File does not appear to be a valid backup.");
         }
 
-        // Clear existing data from local storage
         localStorage.clear();
 
-        // Restore all data from the backup file
         Object.keys(backupData).forEach(key => {
-            // We write all keys from the backup, not just the ones in ALL_APP_KEYS,
-            // to ensure future-proofing if new keys are added and old backups are used.
             localStorage.setItem(key, JSON.stringify(backupData[key]));
         });
 
         toast({ title: 'Restore Successful', description: 'Data restored. The app will now reload.' });
         
-        // Use a timeout to ensure the toast is visible before reloading
         setTimeout(() => {
             window.location.reload();
         }, 1500);
@@ -251,7 +245,6 @@ export default function ControlPanelPage() {
         const errorMessage = error instanceof Error ? error.message : 'The selected file is not a valid backup.';
         toast({ variant: 'destructive', title: 'Restore Failed', description: errorMessage });
       } finally {
-        // Reset the file input so the same file can be re-uploaded if needed
         if (event.target) {
             event.target.value = '';
         }
