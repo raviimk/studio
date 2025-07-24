@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -86,6 +86,8 @@ export default function ControlPanelPage() {
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  
+  const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
@@ -181,7 +183,7 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Box sorting range deleted.' });
   }
 
-  const handleBackup = () => {
+  const handleBackup = (filename: string) => {
     try {
       const backupData: { [key: string]: any } = {};
       ALL_APP_KEYS.forEach(key => {
@@ -196,16 +198,26 @@ export default function ControlPanelPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({ title: 'Backup Successful', description: 'All application data has been saved.' });
+      return true;
     } catch (error) {
       console.error('Backup failed:', error);
       toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
+      return false;
+    }
+  };
+
+  const triggerAutoBackupAndRestore = () => {
+    const backupSuccess = handleBackup(`auto-backup-before-restore-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
+    if (backupSuccess) {
+      toast({ title: 'Auto-Backup Created', description: 'A safety backup of your current data has been downloaded.' });
+      // Programmatically click the hidden file input
+      restoreFileInputRef.current?.click();
     }
   };
   
@@ -228,10 +240,12 @@ export default function ControlPanelPage() {
             throw new Error("File does not appear to be a valid backup.");
         }
 
+        // Only clear and restore if the file is valid
         localStorage.clear();
-
         Object.keys(backupData).forEach(key => {
-            localStorage.setItem(key, JSON.stringify(backupData[key]));
+            if (ALL_APP_KEYS.includes(key)) {
+                localStorage.setItem(key, JSON.stringify(backupData[key]));
+            }
         });
 
         toast({ title: 'Restore Successful', description: 'Data restored. The app will now reload.' });
@@ -243,7 +257,7 @@ export default function ControlPanelPage() {
       } catch (error) {
         console.error('Restore failed:', error);
         const errorMessage = error instanceof Error ? error.message : 'The selected file is not a valid backup.';
-        toast({ variant: 'destructive', title: 'Restore Failed', description: errorMessage });
+        toast({ variant: 'destructive', title: 'Restore Failed', description: `${errorMessage} Your existing data has not been changed.` });
       } finally {
         if (event.target) {
             event.target.value = '';
@@ -566,7 +580,7 @@ export default function ControlPanelPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleBackup}>Backup Now</Button>
+              <Button onClick={() => handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`)}>Backup Now</Button>
             </CardContent>
           </Card>
           <Card>
@@ -574,7 +588,7 @@ export default function ControlPanelPage() {
               <CardTitle>Restore from Backup</CardTitle>
               <CardDescription>
                 Restore your application data from a previously saved backup file.
-                Warning: This will overwrite all current data.
+                Warning: This will create a safety backup of your current data, then overwrite it.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -586,28 +600,26 @@ export default function ControlPanelPage() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. Restoring from a backup will permanently
+                      This action will first create a safety backup of your current data, then it will permanently
                       delete all current data in your browser and replace it with the
-                      data from the backup file.
+                      data from the backup file you upload.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction asChild>
-                      <label htmlFor="restore-file" className="cursor-pointer">
-                        Proceed and Choose File
-                        <input
-                          id="restore-file"
-                          type="file"
-                          accept=".json"
-                          className="hidden"
-                          onChange={handleRestore}
-                        />
-                      </label>
+                    <AlertDialogAction onClick={triggerAutoBackupAndRestore}>
+                        Proceed
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              <input
+                ref={restoreFileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleRestore}
+              />
             </CardContent>
           </Card>
         </TabsContent>
