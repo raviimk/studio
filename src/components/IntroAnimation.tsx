@@ -1,22 +1,18 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
-// --- CONFIGURATION ---
-// Set this to false to disable the intro animation completely
-const SHOW_INTRO = true;
-// -------------------
 
-const INTRO_SESSION_KEY = 'introPlayed';
-
-const Title = ({ text }: { text: string }) => {
+const Title = ({ text, onAnimationEnd }: { text: string; onAnimationEnd?: () => void }) => {
+  const letters = text.split('');
   return (
     <h1
       className="font-display text-4xl md:text-6xl lg:text-7xl font-bold uppercase tracking-wide text-white/90"
       style={{ textShadow: '0px 2px 10px rgba(0,0,0,0.3)' }}
     >
-      {text.split('').map((char, index) => (
+      {letters.map((char, index) => (
         <span
           key={index}
           className="inline-block"
@@ -24,6 +20,11 @@ const Title = ({ text }: { text: string }) => {
             animation: `slide-in 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards`,
             animationDelay: `${0.3 + index * 0.05}s`,
             opacity: 0,
+          }}
+          onAnimationEnd={() => {
+            if (index === letters.length - 1 && onAnimationEnd) {
+              onAnimationEnd();
+            }
           }}
         >
           {char === ' ' ? '\u00A0' : char}
@@ -44,31 +45,25 @@ const GoldenShimmer = () => (
 );
 
 
-export default function IntroAnimation() {
+export default function IntroAnimation({ onFinished }: { onFinished: () => void; }) {
   const [isAnimationActive, setIsAnimationActive] = useState(false);
-  const [isComponentVisible, setIsComponentVisible] = useState(false);
+  const [isComponentVisible, setIsComponentVisible] = useState(true);
 
   useEffect(() => {
-    const introHasPlayed = sessionStorage.getItem(INTRO_SESSION_KEY);
-
-    if (SHOW_INTRO && !introHasPlayed) {
-      setIsComponentVisible(true);
-      
       const startTimer = setTimeout(() => {
         setIsAnimationActive(true);
-        sessionStorage.setItem(INTRO_SESSION_KEY, 'true');
       }, 100);
 
       const endTimer = setTimeout(() => {
         setIsComponentVisible(false);
+        onFinished();
       }, 3500); // Total duration of the intro
 
       return () => {
           clearTimeout(startTimer);
           clearTimeout(endTimer);
       };
-    }
-  }, []);
+  }, [onFinished]);
 
   if (!isComponentVisible) {
     return null;
