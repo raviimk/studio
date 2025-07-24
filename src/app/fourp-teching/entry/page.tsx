@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { FOURP_TECHING_LOTS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
 import { FourPLot, FourPTechingOperator, PriceMaster, FourPDepartmentSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,10 +30,10 @@ type HireDetails = {
 
 export default function FourPTechingEntryPage() {
   const { toast } = useToast();
-  const [fourPTechingLots, setFourPTechingLots] = useSyncedStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-  const [fourPTechingOperators] = useSyncedStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster] = useSyncedStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
-  const [deptSettings] = useSyncedStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [fourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
+  const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
 
 
   const [lotBarcode, setLotBarcode] = useState('');

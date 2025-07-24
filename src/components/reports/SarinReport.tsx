@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,8 @@ import { format } from 'date-fns';
 import { Input } from '../ui/input';
 
 export default function SarinReport() {
-  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [returnStatus, setReturnStatus] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({

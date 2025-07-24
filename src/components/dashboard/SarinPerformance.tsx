@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SarinPacket, SarinOperator } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,8 +14,8 @@ import { subDays } from 'date-fns';
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
 export default function SarinPerformance() {
-  const [sarinPackets] = useSyncedStorage<SarinPacket[]>('sarinPackets', []);
-  const [sarinOperators] = useSyncedStorage<SarinOperator[]>('sarinOperators', []);
+  const [sarinPackets] = useLocalStorage<SarinPacket[]>('sarinPackets', []);
+  const [sarinOperators] = useLocalStorage<SarinOperator[]>('sarinOperators', []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),

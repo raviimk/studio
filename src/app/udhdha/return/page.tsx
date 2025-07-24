@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { UHDHA_PACKETS_KEY } from '@/lib/constants';
 import { UdhdaPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -22,7 +22,7 @@ type ScanResult = {
 
 export default function UdhdaReturnPage() {
   const { toast } = useToast();
-  const [udhdhaPackets, setUdhdhaPackets] = useSyncedStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+  const [udhdhaPackets, setUdhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
   
   const [barcode, setBarcode] = useState('');
   const [lastScanResult, setLastScanResult] = useState<ScanResult | null>(null);

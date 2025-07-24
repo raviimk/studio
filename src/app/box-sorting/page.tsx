@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo, useRef, Fragment, useEffect } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { BOX_SORTING_RANGES_KEY, BOX_SORTING_PACKETS_KEY } from '@/lib/constants';
 import { BoxSortingRange, BoxSortingPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -94,10 +94,10 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
 
 export default function BoxSortingPage() {
   const { toast } = useToast();
-  const [ranges] = useSyncedStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [ranges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
   
   // Apply filtering logic when reading from localStorage
-  const [packets, setPackets] = useSyncedStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  const [packets, setPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
   
   const [barcode, setBarcode] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);

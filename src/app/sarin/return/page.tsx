@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -15,8 +15,8 @@ import { Input } from '@/components/ui/input';
 
 
 export default function ReturnSarinLotPage() {
-  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const { toast } = useToast();
   const [returningOperator, setReturningOperator] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');

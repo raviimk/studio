@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY } from '@/lib/constants';
 import { FourPLot, FourPOperator } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,8 @@ import { format } from 'date-fns';
 import { Input } from '../ui/input';
 
 export default function FourPWorkReport() {
-  const [fourPTechingLots] = useSyncedStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-  const [fourPOperators] = useSyncedStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [fourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [fourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),

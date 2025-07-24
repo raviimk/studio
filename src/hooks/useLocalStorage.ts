@@ -1,9 +1,8 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 
-// This is the fallback hook for when Firebase is not connected.
-// It's a simple key-value store in the browser's localStorage.
 export function useLocalStorage<T>(
   key: string,
   initialValue: T

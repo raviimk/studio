@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
 import { LaserLot, LaserOperator } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,8 @@ import { format } from 'date-fns';
 import { Input } from '../ui/input';
 
 export default function LaserReport() {
-  const [laserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-  const [laserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [returnStatus, setReturnStatus] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({

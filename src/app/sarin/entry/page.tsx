@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, SARIN_MAPPINGS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator, SarinMapping } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -36,9 +36,9 @@ const formSchema = z.object({
 
 export default function SarinPacketEntryPage() {
   const { toast } = useToast();
-  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [sarinMappings] = useSyncedStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

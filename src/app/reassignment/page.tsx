@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useSyncedStorage } from '@/hooks/useSyncedStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, REASSIGN_LOGS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator, ReassignLog } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -21,9 +21,9 @@ type TransferSelection = {
 };
 
 export default function ReassignmentPage() {
-  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [reassignLogs, setReassignLogs] = useSyncedStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
+  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [reassignLogs, setReassignLogs] = useLocalStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
   const [fromOperator, setFromOperator] = useState<string>('');
   const [toOperator, setToOperator] = useState<string>('');
   const [selectedPackets, setSelectedPackets] = useState<Record<string, TransferSelection>>({});
