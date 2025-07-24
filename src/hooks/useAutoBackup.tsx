@@ -11,7 +11,7 @@ import { format, formatISO, parse } from 'date-fns';
 import { Button } from '@/components/ui/button';
 
 export function useAutoBackup() {
-  const [settings, setSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0 });
+  const [settings, setSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: "18:30" });
   const toastIdRef = useRef<string | null>(null);
 
   useEffect(() => {
