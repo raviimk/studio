@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AppShell } from '@/components/AppShell';
+import IntroAnimation from '@/components/IntroAnimation';
 
 export const metadata: Metadata = {
   title: 'Gem Tracker',
@@ -24,6 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
+        <IntroAnimation />
         <AppShell>{children}</AppShell>
         <Toaster />
       </body>
