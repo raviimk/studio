@@ -33,20 +33,6 @@ const Title = ({ text }: { text: string }) => {
   );
 };
 
-const Subtitle = ({ text }: { text: string }) => {
-  return (
-    <p
-      className="font-headline text-lg md:text-2xl text-white/70 animate-simple-fade-in"
-      style={{
-        animationDelay: '1.2s',
-        animationFillMode: 'backwards',
-      }}
-    >
-      {text}
-    </p>
-  );
-};
-
 const GoldenShimmer = () => (
    <div className="absolute inset-x-0 top-1/2 h-20 -translate-y-1/2"
         style={{
@@ -102,7 +88,6 @@ export default function IntroAnimation() {
             <Title text="ATIXE DIAMOND" />
             <GoldenShimmer/>
         </div>
-      <Subtitle text="BY RAVII" />
     </div>
   );
 }
