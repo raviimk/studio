@@ -90,21 +90,31 @@ body {
   .animate-thumbs-up {
     animation: thumbs-up 2s ease-in-out forwards;
   }
-  
-  @keyframes fade-in-glow {
-    0% {
+
+  /* New Intro Animation Keyframes */
+  @keyframes slide-in {
+    from {
+      transform: translateY(1.2em) rotateZ(5deg);
       opacity: 0;
-      transform: scale(0.9);
-      text-shadow: 0 0 0px hsl(var(--primary-foreground) / 0.5);
     }
-    100% {
+    to {
+      transform: translateY(0) rotateZ(0deg);
       opacity: 1;
-      transform: scale(1);
-      text-shadow: 0 0 10px hsl(var(--primary-foreground) / 0.8);
     }
   }
 
-  .animate-fade-in-glow {
-    animation: fade-in-glow 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  @keyframes shimmer {
+    0% {
+      background-position: -150% 0;
+    }
+    100% {
+      background-position: 150% 0;
+    }
   }
+  
+  @keyframes simple-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
 }
