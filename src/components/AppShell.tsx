@@ -41,6 +41,7 @@ import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { cn } from '@/lib/utils';
 import { Toaster } from './ui/toaster';
+import { useAutoBackup } from '@/hooks/useAutoBackup';
 
 const menuItems = [
   {
@@ -127,6 +128,7 @@ const menuItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  useAutoBackup();
 
   return (
     <SidebarProvider>

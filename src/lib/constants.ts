@@ -27,6 +27,9 @@ export const JIRAM_REPORT_PACKETS_KEY = 'jiramReportPackets';
 export const BOX_SORTING_RANGES_KEY = 'boxSortingRanges';
 export const BOX_SORTING_PACKETS_KEY = 'boxSortingPackets';
 
+// Settings
+export const AUTO_BACKUP_SETTINGS_KEY = 'autoBackupSettings';
+
 // All keys for backup/restore
 export const ALL_APP_KEYS = [
     SARIN_PACKETS_KEY,
@@ -47,4 +50,5 @@ export const ALL_APP_KEYS = [
     JIRAM_REPORT_PACKETS_KEY,
     BOX_SORTING_RANGES_KEY,
     BOX_SORTING_PACKETS_KEY,
+    AUTO_BACKUP_SETTINGS_KEY,
 ];

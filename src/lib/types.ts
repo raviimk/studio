@@ -154,3 +154,9 @@ export interface BoxSortingPacket {
     boxLabel: string;
     scanTime: string;
 }
+
+// Settings
+export interface AutoBackupSettings {
+    intervalHours: number; // 0 for disabled
+    lastBackupTimestamp?: number;
+}

@@ -15,9 +15,9 @@ import {
   ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
-  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY
+  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -25,6 +25,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import PageHeader from '@/components/PageHeader';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
+import { handleBackup } from '@/lib/backup';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Schemas
 const sarinOperatorSchema = z.object({
@@ -86,6 +88,7 @@ export default function ControlPanelPage() {
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0 });
   
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -183,40 +186,21 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Box sorting range deleted.' });
   }
 
-  const handleBackup = (filename: string) => {
+  const doBackup = () => {
     try {
-      const backupData: { [key: string]: any } = {};
-      ALL_APP_KEYS.forEach(key => {
-        const data = localStorage.getItem(key);
-        if (data) {
-          backupData[key] = JSON.parse(data);
-        }
-      });
-      
-      const jsonString = JSON.stringify(backupData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      return true;
+        handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
+        return true;
     } catch (error) {
-      console.error('Backup failed:', error);
-      toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
-      return false;
+        console.error("Backup failed", error);
+        toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
+        return false;
     }
-  };
+  }
 
   const triggerAutoBackupAndRestore = () => {
     const backupSuccess = handleBackup(`auto-backup-before-restore-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
     if (backupSuccess) {
       toast({ title: 'Auto-Backup Created', description: 'A safety backup of your current data has been downloaded.' });
-      // Programmatically click the hidden file input
       restoreFileInputRef.current?.click();
     }
   };
@@ -240,7 +224,6 @@ export default function ControlPanelPage() {
             throw new Error("File does not appear to be a valid backup.");
         }
 
-        // Only clear and restore if the file is valid
         localStorage.clear();
         Object.keys(backupData).forEach(key => {
             if (ALL_APP_KEYS.includes(key)) {
@@ -266,6 +249,15 @@ export default function ControlPanelPage() {
     };
     reader.readAsText(file);
   };
+  
+  const handleAutoBackupChange = (value: string) => {
+    const hours = parseInt(value, 10);
+    setAutoBackupSettings({
+        intervalHours: hours,
+        lastBackupTimestamp: hours > 0 ? Date.now() : undefined,
+    });
+    toast({ title: 'Settings Saved', description: `Auto backup set to ${hours > 0 ? `every ${hours} hour(s)` : 'disabled'}.` });
+  }
 
 
   return (
@@ -573,6 +565,32 @@ export default function ControlPanelPage() {
         <TabsContent value="backup" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
+                <CardTitle>Auto Backup Settings</CardTitle>
+                <CardDescription>
+                    Automatically create a backup of your data at a set interval.
+                    The backup will be downloaded to your computer.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <div className="max-w-sm space-y-2">
+                    <Label htmlFor="auto-backup-interval">Backup Frequency</Label>
+                    <Select value={String(autoBackupSettings.intervalHours)} onValueChange={handleAutoBackupChange}>
+                        <SelectTrigger id="auto-backup-interval">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="0">Disabled</SelectItem>
+                            <SelectItem value="1">Every 1 Hour</SelectItem>
+                            <SelectItem value="2">Every 2 Hours</SelectItem>
+                            <SelectItem value="4">Every 4 Hours</SelectItem>
+                            <SelectItem value="8">Every 8 Hours</SelectItem>
+                        </SelectContent>
+                    </Select>
+                 </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
               <CardTitle>Manual Backup</CardTitle>
               <CardDescription>
                 Download a single JSON file containing all your application data. 
@@ -580,7 +598,7 @@ export default function ControlPanelPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`)}>Backup Now</Button>
+              <Button onClick={doBackup}>Backup Now</Button>
             </CardContent>
           </Card>
           <Card>
