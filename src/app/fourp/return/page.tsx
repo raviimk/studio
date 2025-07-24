@@ -36,6 +36,7 @@ export default function FourPReturnPage() {
   const [selectedOperator, setSelectedOperator] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [lotToReturn, setLotToReturn] = useState<FourPLot | null>(null);
+  const [returnedSearchTerm, setReturnedSearchTerm] = useState('');
 
   const handleConfirmReturn = () => {
      if (!selectedOperator || !lotToReturn) {
@@ -72,10 +73,16 @@ export default function FourPReturnPage() {
   }, [fourPTechingLots, searchTerm]);
 
   const returnedLots = useMemo(() => {
+    const searchLower = returnedSearchTerm.toLowerCase();
     return fourPTechingLots
-      .filter(lot => lot.isReturnedToFourP)
+      .filter(lot => {
+          if (!lot.isReturnedToFourP) return false;
+          if (!returnedSearchTerm) return true;
+          return lot.lot.toLowerCase().includes(searchLower) ||
+                 lot.kapan.toLowerCase().includes(searchLower);
+      })
       .sort((a,b) => new Date(b.returnDate!).getTime() - new Date(a.returnDate!).getTime());
-  }, [fourPTechingLots]);
+  }, [fourPTechingLots, returnedSearchTerm]);
 
 
   return (
@@ -155,7 +162,19 @@ export default function FourPReturnPage() {
       </Card>
       
        <Card>
-        <CardHeader><CardTitle>Recently Returned Lots</CardTitle></CardHeader>
+        <CardHeader>
+            <CardTitle>Recently Returned Lots</CardTitle>
+            <div className="pt-4">
+                <Label htmlFor="search-returned-lot">Search Returned Lots</Label>
+                <Input
+                    id="search-returned-lot"
+                    placeholder="Enter lot or kapan number..."
+                    value={returnedSearchTerm}
+                    onChange={(e) => setReturnedSearchTerm(e.target.value)}
+                    className="mt-1 max-w-sm"
+                />
+            </div>
+        </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
