@@ -251,8 +251,11 @@ export default function ControlPanelPage() {
     reader.readAsText(file);
   };
   
-  const handleAutoBackupChange = (value: string) => {
-    const hours = parseInt(value, 10);
+  const handleAutoBackupChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const hours = parseInt(event.target.value, 10);
+    if (isNaN(hours) || hours < 0) {
+        return; 
+    }
     setAutoBackupSettings({
         intervalHours: hours,
         lastBackupTimestamp: hours > 0 ? Date.now() : undefined,
@@ -574,19 +577,15 @@ export default function ControlPanelPage() {
             </CardHeader>
             <CardContent>
                  <div className="max-w-sm space-y-2">
-                    <Label htmlFor="auto-backup-interval">Backup Frequency</Label>
-                    <Select value={String(autoBackupSettings.intervalHours)} onValueChange={handleAutoBackupChange}>
-                        <SelectTrigger id="auto-backup-interval">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="0">Disabled</SelectItem>
-                            <SelectItem value="1">Every 1 Hour</SelectItem>
-                            <SelectItem value="2">Every 2 Hours</SelectItem>
-                            <SelectItem value="4">Every 4 Hours</SelectItem>
-                            <SelectItem value="8">Every 8 Hours</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Label htmlFor="auto-backup-interval">Backup Frequency (in hours)</Label>
+                    <Input
+                        id="auto-backup-interval"
+                        type="number"
+                        min="0"
+                        value={String(autoBackupSettings.intervalHours)}
+                        onChange={handleAutoBackupChange}
+                        placeholder="0 for disabled"
+                     />
                  </div>
             </CardContent>
           </Card>
