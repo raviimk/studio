@@ -33,6 +33,11 @@ type ChaluProgress = {
     [packetId: string]: number;
 }
 
+type SarinReturnSummary = {
+    operator: string;
+    packets: number;
+}
+
 export default function TodaysProductionReport() {
     const [sarinPackets] = useLocalStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
     const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
@@ -63,7 +68,19 @@ export default function TodaysProductionReport() {
         }));
     };
 
-    const totalSarinReturnedPackets = useMemo(() => todaysReturnedSarin.reduce((sum, p) => sum + p.packetCount, 0), [todaysReturnedSarin]);
+    const sarinReturnSummary = useMemo((): SarinReturnSummary[] => {
+        const summary: Record<string, number> = {};
+        todaysReturnedSarin.forEach(p => {
+            if (p.returnedBy) {
+                summary[p.returnedBy] = (summary[p.returnedBy] || 0) + p.packetCount;
+            }
+        });
+        return Object.entries(summary)
+            .map(([operator, packets]) => ({ operator, packets }))
+            .sort((a,b) => b.packets - a.packets);
+    }, [todaysReturnedSarin]);
+
+    const totalSarinReturnedPackets = useMemo(() => sarinReturnSummary.reduce((sum, item) => sum + item.packets, 0), [sarinReturnSummary]);
     const totalSarinChaluPackets = useMemo(() => Object.values(chaluProgress).reduce((sum, count) => sum + (count || 0), 0), [chaluProgress]);
     const totalSarinProduction = totalSarinReturnedPackets + totalSarinChaluPackets;
 
@@ -130,10 +147,28 @@ export default function TodaysProductionReport() {
                 <div className="space-y-4">
                     <div>
                         <h4 className="font-semibold text-md mb-2">Production (Returned Lots)</h4>
-                        <div className="p-4 bg-muted/50 rounded-md text-center">
-                            <span className="text-sm text-muted-foreground">Returned Today: </span>
-                            <span className="font-bold text-lg">{totalSarinReturnedPackets}</span>
-                        </div>
+                         {sarinReturnSummary.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Operator</TableHead>
+                                        <TableHead className="text-right">Packets Returned</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {sarinReturnSummary.map(op => (
+                                        <TableRow key={op.operator}>
+                                            <TableCell className="font-medium">{op.operator}</TableCell>
+                                            <TableCell className="text-right font-mono">{op.packets}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    <TableRow className="bg-muted/50 font-bold">
+                                        <TableCell>Total Returned</TableCell>
+                                        <TableCell className="text-right font-mono">{totalSarinReturnedPackets}</TableCell>
+                                    </TableRow>
+                                </TableBody>
+                            </Table>
+                         ) : <p className="text-sm text-muted-foreground text-center py-4">No lots returned today.</p>}
                     </div>
 
                     <Separator />
