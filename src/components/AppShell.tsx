@@ -110,7 +110,8 @@ const menuItems = [
     label: 'Reports Center',
     icon: AreaChart,
     subItems: [
-        { label: 'Production Analysis', href: '/analysis-report' },
+        { label: 'Analysis Reports', href: '/analysis-report' },
+        { label: 'Production Reports', href: '/production-report' },
         { label: 'Jiram Report', href: '/jiram-report' },
     ]
   },
@@ -129,6 +130,23 @@ const menuItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   useAutoBackup();
+
+  // Hide AI Insights and combine reports
+  const updatedMenuItems = menuItems.map(item => {
+    if (item.label === 'Reports Center') {
+      return {
+        ...item,
+        label: 'Reports',
+        subItems: [
+          { label: 'Analysis Dashboard', href: '/analysis-report' },
+          { label: 'Production Report', href: '/production-report' },
+          { label: 'Jiram Verification', href: '/jiram-report' },
+        ],
+      };
+    }
+    return item;
+  }).filter(item => item.label !== 'AI Insights');
+
 
   return (
     <SidebarProvider>
@@ -154,7 +172,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {menuItems.map((item) =>
+            {updatedMenuItems.map((item) =>
               item.subItems ? (
                 <Collapsible key={item.label} defaultOpen={item.subItems.some(sub => pathname.startsWith(sub.href))}>
                   <SidebarMenuItem className="p-0">
