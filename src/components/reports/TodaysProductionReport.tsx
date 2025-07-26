@@ -53,11 +53,13 @@ export default function TodaysProductionReport() {
         return { todaysReturnedSarin: returned, todaysChaluSarin: chalu };
     }, [sarinPackets]);
 
-    const handleChaluProgressChange = (packetId: string, value: string) => {
+    const handleChaluProgressChange = (packet: T.SarinPacket, value: string) => {
         const count = parseInt(value, 10);
+        const validatedCount = isNaN(count) || count < 0 ? 0 : Math.min(count, packet.packetCount);
+        
         setChaluProgress(prev => ({
             ...prev,
-            [packetId]: isNaN(count) || count < 0 ? 0 : count
+            [packet.id]: validatedCount
         }));
     };
 
@@ -123,22 +125,15 @@ export default function TodaysProductionReport() {
                 title="Sarin Department" 
                 total={totalSarinProduction}
                 borderColor="border-orange-400"
-                totalBreakdown={`Returned: ${totalSarinReturnedPackets} | Chalu: ${totalSarinChaluPackets}`}
+                totalBreakdown={`Returned: ${totalSarinReturnedPackets} + Chalu: ${totalSarinChaluPackets}`}
             >
                 <div className="space-y-4">
                     <div>
                         <h4 className="font-semibold text-md mb-2">Production (Returned Lots)</h4>
-                        {todaysReturnedSarin.length > 0 ? (
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Lot</TableHead><TableHead>Return Date</TableHead><TableHead className="text-right">Packets</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {todaysReturnedSarin.map(p => (
-                                        <TableRow key={p.id}><TableCell>{p.returnedBy}</TableCell><TableCell>{p.lotNumber}</TableCell><TableCell>{format(parseISO(p.returnDate!), 'p')}</TableCell><TableCell className="text-right">{p.packetCount}</TableCell></TableRow>
-                                    ))}
-                                    <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={3}>Returned Total</TableCell><TableCell className="text-right">{totalSarinReturnedPackets}</TableCell></TableRow>
-                                </TableBody>
-                            </Table>
-                        ) : <p className="text-sm text-muted-foreground text-center py-4">No lots returned today.</p>}
+                        <div className="p-4 bg-muted/50 rounded-md text-center">
+                            <span className="text-sm text-muted-foreground">Returned Today: </span>
+                            <span className="font-bold text-lg">{totalSarinReturnedPackets}</span>
+                        </div>
                     </div>
 
                     <Separator />
@@ -147,25 +142,39 @@ export default function TodaysProductionReport() {
                         <h4 className="font-semibold text-md mb-2">Chalu Lots (In-Progress)</h4>
                          {todaysChaluSarin.length > 0 ? (
                             <Table>
-                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Lot</TableHead><TableHead>Entry Date</TableHead><TableHead className="w-[150px]">Today's Pcs</TableHead></TableRow></TableHeader>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Operator / Lot</TableHead>
+                                        <TableHead className="w-[100px]">Total PCS</TableHead>
+                                        <TableHead className="w-[150px]">Today's PCS Made</TableHead>
+                                        <TableHead className="w-[100px]">Remaining</TableHead>
+                                    </TableRow>
+                                </TableHeader>
                                 <TableBody>
-                                    {todaysChaluSarin.map(p => (
+                                    {todaysChaluSarin.map(p => {
+                                        const todaysPcs = chaluProgress[p.id] || 0;
+                                        const remaining = p.packetCount - todaysPcs;
+                                        return (
                                         <TableRow key={p.id}>
-                                            <TableCell>{p.operator}</TableCell>
-                                            <TableCell>{p.lotNumber}</TableCell>
-                                            <TableCell>{format(parseISO(p.date), 'PP')}</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{p.operator}</div>
+                                                <div className="text-xs text-muted-foreground">{p.lotNumber} ({format(parseISO(p.date), 'dd/MM')})</div>
+                                            </TableCell>
+                                            <TableCell className="font-mono text-center">{p.packetCount}</TableCell>
                                             <TableCell>
                                                 <Input 
                                                     type="number" 
                                                     placeholder="0"
                                                     className="h-8"
                                                     value={chaluProgress[p.id] || ''}
-                                                    onChange={(e) => handleChaluProgressChange(p.id, e.target.value)}
+                                                    onChange={(e) => handleChaluProgressChange(p, e.target.value)}
+                                                    max={p.packetCount}
                                                 />
                                             </TableCell>
+                                            <TableCell className="font-mono text-center font-semibold text-muted-foreground">{remaining}</TableCell>
                                         </TableRow>
-                                    ))}
-                                    <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={3}>Chalu Total</TableCell><TableCell className="text-right">{totalSarinChaluPackets}</TableCell></TableRow>
+                                    )})}
+                                    <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={2}>Chalu Total</TableCell><TableCell className="text-center">{totalSarinChaluPackets}</TableCell><TableCell></TableCell></TableRow>
                                 </TableBody>
                             </Table>
                         ) : <p className="text-sm text-muted-foreground text-center py-4">No active lots.</p>}
