@@ -10,7 +10,7 @@ export default function ProductionReportPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader
-        title="Production Reports"
+        title="Production Entries"
         description="A central dashboard to review department-level productivity."
       />
       <Tabs defaultValue="today" className="w-full">
