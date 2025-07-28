@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DatePickerWithRange } from '../ui/date-picker-range';
 import type { DateRange } from 'react-day-picker';
 import { subDays } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -142,7 +143,7 @@ export default function SarinPerformance() {
             </ResponsiveContainer>
           </div>
         </div>
-        <Card>
+        <Card className="glass-card">
           <CardHeader>
             <CardTitle>Top 5 Performers (by Packets)</CardTitle>
           </CardHeader>
@@ -154,7 +155,14 @@ export default function SarinPerformance() {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{
+                        background: 'hsla(var(--background) / 0.8)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid hsla(var(--border) / 0.5)',
+                        borderRadius: 'var(--radius)'
+                      }}
+                    />
                     <Legend />
                 </PieChart>
             </ResponsiveContainer>
