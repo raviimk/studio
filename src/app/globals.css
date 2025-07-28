@@ -34,6 +34,12 @@ body {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    
+    /* Custom gradients for the new chart */
+    --gradient-regular-from: #2E4765; /* Deep Blue */
+    --gradient-regular-to: #43A0A8;   /* Teal */
+    --gradient-jiram: #D4A276;        /* Soft Gold */
+
   }
   .dark {
     --background: 240 6% 10%;
@@ -60,6 +66,11 @@ body {
     --chart-3: 197 37% 44%;
     --chart-4: 43 74% 76%;
     --chart-5: 27 87% 77%;
+
+    /* Custom gradients for the new chart - dark mode */
+    --gradient-regular-from: #4A6E94;
+    --gradient-regular-to: #62C4C3;
+    --gradient-jiram: #E6B98A;
   }
 }
 
@@ -120,6 +131,21 @@ body {
   
   .animate-simple-fade-in {
     animation: simple-fade-in 0.5s ease-in-out forwards;
+  }
+
+  /* Glassmorphism Card Style */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.3); /* Light mode background */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .glass-card {
+    background: rgba(26, 37, 51, 0.3); /* Dark mode background */
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
 }

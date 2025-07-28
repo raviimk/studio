@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SarinPacket, SarinOperator } from '@/lib/types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithRange } from '../ui/date-picker-range';
 import type { DateRange } from 'react-day-picker';
@@ -108,24 +108,40 @@ export default function SarinPerformance() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Packets by Operator</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
+        <div className="glass-card p-4">
+          <h3 className="font-headline text-lg font-semibold text-foreground/90 p-2">Packets by Operator</h3>
+          <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performanceData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="packets" stackId="a" fill="hsl(var(--primary))" name="Regular Packets" />
-                <Bar dataKey="jiram" stackId="a" fill="hsl(var(--accent))" name="Jiram Packets" />
+              <BarChart data={performanceData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                 <defs>
+                    <linearGradient id="gradientRegular" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--gradient-regular-from)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--gradient-regular-to)" stopOpacity={0.8}/>
+                    </linearGradient>
+                    <linearGradient id="gradientJiram" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--gradient-jiram)" stopOpacity={0.9}/>
+                        <stop offset="95%" stopColor="var(--gradient-jiram)" stopOpacity={0.5}/>
+                    </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
+                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
+                <YAxis tickLine={false} axisLine={false} fontSize={12} allowDecimals={false}/>
+                <Tooltip 
+                    cursor={{fill: 'hsla(var(--card) / 0.5)'}}
+                    contentStyle={{
+                        background: 'hsla(var(--background) / 0.8)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid hsla(var(--border) / 0.5)',
+                        borderRadius: 'var(--radius)'
+                    }}
+                />
+                <Legend iconSize={10}/>
+                <Bar dataKey="packets" stackId="a" fill="url(#gradientRegular)" name="Regular Packets" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="jiram" stackId="a" fill="url(#gradientJiram)" name="Jiram Packets" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         <Card>
           <CardHeader>
             <CardTitle>Top 5 Performers (by Packets)</CardTitle>
