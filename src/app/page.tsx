@@ -1,11 +1,16 @@
-'use client';
 
+'use client';
+import React, { useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/PageHeader';
 import SarinPerformance from '@/components/dashboard/SarinPerformance';
 import LaserPerformance from '@/components/dashboard/LaserPerformance';
 
 export default function DashboardPage() {
+    useEffect(() => {
+        document.title = 'Dashboard | ATIXE Diamond';
+    }, []);
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader

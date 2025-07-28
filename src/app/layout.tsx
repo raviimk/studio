@@ -32,7 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>Gem Tracker</title>
+        <title>ATIXE Diamond</title>
         <meta name="description" content="Diamond Production Manager – Sarin + Laser Unified Tracker" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
