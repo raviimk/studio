@@ -42,6 +42,7 @@ export default function KapanCheckerPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchedTerm, setSearchedTerm] = useState<string | null>(null);
+  const [packetFilter, setPacketFilter] = useState('');
 
   const kapanData = useMemo(() => {
     if (!searchedTerm) return [];
@@ -105,13 +106,23 @@ export default function KapanCheckerPage() {
         }
     });
     
-    return results.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const sortedResults = results.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  }, [searchedTerm, sarinPackets, laserLots, udhdhaPackets]);
+    if (!packetFilter) {
+      return sortedResults;
+    }
+    
+    const filterLower = packetFilter.toLowerCase();
+    return sortedResults.filter(item => 
+      item.identifier.toLowerCase().includes(filterLower)
+    );
+
+  }, [searchedTerm, sarinPackets, laserLots, udhdhaPackets, packetFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchedTerm(searchTerm);
+    setPacketFilter(''); // Reset inline filter on new search
   };
 
   const getStatusIcon = (status: 'Returned' | 'Running') => {
@@ -148,16 +159,11 @@ export default function KapanCheckerPage() {
           <CardHeader>
             <CardTitle>Results for: {searchedTerm}</CardTitle>
              <div className="pt-4">
-                <form onSubmit={handleSearch} className="flex gap-2">
-                    <Input 
-                    placeholder="Enter new Kapan or Packet Number..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    />
-                    <Button type="submit" disabled={!searchTerm}>
-                    <Search className="mr-2" /> Search
-                    </Button>
-                </form>
+                <Input 
+                  placeholder="Filter by Packet Number..."
+                  value={packetFilter}
+                  onChange={e => setPacketFilter(e.target.value)}
+                />
             </div>
           </CardHeader>
           <CardContent>
@@ -189,7 +195,7 @@ export default function KapanCheckerPage() {
                 </Table>
             </div>
             {kapanData.length === 0 && (
-                <p className="text-center text-muted-foreground p-6">No packets found for "{searchedTerm}".</p>
+                <p className="text-center text-muted-foreground p-6">No packets found for "{searchedTerm}" matching your filter.</p>
             )}
           </CardContent>
         </Card>
