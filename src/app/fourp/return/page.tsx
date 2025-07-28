@@ -1,9 +1,9 @@
 
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useReducer } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY, PRICE_MASTER_KEY } from '@/lib/constants';
-import { FourPLot, FourPOperator, PriceMaster } from '@/lib/types';
+import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
+import { FourPLot, FourPOperator, PriceMaster, FourPDepartmentSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Edit, Save, Trash2, X } from 'lucide-react';
 
 
 export default function FourPReturnPage() {
@@ -32,11 +33,18 @@ export default function FourPReturnPage() {
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
   const [fourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
   const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+
 
   const [selectedOperator, setSelectedOperator] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [lotToReturn, setLotToReturn] = useState<FourPLot | null>(null);
   const [returnedSearchTerm, setReturnedSearchTerm] = useState('');
+  
+  // State for editing returned lots
+  const [editingLotId, setEditingLotId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<FourPLot>>({});
+
 
   const handleConfirmReturn = () => {
      if (!selectedOperator || !lotToReturn) {
@@ -79,10 +87,54 @@ export default function FourPReturnPage() {
           if (!lot.isReturnedToFourP) return false;
           if (!returnedSearchTerm) return true;
           return lot.lot.toLowerCase().includes(searchLower) ||
-                 lot.kapan.toLowerCase().includes(searchLower);
+                 lot.kapan.toLowerCase().includes(searchLower) ||
+                 lot.fourPOperator?.toLowerCase().includes(searchLower);
       })
       .sort((a,b) => new Date(b.returnDate!).getTime() - new Date(a.returnDate!).getTime());
   }, [fourPTechingLots, returnedSearchTerm]);
+  
+  const departmentNames = useMemo(() => {
+    return [deptSettings.belowThresholdDeptName, deptSettings.aboveThresholdDeptName];
+  },[deptSettings]);
+
+  // Edit/Delete handlers for returned lots
+  const handleEditClick = (lot: FourPLot) => {
+      setEditingLotId(lot.id);
+      setEditFormData({
+          fourPOperator: lot.fourPOperator,
+          finalPcs: lot.finalPcs,
+          blocking: lot.blocking,
+          department: lot.department,
+      });
+  };
+
+  const handleCancelEdit = () => {
+      setEditingLotId(null);
+      setEditFormData({});
+  };
+
+  const handleSaveEdit = (lotId: string) => {
+      const updatedLotData = { ...editFormData };
+
+      // Recalculate amount based on potentially new PCS
+      const newFinalPcs = updatedLotData.finalPcs || 0;
+      updatedLotData.fourPAmount = newFinalPcs * priceMaster.fourP;
+
+      setFourPTechingLots(prev =>
+          prev.map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
+      );
+      toast({ title: 'Success', description: 'Lot updated successfully.' });
+      handleCancelEdit();
+  };
+  
+  const handleDeleteLot = (lotId: string) => {
+      setFourPTechingLots(prev => prev.filter(lot => lot.id !== lotId));
+      toast({title: 'Success', description: 'Lot entry deleted.'});
+  }
+
+  const handleEditFormChange = (field: keyof FourPLot, value: string | number) => {
+      setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
 
 
   return (
@@ -165,10 +217,10 @@ export default function FourPReturnPage() {
         <CardHeader>
             <CardTitle>Recently Returned Lots</CardTitle>
             <div className="pt-4">
-                <Label htmlFor="search-returned-lot">Search Returned Lots</Label>
+                <Label htmlFor="search-returned-lot">Search Returned Lots (by Lot, Kapan, or Operator)</Label>
                 <Input
                     id="search-returned-lot"
-                    placeholder="Enter lot or kapan number..."
+                    placeholder="Enter search term..."
                     value={returnedSearchTerm}
                     onChange={(e) => setReturnedSearchTerm(e.target.value)}
                     className="mt-1 max-w-sm"
@@ -178,21 +230,76 @@ export default function FourPReturnPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Operator</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Return Date</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Operator</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Return Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {returnedLots.map(lot => (
                   <TableRow key={lot.id}>
-                    <TableCell>{lot.kapan}</TableCell>
-                    <TableCell>{lot.lot}</TableCell>
-                    <TableCell><Badge>{lot.department}</Badge></TableCell>
-                    <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
-                    <TableCell className="font-bold">{lot.finalPcs}</TableCell>
-                    <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>
-                    <TableCell>₹{lot.fourPAmount?.toFixed(2)}</TableCell>
-                    <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
+                    {editingLotId === lot.id ? (
+                        <>
+                           <TableCell>{lot.kapan}</TableCell>
+                           <TableCell>{lot.lot}</TableCell>
+                           <TableCell>
+                               <Select value={editFormData.department} onValueChange={(val) => handleEditFormChange('department', val)}>
+                                   <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+                                   <SelectContent>
+                                       {departmentNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
+                                   </SelectContent>
+                               </Select>
+                           </TableCell>
+                           <TableCell>
+                                <Input type="number" value={editFormData.blocking} onChange={(e) => handleEditFormChange('blocking', parseInt(e.target.value, 10))} className="w-20" />
+                           </TableCell>
+                           <TableCell>
+                                <Input type="number" value={editFormData.finalPcs} onChange={(e) => handleEditFormChange('finalPcs', parseInt(e.target.value, 10))} className="w-20" />
+                           </TableCell>
+                           <TableCell>
+                                <Select value={editFormData.fourPOperator} onValueChange={(val) => handleEditFormChange('fourPOperator', val)}>
+                                    <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>{fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                           </TableCell>
+                           <TableCell>₹{((editFormData.finalPcs || 0) * priceMaster.fourP).toFixed(2)}</TableCell>
+                           <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
+                           <TableCell className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(lot.id)}><Save className="h-4 w-4 text-green-600" /></Button>
+                                <Button variant="ghost" size="icon" onClick={handleCancelEdit}><X className="h-4 w-4 text-red-600" /></Button>
+                           </TableCell>
+                        </>
+                    ) : (
+                        <>
+                            <TableCell>{lot.kapan}</TableCell>
+                            <TableCell>{lot.lot}</TableCell>
+                            <TableCell><Badge>{lot.department}</Badge></TableCell>
+                            <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
+                            <TableCell className="font-bold">{lot.finalPcs}</TableCell>
+                            <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>
+                            <TableCell>₹{lot.fourPAmount?.toFixed(2)}</TableCell>
+                            <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
+                             <TableCell className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(lot)}><Edit className="h-4 w-4" /></Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action will permanently delete the entry for Lot <span className="font-bold">{lot.lot}</span>. This cannot be undone.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteLot(lot.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </TableCell>
+                        </>
+                    )}
                   </TableRow>
                 ))}
-                 {returnedLots.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No lots returned yet.</TableCell></TableRow>}
+                 {returnedLots.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No lots returned yet.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
