@@ -29,25 +29,37 @@ const getKapanFromIdentifier = (identifier: string): string | null => {
   return match ? match[1] : null;
 };
 
+// Helper to normalize a packet barcode for searching
+const normalizeBarcode = (barcode: string): string => {
+  return barcode.toUpperCase().startsWith('R') ? barcode.substring(1) : barcode;
+};
+
+
 export default function KapanCheckerPage() {
   const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [udhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchedKapan, setSearchedKapan] = useState<string | null>(null);
+  const [searchedTerm, setSearchedTerm] = useState<string | null>(null);
 
   const kapanData = useMemo(() => {
-    if (!searchedKapan) return [];
+    if (!searchedTerm) return [];
     
     let results: PacketInfo[] = [];
+    const normalizedSearchTerm = normalizeBarcode(searchedTerm);
+    const searchIsKapanOnly = /^\d+$/.test(searchedTerm);
 
     // Process Sarin Packets
     sarinPackets.forEach(p => {
-        if (p.kapanNumber === searchedKapan) {
+        const sarinIdentifier = `${p.kapanNumber}-${p.mainPacketNumber}`;
+        const matchesKapan = searchIsKapanOnly && p.kapanNumber === searchedTerm;
+        const matchesIdentifier = !searchIsKapanOnly && sarinIdentifier === normalizedSearchTerm;
+
+        if (matchesKapan || matchesIdentifier) {
             results.push({
                 id: p.id,
-                identifier: p.lotNumber,
+                identifier: sarinIdentifier,
                 source: 'Sarin',
                 operator: p.operator,
                 timestamp: p.date,
@@ -58,24 +70,30 @@ export default function KapanCheckerPage() {
 
     // Process Laser Lots (and their individual packets)
     laserLots.forEach(lot => {
-        if (lot.kapanNumber === searchedKapan) {
-            lot.scannedPackets?.forEach(p => {
+        lot.scannedPackets?.forEach(p => {
+            const matchesKapan = searchIsKapanOnly && p.kapanNumber === searchedTerm;
+            const matchesIdentifier = !searchIsKapanOnly && normalizeBarcode(p.fullBarcode) === normalizedSearchTerm;
+
+             if (matchesKapan || matchesIdentifier) {
                 results.push({
                     id: p.id,
                     identifier: p.fullBarcode,
                     source: 'Laser',
-                    operator: lot.returnedBy || 'N/A',
+                    operator: lot.returnedBy || lot.machine,
                     timestamp: lot.entryDate,
                     status: lot.isReturned ? 'Returned' : 'Running'
                 });
-            });
-        }
+            }
+        });
     });
 
     // Process Udhda Packets
     udhdhaPackets.forEach(p => {
         const kapan = getKapanFromIdentifier(p.barcode);
-        if (kapan === searchedKapan) {
+        const matchesKapan = searchIsKapanOnly && kapan === searchedTerm;
+        const matchesIdentifier = !searchIsKapanOnly && normalizeBarcode(p.barcode) === normalizedSearchTerm;
+        
+        if (matchesKapan || matchesIdentifier) {
             results.push({
                 id: p.id,
                 identifier: p.barcode,
@@ -89,11 +107,11 @@ export default function KapanCheckerPage() {
     
     return results.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  }, [searchedKapan, sarinPackets, laserLots, udhdhaPackets]);
+  }, [searchedTerm, sarinPackets, laserLots, udhdhaPackets]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setSearchedKapan(searchTerm);
+    setSearchedTerm(searchTerm);
   };
 
   const getStatusIcon = (status: 'Returned' | 'Running') => {
@@ -105,16 +123,16 @@ export default function KapanCheckerPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-      <PageHeader title="Kapan Checker" description="Check the status of all packets associated with a Kapan number." />
+      <PageHeader title="Kapan Checker" description="Check the status of all packets associated with a Kapan or Packet number." />
       
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>Search Kapan</CardTitle>
+          <CardTitle>Search Kapan or Packet</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSearch} className="flex gap-2">
             <Input 
-              placeholder="Enter Kapan Number..."
+              placeholder="Enter Kapan or Packet Number..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
@@ -125,10 +143,10 @@ export default function KapanCheckerPage() {
         </CardContent>
       </Card>
       
-      {searchedKapan && (
+      {searchedTerm && (
         <Card>
           <CardHeader>
-            <CardTitle>Results for Kapan: {searchedKapan}</CardTitle>
+            <CardTitle>Results for: {searchedTerm}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -159,7 +177,7 @@ export default function KapanCheckerPage() {
                 </Table>
             </div>
             {kapanData.length === 0 && (
-                <p className="text-center text-muted-foreground p-6">No packets found for Kapan "{searchedKapan}".</p>
+                <p className="text-center text-muted-foreground p-6">No packets found for "{searchedTerm}".</p>
             )}
           </CardContent>
         </Card>
