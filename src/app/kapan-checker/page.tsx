@@ -147,6 +147,18 @@ export default function KapanCheckerPage() {
         <Card>
           <CardHeader>
             <CardTitle>Results for: {searchedTerm}</CardTitle>
+             <div className="pt-4">
+                <form onSubmit={handleSearch} className="flex gap-2">
+                    <Input 
+                    placeholder="Enter new Kapan or Packet Number..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    />
+                    <Button type="submit" disabled={!searchTerm}>
+                    <Search className="mr-2" /> Search
+                    </Button>
+                </form>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
