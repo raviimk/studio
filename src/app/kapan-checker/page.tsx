@@ -71,7 +71,7 @@ export default function KapanCheckerPage() {
     // Process Laser Lots (and their individual packets)
     laserLots.forEach(lot => {
         lot.scannedPackets?.forEach(p => {
-            const matchesKapan = searchIsKapanOnly && p.kapanNumber === searchedTerm;
+            const matchesKapan = searchIsKapanOnly && lot.kapanNumber === searchedTerm;
             const matchesIdentifier = !searchIsKapanOnly && normalizeBarcode(p.fullBarcode) === normalizedSearchTerm;
 
              if (matchesKapan || matchesIdentifier) {
