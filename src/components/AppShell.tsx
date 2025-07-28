@@ -42,6 +42,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collap
 import { cn } from '@/lib/utils';
 import { Toaster } from './ui/toaster';
 import { useAutoBackup } from '@/hooks/useAutoBackup';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 const menuItems = [
   {
@@ -171,25 +172,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarMenu>
+          <Accordion type="multiple" className="w-full">
             {updatedMenuItems.map((item) =>
               item.subItems ? (
-                <Collapsible key={item.label} defaultOpen={item.subItems.some(sub => pathname.startsWith(sub.href))}>
-                  <SidebarMenuItem className="p-0">
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        className="justify-between w-full"
-                        variant="ghost"
-                      >
-                        <div className="flex items-center gap-2">
-                          <item.icon size={18} />
-                          <span>{item.label}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200 [&[data-state=open]>svg]:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                  </SidebarMenuItem>
-                  <CollapsibleContent>
+                <AccordionItem value={item.label} key={item.label} className="border-none">
+                  <AccordionTrigger className="py-2 px-3 text-sm rounded-md hover:bg-sidebar-accent hover:no-underline">
+                    <div className="flex items-center gap-2">
+                      <item.icon size={18} />
+                      <span>{item.label}</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pl-6">
                     <SidebarMenuSub>
                       {item.subItems.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.href}>
@@ -201,15 +194,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         </SidebarMenuSubItem>
                       ))}
                     </SidebarMenuSub>
-                  </CollapsibleContent>
-                </Collapsible>
+                  </AccordionContent>
+                </AccordionItem>
               ) : (
-                <SidebarMenuItem key={item.label}>
+                <div key={item.label} className="px-3">
                   <Link href={item.href}>
                     <SidebarMenuButton
                       asChild
                       isActive={pathname === item.href}
                       variant="ghost"
+                      className="w-full justify-start"
                     >
                       <a>
                         <item.icon size={18} />
@@ -217,10 +211,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       </a>
                     </SidebarMenuButton>
                   </Link>
-                </SidebarMenuItem>
+                </div>
               )
             )}
-          </SidebarMenu>
+          </Accordion>
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
