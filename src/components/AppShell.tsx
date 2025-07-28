@@ -22,6 +22,7 @@ import {
   Warehouse,
   TestTubeDiagonal,
   Box,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -106,6 +107,11 @@ const menuItems = [
     label: 'Packet History',
     href: '/packet-history',
     icon: History,
+  },
+  {
+    label: 'Kapan Checker',
+    href: '/kapan-checker',
+    icon: ClipboardCheck,
   },
    {
     label: 'Reports Center',
