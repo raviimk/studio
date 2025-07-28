@@ -8,7 +8,7 @@ import LaserPerformance from '@/components/dashboard/LaserPerformance';
 
 export default function DashboardPage() {
     useEffect(() => {
-        document.title = 'Dashboard | ATIXE Diamond';
+        document.title = 'ATIXE Diamond';
     }, []);
 
   return (
