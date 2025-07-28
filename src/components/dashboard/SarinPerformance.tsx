@@ -156,9 +156,31 @@ export default function SarinPerformance() {
           <CardContent className="h-[300px]">
              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                    <defs>
+                        <radialGradient id="color1">
+                            <stop offset="0%" stopColor="hsl(var(--chart-1))" stopOpacity={0.4} />
+                            <stop offset="75%" stopColor="hsl(var(--chart-1))" stopOpacity={1} />
+                        </radialGradient>
+                         <radialGradient id="color2">
+                            <stop offset="0%" stopColor="hsl(var(--chart-2))" stopOpacity={0.4} />
+                            <stop offset="75%" stopColor="hsl(var(--chart-2))" stopOpacity={1} />
+                        </radialGradient>
+                         <radialGradient id="color3">
+                            <stop offset="0%" stopColor="hsl(var(--chart-3))" stopOpacity={0.4} />
+                            <stop offset="75%" stopColor="hsl(var(--chart-3))" stopOpacity={1} />
+                        </radialGradient>
+                         <radialGradient id="color4">
+                            <stop offset="0%" stopColor="hsl(var(--chart-4))" stopOpacity={0.4} />
+                            <stop offset="75%" stopColor="hsl(var(--chart-4))" stopOpacity={1} />
+                        </radialGradient>
+                         <radialGradient id="color5">
+                            <stop offset="0%" stopColor="hsl(var(--chart-5))" stopOpacity={0.4} />
+                            <stop offset="75%" stopColor="hsl(var(--chart-5))" stopOpacity={1} />
+                        </radialGradient>
+                    </defs>
                     <Pie data={topPerformers} dataKey="packets" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
                         {topPerformers.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            <Cell key={`cell-${index}`} fill={`url(#color${index + 1})`} />
                         ))}
                     </Pie>
                     <Tooltip 
@@ -178,4 +200,5 @@ export default function SarinPerformance() {
     </div>
   );
 }
+
 
