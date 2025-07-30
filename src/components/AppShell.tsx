@@ -98,6 +98,11 @@ const menuItems = [
     href: '/packet-verifier',
     icon: ListTodo,
   },
+   {
+    label: 'Kapan Verifier',
+    href: '/kapan-verifier',
+    icon: ClipboardCheck,
+  },
   {
     label: 'Packet Reassignment',
     href: '/reassignment',
