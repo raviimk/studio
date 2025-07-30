@@ -138,6 +138,24 @@ export default function KapanVerifierPage() {
                         </div>
                     </CardHeader>
                     <CardContent>
+                         {missingSerials.length > 0 && (
+                            <Alert variant="destructive" className="mb-6">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>Missing Rows Detected!</AlertTitle>
+                                <AlertDescription>
+                                    The following serial numbers are missing: <strong>{missingSerials.join(', ')}</strong>
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                         {missingSerials.length === 0 && (
+                             <Alert className="mb-6 border-green-500 text-green-700">
+                                <CheckCircle2 className="h-4 w-4" />
+                                <AlertTitle>All Good!</AlertTitle>
+                                <AlertDescription>
+                                    No missing serial numbers were detected in the provided data.
+                                </AlertDescription>
+                            </Alert>
+                         )}
                         <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
@@ -159,30 +177,9 @@ export default function KapanVerifierPage() {
                                 </TableBody>
                             </Table>
                         </div>
-
-                         {missingSerials.length > 0 && (
-                            <Alert variant="destructive" className="mt-6">
-                                <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Missing Rows Detected!</AlertTitle>
-                                <AlertDescription>
-                                    The following serial numbers are missing: <strong>{missingSerials.join(', ')}</strong>
-                                </AlertDescription>
-                            </Alert>
-                        )}
-                         {missingSerials.length === 0 && (
-                             <Alert className="mt-6 border-green-500 text-green-700">
-                                <CheckCircle2 className="h-4 w-4" />
-                                <AlertTitle>All Good!</AlertTitle>
-                                <AlertDescription>
-                                    No missing serial numbers were detected in the provided data.
-                                </AlertDescription>
-                            </Alert>
-                         )}
-
                     </CardContent>
                 </Card>
             )}
         </div>
     );
 }
-
