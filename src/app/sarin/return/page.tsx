@@ -202,14 +202,23 @@ export default function ReturnSarinLotPage() {
                 </CardHeader>
                 <CardContent>
                 <Table>
-                    <TableHeader><TableRow><TableHead>Lot</TableHead><TableHead>Kapan</TableHead><TableHead>Operator</TableHead><TableHead>Packets</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Lot</TableHead>
+                            <TableHead>Kapan</TableHead>
+                            <TableHead>Operator</TableHead>
+                            <TableHead>M / P / J</TableHead>
+                            <TableHead>Entry Date</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     <TableBody>
                     {unreturnedEntries.map(entry => (
                         <TableRow key={entry.id}>
                         <TableCell>{entry.lotNumber}</TableCell>
                         <TableCell>{entry.kapanNumber}</TableCell>
                         <TableCell>{entry.operator}</TableCell>
-                        <TableCell>{entry.packetCount}</TableCell>
+                        <TableCell className="font-mono">{entry.mainPacketNumber} / {entry.packetCount} / {entry.jiramCount || 0}</TableCell>
                         <TableCell>{format(new Date(entry.date), 'PPp')}</TableCell>
                         <TableCell>
                             <Button onClick={() => handleLegacyReturn(entry.id)} disabled={!returningOperator || returningOperator !== entry.operator}>
@@ -247,13 +256,23 @@ export default function ReturnSarinLotPage() {
             <div className="border rounded-md max-h-[60vh] overflow-y-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
-                    <TableRow><TableHead>Lot</TableHead><TableHead>Kapan</TableHead><TableHead>Operator</TableHead><TableHead>Packets</TableHead><TableHead>Entry Time</TableHead><TableHead>Actions</TableHead></TableRow>
+                    <TableRow>
+                        <TableHead>Lot</TableHead>
+                        <TableHead>Kapan</TableHead>
+                        <TableHead>Operator</TableHead>
+                        <TableHead>M / P / J</TableHead>
+                        <TableHead>Entry Time</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
                 </TableHeader>
                 <TableBody>
                   {unreturnedEntries.map(lot => (
                     <TableRow key={lot.id}>
-                      <TableCell>{lot.lotNumber}</TableCell><TableCell>{lot.kapanNumber}</TableCell><TableCell>{lot.operator}</TableCell>
-                      <TableCell>{lot.packetCount}</TableCell><TableCell>{format(new Date(lot.date), 'PPp')}</TableCell>
+                      <TableCell>{lot.lotNumber}</TableCell>
+                      <TableCell>{lot.kapanNumber}</TableCell>
+                      <TableCell>{lot.operator}</TableCell>
+                      <TableCell className="font-mono">{lot.mainPacketNumber} / {lot.packetCount} / {lot.jiramCount || 0}</TableCell>
+                      <TableCell>{format(new Date(lot.date), 'PPp')}</TableCell>
                       <TableCell><Button onClick={() => handleOpenDialog(lot)} disabled={!returningOperator || lot.operator !== returningOperator}>Verify & Return</Button></TableCell>
                     </TableRow>
                   ))}
