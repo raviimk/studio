@@ -35,6 +35,8 @@ export default function LotAnalysisPage() {
     const relevantLogs = reassignLogs
       .filter(log => log.packets.some(p => p.lotNumber === searchTerm))
       .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const scannedReturnPackets = returnEntry?.scannedReturnPackets || [];
 
     return {
       totalEntries,
@@ -49,6 +51,7 @@ export default function LotAnalysisPage() {
       returnedBy: returnEntry?.returnedBy || 'N/A',
       notFound: false,
       reassignmentHistory: relevantLogs,
+      scannedReturnPackets,
     };
   }, [searchTerm, sarinPackets, reassignLogs]);
 
@@ -117,6 +120,24 @@ export default function LotAnalysisPage() {
                 </div>
               </CardContent>
             </Card>
+            
+            {lotData.scannedReturnPackets.length > 0 && (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Scanned Return Packets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Full Barcode</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {lotData.scannedReturnPackets.map((p, i) => (
+                                <TableRow key={p.id}><TableCell>{i + 1}</TableCell><TableCell>{p.fullBarcode}</TableCell></TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+            )}
 
             {lotData.reassignmentHistory.length > 0 && (
                  <Card>
@@ -125,27 +146,13 @@ export default function LotAnalysisPage() {
                     </CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>From</TableHead>
-                                    <TableHead>To</TableHead>
-                                    <TableHead>Packets Transferred</TableHead>
-                                    <TableHead>Date & Time</TableHead>
-                                </TableRow>
-                            </TableHeader>
+                            <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Packets Transferred</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
                             <TableBody>
                                 {lotData.reassignmentHistory.map((log) => (
                                     <TableRow key={log.id}>
                                         <TableCell>{log.fromOperator}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                                                <span>{log.toOperator}</span>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {log.packets.find(p => p.lotNumber === searchTerm)?.quantityTransferred}
-                                        </TableCell>
+                                        <TableCell><div className="flex items-center gap-2"><ArrowRight className="h-4 w-4 text-muted-foreground" /><span>{log.toOperator}</span></div></TableCell>
+                                        <TableCell>{log.packets.find(p => p.lotNumber === searchTerm)?.quantityTransferred}</TableCell>
                                         <TableCell>{format(new Date(log.date), 'PPp')}</TableCell>
                                     </TableRow>
                                 ))}

@@ -15,9 +15,9 @@ import {
   ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
-  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY
+  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +28,7 @@ import { format } from 'date-fns';
 import { handleBackup } from '@/lib/backup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 // Schemas
 const sarinOperatorSchema = z.object({
@@ -90,6 +91,7 @@ export default function ControlPanelPage() {
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
+  const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   
   const restoreFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -267,17 +269,26 @@ export default function ControlPanelPage() {
     toast({ title: 'Settings Saved' });
   }
 
+  const handleScanSettingChange = (department: 'sarin' | 'laser', checked: boolean) => {
+      setReturnScanSettings(prev => ({
+          ...prev,
+          [department]: checked
+      }));
+      toast({ title: 'Settings Saved' });
+  };
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
           <TabsTrigger value="udhdha">Udhda</TabsTrigger>
           <TabsTrigger value="box-sorting">Box Sorting</TabsTrigger>
+          <TabsTrigger value="system">System</TabsTrigger>
           <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
@@ -567,6 +578,34 @@ export default function ControlPanelPage() {
                         ))}
                     </TableBody>
                 </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="system" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+                <CardTitle>Return Process Settings</CardTitle>
+                <CardDescription>
+                    Enable or disable mandatory scanning for lot returns in each department.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="flex items-center space-x-2">
+                    <Switch
+                        id="sarin-scan-mode"
+                        checked={returnScanSettings.sarin}
+                        onCheckedChange={(checked) => handleScanSettingChange('sarin', checked)}
+                    />
+                    <Label htmlFor="sarin-scan-mode">Enable Sarin Return Scanning</Label>
+                </div>
+                 <div className="flex items-center space-x-2">
+                    <Switch
+                        id="laser-scan-mode"
+                        checked={returnScanSettings.laser}
+                        onCheckedChange={(checked) => handleScanSettingChange('laser', checked)}
+                    />
+                    <Label htmlFor="laser-scan-mode">Enable Laser Return Scanning</Label>
+                </div>
             </CardContent>
           </Card>
         </TabsContent>

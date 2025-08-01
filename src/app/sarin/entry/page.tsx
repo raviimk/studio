@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,12 +12,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, SARIN_MAPPINGS_KEY } from '@/lib/constants';
-import { SarinPacket, SarinOperator, SarinMapping } from '@/lib/types';
+import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, SARIN_MAPPINGS_KEY, LASER_LOTS_KEY } from '@/lib/constants';
+import { SarinPacket, SarinOperator, SarinMapping, LaserLot, ScannedPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageHeader from '@/components/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+
 
 const formSchema = z.object({
   senderName: z.string(),
@@ -25,7 +29,7 @@ const formSchema = z.object({
   machine: z.string(),
   kapanNumber: z.string().min(1, 'Kapan number is required.'),
   lotNumber: z.string().min(1, 'Lot number is required.'),
-  mainPacketNumber: z.coerce.number().min(1, 'Main packet count is required.'),
+  sarinMainPackets: z.array(z.any()).min(1, "Main Laser packets are required."),
   packetCount: z.coerce.number().min(1, 'Packet count must be at least 1.'),
   hasJiram: z.boolean().default(false),
   jiramCount: z.coerce.number().optional(),
@@ -39,6 +43,10 @@ export default function SarinPacketEntryPage() {
   const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const [sarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+
+  const [laserLotLoading, setLaserLotLoading] = useState(false);
+  const [foundLaserLot, setFoundLaserLot] = useState<LaserLot | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -48,27 +56,54 @@ export default function SarinPacketEntryPage() {
       machine: '',
       kapanNumber: '',
       lotNumber: '',
-      mainPacketNumber: 0,
+      sarinMainPackets: [],
       packetCount: 0,
       hasJiram: false,
       jiramCount: 0,
     },
   });
+  
+  const { control, watch, setValue } = form;
+  const watchKapan = watch('kapanNumber');
+  const watchLot = watch('lotNumber');
+  const selectedOperatorName = watch('operator');
+  const hasJiram = watch('hasJiram');
 
-  const selectedOperatorName = form.watch('operator');
-  const hasJiram = form.watch('hasJiram');
 
   useEffect(() => {
     if (selectedOperatorName) {
       const operator = sarinOperators.find(op => op.name === selectedOperatorName);
       if (operator) {
         const mapping = sarinMappings.find(m => m.operatorId === operator.id);
-        form.setValue('machine', mapping ? mapping.machine : 'N/A');
+        setValue('machine', mapping ? mapping.machine : 'N/A');
       }
     } else {
-        form.setValue('machine', '');
+        setValue('machine', '');
     }
-  }, [selectedOperatorName, sarinOperators, sarinMappings, form]);
+  }, [selectedOperatorName, sarinOperators, sarinMappings, setValue]);
+
+  useEffect(() => {
+    if (watchKapan && watchLot) {
+      setLaserLotLoading(true);
+      const found = laserLots.find(l => l.kapanNumber === watchKapan && l.lotNumber === watchLot);
+      
+      setTimeout(() => { // simulate loading
+        if (found) {
+            setFoundLaserLot(found);
+            setValue('sarinMainPackets', found.scannedPackets || []);
+        } else {
+            setFoundLaserLot(null);
+            setValue('sarinMainPackets', []);
+        }
+        setLaserLotLoading(false);
+      }, 500);
+
+    } else {
+        setFoundLaserLot(null);
+        setValue('sarinMainPackets', []);
+    }
+  }, [watchKapan, watchLot, laserLots, setValue]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     const existingEntry = sarinPackets.find(
@@ -86,6 +121,7 @@ export default function SarinPacketEntryPage() {
     const newPacket: SarinPacket = {
       id: uuidv4(),
       ...values,
+      mainPacketNumber: values.sarinMainPackets?.length || 0,
       date: new Date().toISOString(),
       time: new Date().toLocaleTimeString(),
       isReturned: false,
@@ -96,11 +132,12 @@ export default function SarinPacketEntryPage() {
         ...form.getValues(),
         kapanNumber: '',
         lotNumber: '',
-        mainPacketNumber: 0,
+        sarinMainPackets: [],
         packetCount: 0,
         hasJiram: false,
         jiramCount: 0,
     });
+    setFoundLaserLot(null);
     form.setFocus('kapanNumber');
   }
 
@@ -113,10 +150,10 @@ export default function SarinPacketEntryPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="senderName" render={({ field }) => (
+                <FormField control={control} name="senderName" render={({ field }) => (
                   <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="operator" render={({ field }) => (
+                <FormField control={control} name="operator" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Operator Name</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -126,36 +163,71 @@ export default function SarinPacketEntryPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="machine" render={({ field }) => (
+                <FormField control={control} name="machine" render={({ field }) => (
                   <FormItem><FormLabel>Machine Number</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="kapanNumber" render={({ field }) => (
+                <FormField control={control} name="kapanNumber" render={({ field }) => (
                   <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="lotNumber" render={({ field }) => (
+                <FormField control={control} name="lotNumber" render={({ field }) => (
                   <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="mainPacketNumber" render={({ field }) => (
-                  <FormItem><FormLabel>Main Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="packetCount" render={({ field }) => (
+
+                <div className="md:col-span-2">
+                    <FormLabel>Main Laser Packets</FormLabel>
+                     <FormField
+                        control={control}
+                        name="sarinMainPackets"
+                        render={({ field }) => (
+                            <FormItem>
+                                {laserLotLoading ? (
+                                    <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" />Searching for Laser Lot...</div>
+                                ) : foundLaserLot ? (
+                                    <Alert>
+                                        <AlertTitle>Laser Lot Found!</AlertTitle>
+                                        <AlertDescription>
+                                            Found {foundLaserLot.scannedPackets?.length || 0} main packets. These will be linked to this Sarin entry.
+                                            <div className="flex flex-wrap gap-1 mt-2">
+                                                {foundLaserLot.scannedPackets?.map(p => <Badge key={p.id} variant="secondary">{p.fullBarcode}</Badge>)}
+                                            </div>
+                                        </AlertDescription>
+                                    </Alert>
+                                ) : watchKapan && watchLot ? (
+                                    <Alert variant="destructive">
+                                        <AlertTitle>Laser Lot Not Found</AlertTitle>
+                                        <AlertDescription>No matching Laser Lot found for this Kapan/Lot combination. You cannot proceed.</AlertDescription>
+                                    </Alert>
+                                ): (
+                                    <Alert variant="default">
+                                        <AlertTitle>Enter Kapan and Lot Number</AlertTitle>
+                                        <AlertDescription>Enter Kapan and Lot numbers above to automatically fetch and link main packets from the Laser module.</AlertDescription>
+                                    </Alert>
+                                )}
+                                <FormMessage />
+                           </FormItem>
+                        )}
+                        />
+                </div>
+
+
+                <FormField control={control} name="packetCount" render={({ field }) => (
                   <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="space-y-2">
-                  <FormField control={form.control} name="hasJiram" render={({ field }) => (
+                  <FormField control={control} name="hasJiram" render={({ field }) => (
                     <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                       <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                       <div className="space-y-1 leading-none"><FormLabel>Jiram Check</FormLabel></div>
                     </FormItem>
                   )} />
                   {hasJiram && (
-                    <FormField control={form.control} name="jiramCount" render={({ field }) => (
+                    <FormField control={control} name="jiramCount" render={({ field }) => (
                       <FormItem><FormLabel>Jiram Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
                   )}
                 </div>
               </div>
-              <Button type="submit">Create Entry</Button>
+              <Button type="submit" disabled={!foundLaserLot}>Create Entry</Button>
             </form>
           </Form>
         </CardContent>

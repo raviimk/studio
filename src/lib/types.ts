@@ -7,7 +7,8 @@ export interface SarinPacket {
   machine: string;
   kapanNumber: string;
   lotNumber: string;
-  mainPacketNumber: number;
+  mainPacketNumber: number; // This is the count of main packets
+  sarinMainPackets?: ScannedPacket[]; // The actual main packets from Laser Lot
   packetCount: number;
   hasJiram: boolean;
   jiramCount?: number;
@@ -16,6 +17,7 @@ export interface SarinPacket {
   isReturned: boolean;
   returnedBy?: string;
   returnDate?: string;
+  scannedReturnPackets?: ScannedPacket[];
 }
 
 export interface ScannedPacket {
@@ -27,7 +29,7 @@ export interface ScannedPacket {
 }
 
 export interface LaserLot {
-  id: string;
+  id:string;
   lotNumber: string;
   tensionType: string;
   machine: string;
@@ -156,6 +158,11 @@ export interface BoxSortingPacket {
 }
 
 // Settings
+export interface ReturnScanSettings {
+    sarin: boolean;
+    laser: boolean;
+}
+
 export interface AutoBackupSettings {
     intervalHours: number; // 0 for disabled
     lastBackupTimestamp?: number;

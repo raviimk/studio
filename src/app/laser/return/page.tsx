@@ -2,8 +2,8 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { LASER_LOTS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
-import { LaserLot, LaserOperator, ScannedPacket } from '@/lib/types';
+import { LASER_LOTS_KEY, LASER_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY } from '@/lib/constants';
+import { LaserLot, LaserOperator, ScannedPacket, ReturnScanSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 export default function ReturnLaserLotPage() {
   const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [scanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+
   const [returningOperator, setReturningOperator] = useState('');
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,6 +106,21 @@ export default function ReturnLaserLotPage() {
     setSelectedLot(null);
     setScannedInDialog(new Set());
   };
+  
+   const handleLegacyReturn = (lotId: string) => {
+    if (!returningOperator) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please select who is returning the lot.' });
+        return;
+    }
+    const lotToReturn = laserLots.find(l => l.id === lotId);
+    if (window.confirm(`Are you sure you want to return Lot ${lotToReturn?.lotNumber}?`)) {
+      const updatedLots = laserLots.map(l =>
+        l.id === lotId ? { ...l, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : l
+      );
+      setLaserLots(updatedLots);
+      toast({ title: 'Success', description: 'Lot entry has been marked as returned.' });
+    }
+  };
 
   const allPacketsScanned = useMemo(() => {
     if (!selectedLot) return false;
@@ -119,6 +136,40 @@ export default function ReturnLaserLotPage() {
       return () => clearTimeout(timer);
     }
   }, [allPacketsScanned]);
+  
+  if (!scanSettings.laser) {
+      return (
+         <div className="container mx-auto py-8 px-4 md:px-6">
+            <PageHeader title="Return Laser Lot" description="Mark Laser lots as returned." />
+             <Card>
+                <CardHeader>
+                    <CardTitle>Unreturned Lots</CardTitle>
+                    <div className="mt-4 flex flex-col sm:flex-row gap-4">
+                        <Input placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="max-w-sm" />
+                        <Select onValueChange={setReturningOperator} value={returningOperator}>
+                            <SelectTrigger className="w-full sm:w-[200px]"><SelectValue placeholder="Select Returning Operator" /></SelectTrigger>
+                            <SelectContent>{laserOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Lot</TableHead><TableHead>Kapan</TableHead><TableHead>Packets</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {unreturnedLots.map(lot => (
+                                <TableRow key={lot.id}>
+                                <TableCell>{lot.lotNumber}</TableCell><TableCell>{lot.kapanNumber}</TableCell><TableCell>{lot.packetCount}</TableCell>
+                                <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                                <TableCell><Button onClick={() => handleLegacyReturn(lot.id)} disabled={!returningOperator}>Return</Button></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </div>
+      )
+  }
 
 
   return (
@@ -128,7 +179,7 @@ export default function ReturnLaserLotPage() {
             <ThumbsUp className="h-24 w-24 text-green-500" fill="currentColor" />
           </div>
         )}
-        <PageHeader title="Return Laser Lot" description="Verify all packets for a lot before marking it as returned." />
+        <PageHeader title="Return Laser Lot (Scan Mode)" description="Verify all packets for a lot before marking it as returned." />
         <Card>
           <CardHeader>
               <CardTitle>Unreturned Lots</CardTitle>

@@ -32,6 +32,8 @@ export const CHALU_SARIN_PROGRESS_KEY = 'chaluSarinProgress';
 
 // Settings
 export const AUTO_BACKUP_SETTINGS_KEY = 'autoBackupSettings';
+export const RETURN_SCAN_SETTINGS_KEY = 'returnScanSettings';
+
 
 // All keys for backup/restore
 export const ALL_APP_KEYS = [
@@ -55,4 +57,5 @@ export const ALL_APP_KEYS = [
     BOX_SORTING_PACKETS_KEY,
     CHALU_SARIN_PROGRESS_KEY,
     AUTO_BACKUP_SETTINGS_KEY,
+    RETURN_SCAN_SETTINGS_KEY,
 ];

@@ -92,7 +92,7 @@ export default function LaserLotAnalysisPage() {
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Scanned Packets</CardTitle>
+                    <CardTitle>Scanned Packets on Entry</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <Table>
