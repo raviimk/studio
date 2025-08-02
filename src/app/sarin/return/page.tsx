@@ -18,6 +18,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
+// Extracts the base part of a barcode, e.g., "R89-83-A" -> "R89-83"
+const getBarcodeBase = (barcode: string): string | null => {
+    const parts = barcode.split('-');
+    if (parts.length < 2) return null;
+    if (parts.length === 2) return barcode; // e.g. 61-105
+    return parts.slice(0, -1).join('-'); // e.g. R89-83-A -> R89-83
+};
+
+
 export default function ReturnSarinLotPage() {
   const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
@@ -32,7 +41,7 @@ export default function ReturnSarinLotPage() {
   const [selectedLot, setSelectedLot] = useState<SarinPacket | null>(null);
   const [scannedInDialog, setScannedInDialog] = useState<Set<string>>(new Set());
   const [scanInput, setScanInput] = useState('');
-  const [lastScanned, setLastScanned] = useState<string | null>(null);
+  const [lastScanned, setLastScanned] = useState<{barcode: string, isValid: boolean} | null>(null);
   const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
   const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
 
@@ -49,35 +58,6 @@ export default function ReturnSarinLotPage() {
       })
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sarinPackets, searchTerm]);
-  
-  const expectedPacketsForDialog = useMemo(() => {
-    if (!selectedLot || !selectedLot.sarinMainPackets) return [];
-
-    const mainPacketPrefixes = selectedLot.sarinMainPackets.map(p => p.fullBarcode);
-    
-    // This is a simplified generation. A real system might have more complex rules.
-    let expected: {id: string, barcode: string}[] = [];
-    for (const prefix of mainPacketPrefixes) {
-      // Assuming sub-packets are just numbered suffixes.
-      // This part might need adjustment based on real barcode generation logic.
-      for (let i = 1; i <= (selectedLot.packetCount / mainPacketPrefixes.length); i++) {
-        const barcode = `${prefix}-${i}`;
-        expected.push({ id: uuidv4(), barcode });
-      }
-    }
-    // This logic is flawed if packetCount is not a multiple of main packets.
-    // Let's assume for now that scanned packets are what matter.
-    // The prompt implies a different logic: if main packet is R85-115-A, valid returns can be R85-115-A1, A2 etc.
-    // This means we need to check prefixes.
-    
-    // The UI will just show a list of what to scan. The validation is the key.
-    return Array.from({ length: selectedLot.packetCount }).map((_, i) => ({
-      id: uuidv4(),
-      barcode: `Packet ${i + 1}`, // Placeholder text
-    }));
-
-  }, [selectedLot]);
-
 
   const handleOpenDialog = (lot: SarinPacket) => {
     if (!returningOperator) {
@@ -92,7 +72,6 @@ export default function ReturnSarinLotPage() {
     setScannedInDialog(new Set());
     setScanInput('');
     setLastScanned(null);
-    itemRefs.current.clear();
     setIsDialogOpen(true);
   };
   
@@ -100,19 +79,27 @@ export default function ReturnSarinLotPage() {
     e.preventDefault();
     if (!scanInput || !selectedLot || !selectedLot.sarinMainPackets) return;
 
-    const mainPacketPrefixes = selectedLot.sarinMainPackets.map(p => p.fullBarcode);
-    const isValid = mainPacketPrefixes.some(prefix => scanInput.startsWith(prefix));
+    if (scannedInDialog.has(scanInput)) {
+        toast({ variant: 'destructive', title: 'Already Scanned', description: 'This packet has already been verified for this lot.' });
+        setScanInput('');
+        return;
+    }
+    
+    const scannedBase = getBarcodeBase(scanInput);
+    const mainPacketBases = selectedLot.sarinMainPackets.map(p => getBarcodeBase(p.fullBarcode));
+    const isValid = mainPacketBases.some(mainBase => mainBase === scannedBase);
 
     if (isValid) {
-        if(scannedInDialog.has(scanInput)){
-            toast({variant: 'destructive', title: 'Already Scanned', description: 'This packet has already been verified for this lot.'})
-        } else {
-            setScannedInDialog(prev => new Set(prev).add(scanInput));
-            setLastScanned(scanInput);
-            toast({title: 'Packet Verified', description: scanInput});
-        }
+        setScannedInDialog(prev => new Set(prev).add(scanInput));
+        setLastScanned({ barcode: scanInput, isValid: true });
+        toast({ title: 'Packet Verified', description: scanInput });
     } else {
-        toast({ variant: 'destructive', title: 'Incorrect Packet', description: 'This packet does not belong to the selected lot.'});
+        setLastScanned({ barcode: scanInput, isValid: false });
+        toast({ 
+            variant: 'destructive', 
+            title: 'Incorrect Packet', 
+            description: `Packet ${scanInput} does not belong to this lot.`
+        });
     }
     setScanInput('');
   };
@@ -143,7 +130,6 @@ export default function ReturnSarinLotPage() {
     setSarinPackets(updatedPackets);
     toast({ title: 'Success', description: `Lot ${selectedLot.lotNumber} has been marked as returned.` });
     
-    // Close dialog and reset state
     setIsDialogOpen(false);
     setSelectedLot(null);
     setScannedInDialog(new Set());
@@ -304,6 +290,12 @@ export default function ReturnSarinLotPage() {
                                    <TableCell><Check className="h-5 w-5 text-green-500" /></TableCell>
                                </TableRow>
                            ))}
+                           {lastScanned && !lastScanned.isValid && (
+                                <TableRow className="bg-destructive/10">
+                                    <TableCell className="font-mono text-destructive">{lastScanned.barcode}</TableCell>
+                                    <TableCell><X className="h-5 w-5 text-destructive" /></TableCell>
+                                </TableRow>
+                           )}
                        </TableBody>
                    </Table>
                 </div>
@@ -314,3 +306,5 @@ export default function ReturnSarinLotPage() {
     </div>
   );
 }
+
+    
