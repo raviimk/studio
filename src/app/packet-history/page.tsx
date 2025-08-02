@@ -77,6 +77,31 @@ export default function PacketHistoryPage() {
             }
         }
         
+        // Sarin Packets
+        const sarinLot = sarinPackets.find(lot => lot.scannedReturnPackets?.some(p => p.fullBarcode === searchedPacket));
+        if (sarinLot) {
+            history.push({
+                step: 0,
+                module: 'Sarin',
+                lotNumber: sarinLot.lotNumber,
+                operator: sarinLot.operator,
+                action: 'Assigned',
+                timestamp: sarinLot.date,
+                notes: `Assigned to lot`
+            });
+            if (sarinLot.isReturned && sarinLot.returnDate && sarinLot.returnedBy) {
+                history.push({
+                    step: 0,
+                    module: 'Sarin',
+                    lotNumber: sarinLot.lotNumber,
+                    operator: sarinLot.returnedBy,
+                    action: 'Returned',
+                    timestamp: sarinLot.returnDate,
+                    duration: formatDistance(new Date(sarinLot.returnDate), new Date(sarinLot.date))
+                });
+            }
+        }
+
         // Udhda Packets
         const udhdhaPacket = udhdhaPackets.find(p => p.barcode === searchedPacket);
         if (udhdhaPacket) {
@@ -100,13 +125,10 @@ export default function PacketHistoryPage() {
             }
         }
         
-        // Note: Sarin & 4P lots don't use individual packet barcodes in the current system.
-        // The search is primarily for Laser and Udhda packets.
-
         return history.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                       .map((event, index) => ({...event, step: index + 1}));
 
-    }, [searchedPacket, laserLots, udhdhaPackets]);
+    }, [searchedPacket, laserLots, udhdhaPackets, sarinPackets]);
 
     const summary = useMemo(() => {
         if (!packetHistory.length) return null;
