@@ -138,7 +138,7 @@ export default function ReturnSarinLotPage() {
   useEffect(() => {
     if (allPacketsScanned) {
       setShowVictoryAnimation(true);
-      const timer = setTimeout(() => setShowVictoryAnimation(false), 3000);
+      const timer = setTimeout(() => setShowVictoryAnimation(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [allPacketsScanned]);
