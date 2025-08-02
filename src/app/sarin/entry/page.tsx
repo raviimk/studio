@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -29,7 +29,8 @@ const formSchema = z.object({
   machine: z.string(),
   kapanNumber: z.string().min(1, 'Kapan number is required.'),
   lotNumber: z.string().min(1, 'Lot number is required.'),
-  sarinMainPackets: z.array(z.any()).min(1, "Main Laser packets are required."),
+  sarinMainPackets: z.array(z.any()).optional(),
+  mainPacketNumber: z.coerce.number().min(1, "Main Laser packets are required."),
   packetCount: z.coerce.number().min(1, 'Packet count must be at least 1.'),
   hasJiram: z.boolean().default(false),
   jiramCount: z.coerce.number().optional(),
@@ -46,7 +47,7 @@ export default function SarinPacketEntryPage() {
   const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
 
   const [laserLotLoading, setLaserLotLoading] = useState(false);
-  const [foundLaserLot, setFoundLaserLot] = useState<LaserLot | null>(null);
+  const [foundLaserLot, setFoundLaserLot] = useState<boolean>(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -57,6 +58,7 @@ export default function SarinPacketEntryPage() {
       kapanNumber: '',
       lotNumber: '',
       sarinMainPackets: [],
+      mainPacketNumber: 0,
       packetCount: 0,
       hasJiram: false,
       jiramCount: 0,
@@ -89,18 +91,21 @@ export default function SarinPacketEntryPage() {
       
       setTimeout(() => { // simulate loading
         if (found) {
-            setFoundLaserLot(found);
+            setFoundLaserLot(true);
             setValue('sarinMainPackets', found.scannedPackets || []);
+            setValue('mainPacketNumber', found.scannedPackets?.length || 0);
         } else {
-            setFoundLaserLot(null);
+            setFoundLaserLot(false);
             setValue('sarinMainPackets', []);
+            setValue('mainPacketNumber', 0);
         }
         setLaserLotLoading(false);
       }, 500);
 
     } else {
-        setFoundLaserLot(null);
+        setFoundLaserLot(false);
         setValue('sarinMainPackets', []);
+        setValue('mainPacketNumber', 0);
     }
   }, [watchKapan, watchLot, laserLots, setValue]);
 
@@ -121,7 +126,7 @@ export default function SarinPacketEntryPage() {
     const newPacket: SarinPacket = {
       id: uuidv4(),
       ...values,
-      mainPacketNumber: values.sarinMainPackets?.length || 0,
+      mainPacketNumber: values.mainPacketNumber,
       date: new Date().toISOString(),
       time: new Date().toLocaleTimeString(),
       isReturned: false,
@@ -133,11 +138,12 @@ export default function SarinPacketEntryPage() {
         kapanNumber: '',
         lotNumber: '',
         sarinMainPackets: [],
+        mainPacketNumber: 0,
         packetCount: 0,
         hasJiram: false,
         jiramCount: 0,
     });
-    setFoundLaserLot(null);
+    setFoundLaserLot(false);
     form.setFocus('kapanNumber');
   }
 
@@ -173,41 +179,18 @@ export default function SarinPacketEntryPage() {
                   <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
 
-                <div className="md:col-span-2">
-                    <FormLabel>Main Laser Packets</FormLabel>
-                     <FormField
-                        control={control}
-                        name="sarinMainPackets"
-                        render={({ field }) => (
-                            <FormItem>
-                                {laserLotLoading ? (
-                                    <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="animate-spin h-4 w-4" />Searching for Laser Lot...</div>
-                                ) : foundLaserLot ? (
-                                    <Alert>
-                                        <AlertTitle>Laser Lot Found!</AlertTitle>
-                                        <AlertDescription>
-                                            Found {foundLaserLot.scannedPackets?.length || 0} main packets. These will be linked to this Sarin entry.
-                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                {foundLaserLot.scannedPackets?.map(p => <Badge key={p.id} variant="secondary">{p.fullBarcode}</Badge>)}
-                                            </div>
-                                        </AlertDescription>
-                                    </Alert>
-                                ) : watchKapan && watchLot ? (
-                                    <Alert variant="destructive">
-                                        <AlertTitle>Laser Lot Not Found</AlertTitle>
-                                        <AlertDescription>No matching Laser Lot found for this Kapan/Lot combination. You cannot proceed.</AlertDescription>
-                                    </Alert>
-                                ): (
-                                    <Alert variant="default">
-                                        <AlertTitle>Enter Kapan and Lot Number</AlertTitle>
-                                        <AlertDescription>Enter Kapan and Lot numbers above to automatically fetch and link main packets from the Laser module.</AlertDescription>
-                                    </Alert>
-                                )}
-                                <FormMessage />
-                           </FormItem>
-                        )}
-                        />
-                </div>
+                 <FormField control={control} name="mainPacketNumber" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Main Packets from Laser</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input type="number" {...field} readOnly disabled />
+                             {laserLotLoading && <Loader2 className="animate-spin h-4 w-4 absolute right-2 top-2.5 text-muted-foreground" />}
+                          </div>
+                        </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
 
 
                 <FormField control={control} name="packetCount" render={({ field }) => (
@@ -227,6 +210,12 @@ export default function SarinPacketEntryPage() {
                   )}
                 </div>
               </div>
+               {!foundLaserLot && watchKapan && watchLot && !laserLotLoading && (
+                 <Alert variant="destructive">
+                    <AlertTitle>Laser Lot Not Found</AlertTitle>
+                    <AlertDescription>No matching Laser Lot found. You cannot create a Sarin entry without a valid parent Laser Lot.</AlertDescription>
+                </Alert>
+              )}
               <Button type="submit" disabled={!foundLaserLot}>Create Entry</Button>
             </form>
           </Form>
