@@ -78,18 +78,19 @@ export default function TodaysProductionReport() {
 
     const handleChaluProgressChange = (packetId: string, packet: T.SarinPacket, value: string) => {
         const count = parseInt(value, 10);
-        if (isNaN(count)) {
-            const newProgress = {...chaluProgress};
-            delete newProgress[packetId];
-            setChaluProgress(newProgress);
-            return;
-        }
-        const validatedCount = count < 0 ? 0 : Math.min(count, packet.packetCount);
         
-        setChaluProgress(prev => ({
-            ...prev,
-            [packetId]: validatedCount
-        }));
+        setChaluProgress(prev => {
+             if (isNaN(count)) {
+                const newProgress = {...prev};
+                delete newProgress[packetId];
+                return newProgress;
+            }
+            const validatedCount = count < 0 ? 0 : Math.min(count, packet.packetCount);
+            return {
+                ...prev,
+                [packetId]: validatedCount
+            };
+        });
     };
     
     const handleConfirmChalu = (packet: T.SarinPacket) => {
@@ -105,9 +106,18 @@ export default function TodaysProductionReport() {
             
             setProductionHistory(prev => {
                 const todayEntries = prev[todayString] || [];
+                const existingEntryIndex = todayEntries.findIndex(e => e.packetId === packet.id);
+
+                let newTodayEntries = [...todayEntries];
+                if (existingEntryIndex > -1) {
+                    newTodayEntries[existingEntryIndex] = newEntry;
+                } else {
+                    newTodayEntries.push(newEntry);
+                }
+
                 return {
                     ...prev,
-                    [todayString]: [...todayEntries, newEntry]
+                    [todayString]: newTodayEntries
                 }
             });
         }
@@ -324,3 +334,5 @@ export default function TodaysProductionReport() {
         </div>
     );
 }
+
+    
