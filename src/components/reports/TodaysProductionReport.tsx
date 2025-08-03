@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -76,7 +76,7 @@ export default function TodaysProductionReport() {
         return { todaysReturnedSarin: returned, todaysChaluSarin: chalu };
     }, [sarinPackets]);
 
-    const handleChaluProgressChange = (packetId: string, packet: T.SarinPacket, value: string) => {
+    const handleChaluProgressChange = useCallback((packetId: string, packet: T.SarinPacket, value: string) => {
         const count = parseInt(value, 10);
         
         setChaluProgress(prev => {
@@ -91,7 +91,7 @@ export default function TodaysProductionReport() {
                 [packetId]: validatedCount
             };
         });
-    };
+    }, [setChaluProgress]);
     
     const handleConfirmChalu = (packet: T.SarinPacket) => {
         const packetsToConfirm = chaluProgress[packet.id] || 0;
