@@ -16,6 +16,8 @@ import * as T from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Input } from '../ui/input';
 import { Separator } from '../ui/separator';
+import { Button } from '../ui/button';
+import { CheckCircle2 } from 'lucide-react';
 
 type LaserSummary = {
     operator: string;
@@ -33,6 +35,11 @@ type ChaluProgress = {
     [packetId: string]: number;
 }
 
+type ConfirmedChalu = {
+    operator: string;
+    packets: number;
+}
+
 type SarinReturnSummary = {
     operator: string;
     packets: number;
@@ -43,6 +50,7 @@ export default function TodaysProductionReport() {
     const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
     const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
     const [chaluProgress, setChaluProgress] = useLocalStorage<ChaluProgress>(CHALU_SARIN_PROGRESS_KEY, {});
+    const [confirmedChalu, setConfirmedChalu] = useState<Record<string, ConfirmedChalu>>({});
 
     const { todaysReturnedSarin, todaysChaluSarin } = useMemo(() => {
         const returned: T.SarinPacket[] = [];
@@ -58,30 +66,61 @@ export default function TodaysProductionReport() {
         return { todaysReturnedSarin: returned, todaysChaluSarin: chalu };
     }, [sarinPackets]);
 
-    const handleChaluProgressChange = (packet: T.SarinPacket, value: string) => {
+    const handleChaluProgressChange = (packetId: string, packet: T.SarinPacket, value: string) => {
         const count = parseInt(value, 10);
-        const validatedCount = isNaN(count) || count < 0 ? 0 : Math.min(count, packet.packetCount);
+        if (isNaN(count)) {
+            // allows deleting the input content
+            const newProgress = {...chaluProgress};
+            delete newProgress[packetId];
+            setChaluProgress(newProgress);
+            return;
+        }
+        const validatedCount = count < 0 ? 0 : Math.min(count, packet.packetCount);
         
         setChaluProgress(prev => ({
             ...prev,
-            [packet.id]: validatedCount
+            [packetId]: validatedCount
         }));
     };
+    
+    const handleConfirmChalu = (packet: T.SarinPacket) => {
+        const packetsToConfirm = chaluProgress[packet.id] || 0;
+        if (packetsToConfirm > 0) {
+            setConfirmedChalu(prev => ({
+                ...prev,
+                [packet.id]: { operator: packet.operator, packets: packetsToConfirm }
+            }));
+        }
+    }
 
     const sarinReturnSummary = useMemo((): SarinReturnSummary[] => {
         const summary: Record<string, number> = {};
+        
+        // Add fully returned lots
         todaysReturnedSarin.forEach(p => {
             if (p.returnedBy) {
                 summary[p.returnedBy] = (summary[p.returnedBy] || 0) + p.packetCount;
             }
         });
+
+        // Add today's confirmed Chalu packets
+        Object.values(confirmedChalu).forEach(item => {
+            summary[item.operator] = (summary[item.operator] || 0) + item.packets;
+        });
+
         return Object.entries(summary)
             .map(([operator, packets]) => ({ operator, packets }))
             .sort((a,b) => b.packets - a.packets);
+    }, [todaysReturnedSarin, confirmedChalu]);
+
+    const totalSarinReturnedPackets = useMemo(() => {
+        return todaysReturnedSarin.reduce((sum, p) => sum + p.packetCount, 0)
     }, [todaysReturnedSarin]);
 
-    const totalSarinReturnedPackets = useMemo(() => sarinReturnSummary.reduce((sum, item) => sum + item.packets, 0), [sarinReturnSummary]);
-    const totalSarinChaluPackets = useMemo(() => Object.values(chaluProgress).reduce((sum, count) => sum + (count || 0), 0), [chaluProgress]);
+    const totalSarinChaluPackets = useMemo(() => {
+         return Object.values(confirmedChalu).reduce((sum, item) => sum + item.packets, 0);
+    }, [confirmedChalu]);
+
     const totalSarinProduction = totalSarinReturnedPackets + totalSarinChaluPackets;
 
     const todaysLaserData = useMemo(() => {
@@ -146,13 +185,13 @@ export default function TodaysProductionReport() {
             >
                 <div className="space-y-4">
                     <div>
-                        <h4 className="font-semibold text-md mb-2">Production (Returned Lots)</h4>
+                        <h4 className="font-semibold text-md mb-2">Production (Returned & Confirmed Chalu)</h4>
                          {sarinReturnSummary.length > 0 ? (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Operator</TableHead>
-                                        <TableHead className="text-right">Packets Returned</TableHead>
+                                        <TableHead className="text-right">Total Packets</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -163,12 +202,12 @@ export default function TodaysProductionReport() {
                                         </TableRow>
                                     ))}
                                     <TableRow className="bg-muted/50 font-bold">
-                                        <TableCell>Total Returned</TableCell>
-                                        <TableCell className="text-right font-mono">{totalSarinReturnedPackets}</TableCell>
+                                        <TableCell>Total Production</TableCell>
+                                        <TableCell className="text-right font-mono">{totalSarinProduction}</TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
-                         ) : <p className="text-sm text-muted-foreground text-center py-4">No lots returned today.</p>}
+                         ) : <p className="text-sm text-muted-foreground text-center py-4">No lots returned or confirmed today.</p>}
                     </div>
 
                     <Separator />
@@ -182,13 +221,13 @@ export default function TodaysProductionReport() {
                                         <TableHead>Operator / Lot</TableHead>
                                         <TableHead className="w-[100px]">Total PCS</TableHead>
                                         <TableHead className="w-[150px]">Today's PCS Made</TableHead>
-                                        <TableHead className="w-[100px]">Remaining</TableHead>
+                                        <TableHead className="w-[120px]">Action</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {todaysChaluSarin.map(p => {
                                         const todaysPcs = chaluProgress[p.id] || 0;
-                                        const remaining = p.packetCount - todaysPcs;
+                                        const isConfirmed = !!confirmedChalu[p.id];
                                         return (
                                         <TableRow key={p.id}>
                                             <TableCell>
@@ -201,15 +240,29 @@ export default function TodaysProductionReport() {
                                                     type="number" 
                                                     placeholder="0"
                                                     className="h-8"
-                                                    value={chaluProgress[p.id] || ''}
-                                                    onChange={(e) => handleChaluProgressChange(p, e.target.value)}
+                                                    value={isConfirmed ? confirmedChalu[p.id].packets : (chaluProgress[p.id] || '')}
+                                                    onChange={(e) => handleChaluProgressChange(p.id, p, e.target.value)}
                                                     max={p.packetCount}
+                                                    disabled={isConfirmed}
                                                 />
                                             </TableCell>
-                                            <TableCell className="font-mono text-center font-semibold text-muted-foreground">{remaining}</TableCell>
+                                            <TableCell>
+                                            {isConfirmed ? (
+                                                <div className="flex items-center gap-2 text-green-600 font-semibold">
+                                                    <CheckCircle2 className="h-5 w-5" /> Confirmed
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => handleConfirmChalu(p)}
+                                                    disabled={!todaysPcs || todaysPcs === 0}
+                                                >
+                                                    Confirm
+                                                </Button>
+                                            )}
+                                            </TableCell>
                                         </TableRow>
                                     )})}
-                                    <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={2}>Chalu Total</TableCell><TableCell className="text-center">{totalSarinChaluPackets}</TableCell><TableCell></TableCell></TableRow>
                                 </TableBody>
                             </Table>
                         ) : <p className="text-sm text-muted-foreground text-center py-4">No active lots.</p>}
@@ -253,3 +306,5 @@ export default function TodaysProductionReport() {
         </div>
     );
 }
+
+    
