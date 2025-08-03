@@ -157,6 +157,20 @@ export interface BoxSortingPacket {
     scanTime: string;
 }
 
+// Production History Types
+export interface ProductionEntry {
+    operator: string;
+    lotNumber: string;
+    kapanNumber: string;
+    pcs: number;
+    packetId: string;
+}
+
+export interface ProductionHistory {
+    [date: string]: ProductionEntry[]; // date is 'yyyy-MM-dd'
+}
+
+
 // Settings
 export interface ReturnScanSettings {
     sarin: boolean;

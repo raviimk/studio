@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -11,6 +11,7 @@ import {
     LASER_LOTS_KEY,
     FOURP_TECHING_LOTS_KEY,
     CHALU_SARIN_PROGRESS_KEY,
+    PRODUCTION_HISTORY_KEY
 } from '@/lib/constants';
 import * as T from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -35,11 +36,6 @@ type ChaluProgress = {
     [packetId: string]: number;
 }
 
-type ConfirmedChalu = {
-    operator: string;
-    packets: number;
-}
-
 type SarinReturnSummary = {
     operator: string;
     packets: number;
@@ -50,7 +46,21 @@ export default function TodaysProductionReport() {
     const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
     const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
     const [chaluProgress, setChaluProgress] = useLocalStorage<ChaluProgress>(CHALU_SARIN_PROGRESS_KEY, {});
-    const [confirmedChalu, setConfirmedChalu] = useState<Record<string, ConfirmedChalu>>({});
+    const [productionHistory, setProductionHistory] = useLocalStorage<T.ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
+
+    const [todaysConfirmedChalu, setTodaysConfirmedChalu] = useState<Record<string, T.ProductionEntry>>({});
+
+    const todayString = format(new Date(), 'yyyy-MM-dd');
+
+    useEffect(() => {
+        const todaysHistory = productionHistory[todayString] || [];
+        const confirmedEntries: Record<string, T.ProductionEntry> = {};
+        todaysHistory.forEach(entry => {
+            confirmedEntries[entry.packetId] = entry;
+        });
+        setTodaysConfirmedChalu(confirmedEntries);
+    }, [productionHistory, todayString]);
+
 
     const { todaysReturnedSarin, todaysChaluSarin } = useMemo(() => {
         const returned: T.SarinPacket[] = [];
@@ -69,7 +79,6 @@ export default function TodaysProductionReport() {
     const handleChaluProgressChange = (packetId: string, packet: T.SarinPacket, value: string) => {
         const count = parseInt(value, 10);
         if (isNaN(count)) {
-            // allows deleting the input content
             const newProgress = {...chaluProgress};
             delete newProgress[packetId];
             setChaluProgress(newProgress);
@@ -86,40 +95,49 @@ export default function TodaysProductionReport() {
     const handleConfirmChalu = (packet: T.SarinPacket) => {
         const packetsToConfirm = chaluProgress[packet.id] || 0;
         if (packetsToConfirm > 0) {
-            setConfirmedChalu(prev => ({
-                ...prev,
-                [packet.id]: { operator: packet.operator, packets: packetsToConfirm }
-            }));
+             const newEntry: T.ProductionEntry = {
+                operator: packet.operator,
+                lotNumber: packet.lotNumber,
+                kapanNumber: packet.kapanNumber,
+                pcs: packetsToConfirm,
+                packetId: packet.id
+            };
+            
+            setProductionHistory(prev => {
+                const todayEntries = prev[todayString] || [];
+                return {
+                    ...prev,
+                    [todayString]: [...todayEntries, newEntry]
+                }
+            });
         }
     }
 
     const sarinReturnSummary = useMemo((): SarinReturnSummary[] => {
         const summary: Record<string, number> = {};
         
-        // Add fully returned lots
         todaysReturnedSarin.forEach(p => {
             if (p.returnedBy) {
                 summary[p.returnedBy] = (summary[p.returnedBy] || 0) + p.packetCount;
             }
         });
 
-        // Add today's confirmed Chalu packets
-        Object.values(confirmedChalu).forEach(item => {
-            summary[item.operator] = (summary[item.operator] || 0) + item.packets;
+        Object.values(todaysConfirmedChalu).forEach(item => {
+            summary[item.operator] = (summary[item.operator] || 0) + item.pcs;
         });
 
         return Object.entries(summary)
             .map(([operator, packets]) => ({ operator, packets }))
             .sort((a,b) => b.packets - a.packets);
-    }, [todaysReturnedSarin, confirmedChalu]);
+    }, [todaysReturnedSarin, todaysConfirmedChalu]);
 
     const totalSarinReturnedPackets = useMemo(() => {
         return todaysReturnedSarin.reduce((sum, p) => sum + p.packetCount, 0)
     }, [todaysReturnedSarin]);
 
     const totalSarinChaluPackets = useMemo(() => {
-         return Object.values(confirmedChalu).reduce((sum, item) => sum + item.packets, 0);
-    }, [confirmedChalu]);
+         return Object.values(todaysConfirmedChalu).reduce((sum, item) => sum + item.pcs, 0);
+    }, [todaysConfirmedChalu]);
 
     const totalSarinProduction = totalSarinReturnedPackets + totalSarinChaluPackets;
 
@@ -226,8 +244,8 @@ export default function TodaysProductionReport() {
                                 </TableHeader>
                                 <TableBody>
                                     {todaysChaluSarin.map(p => {
+                                        const isConfirmed = !!todaysConfirmedChalu[p.id];
                                         const todaysPcs = chaluProgress[p.id] || 0;
-                                        const isConfirmed = !!confirmedChalu[p.id];
                                         return (
                                         <TableRow key={p.id}>
                                             <TableCell>
@@ -240,7 +258,7 @@ export default function TodaysProductionReport() {
                                                     type="number" 
                                                     placeholder="0"
                                                     className="h-8"
-                                                    value={isConfirmed ? confirmedChalu[p.id].packets : (chaluProgress[p.id] || '')}
+                                                    value={isConfirmed ? todaysConfirmedChalu[p.id].pcs : (chaluProgress[p.id] || '')}
                                                     onChange={(e) => handleChaluProgressChange(p.id, p, e.target.value)}
                                                     max={p.packetCount}
                                                     disabled={isConfirmed}
@@ -306,5 +324,3 @@ export default function TodaysProductionReport() {
         </div>
     );
 }
-
-    

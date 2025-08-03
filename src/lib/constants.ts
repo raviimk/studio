@@ -30,6 +30,9 @@ export const BOX_SORTING_PACKETS_KEY = 'boxSortingPackets';
 // Sarin Chalu Progress
 export const CHALU_SARIN_PROGRESS_KEY = 'chaluSarinProgress';
 
+// Production History
+export const PRODUCTION_HISTORY_KEY = 'productionHistory';
+
 // Settings
 export const AUTO_BACKUP_SETTINGS_KEY = 'autoBackupSettings';
 export const RETURN_SCAN_SETTINGS_KEY = 'returnScanSettings';
@@ -56,6 +59,7 @@ export const ALL_APP_KEYS = [
     BOX_SORTING_RANGES_KEY,
     BOX_SORTING_PACKETS_KEY,
     CHALU_SARIN_PROGRESS_KEY,
+    PRODUCTION_HISTORY_KEY,
     AUTO_BACKUP_SETTINGS_KEY,
     RETURN_SCAN_SETTINGS_KEY,
 ];
