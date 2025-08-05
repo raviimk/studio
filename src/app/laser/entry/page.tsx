@@ -218,37 +218,20 @@ export default function NewLaserLotPage() {
     const completed = new Set(lotsThisMonth);
     const maxCompleted = lotsThisMonth.length > 0 ? Math.max(...lotsThisMonth) : 0;
     
-    let nextLotNumber: number | null = maxCompleted + 1;
-
     const currentLotNum = parseInt(currentLotNumberStr, 10);
     const highestNum = Math.max(maxCompleted, isNaN(currentLotNum) ? 0 : currentLotNum);
 
-    const series = new Set<number>();
-    lotsThisMonth.forEach(lot => series.add(lot));
-    if (!isNaN(currentLotNum)) {
-      series.add(currentLotNum);
-    }
-    
-    // Add some future lots for context
-    const seriesStartPoint = highestNum > 0 ? highestNum : (nextLotNumber || 1);
-    for (let i = 1; i <= 10; i++) {
-        series.add(seriesStartPoint + i);
-    }
-     // Add some past lots for context
-    for (let i = 1; i <= 5; i++) {
-        if(seriesStartPoint - i > 0) {
-            series.add(seriesStartPoint - i);
-        }
-    }
-    
-    // If nextLot is already completed (manual entry), find the next available one
+    const seriesEnd = highestNum + 5; // Show a few future lots for context
+    const series = Array.from({ length: seriesEnd }, (_, i) => i + 1);
+
+    let nextLotNumber: number | null = maxCompleted + 1;
     while(completed.has(nextLotNumber!)) {
         nextLotNumber!++;
     }
 
 
     return {
-        lotSeries: Array.from(series).sort((a,b) => a-b),
+        lotSeries: series,
         completedLots: completed,
         nextLot: nextLotNumber
     }

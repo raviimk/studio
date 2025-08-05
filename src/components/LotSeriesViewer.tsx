@@ -5,7 +5,7 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { cn } from '@/lib/utils';
 import { Check, Circle, Dot } from 'lucide-react';
 
-type LotStatus = 'completed' | 'current' | 'next' | 'future';
+type LotStatus = 'completed' | 'current' | 'next' | 'future' | 'missing';
 
 interface LotSeriesViewerProps {
     series: number[];
@@ -22,7 +22,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
 
         const currentLotIndex = currentLot ? series.indexOf(currentLot) : -1;
         if (currentLotIndex !== -1) {
-            api.scrollTo(currentLotIndex, true); // Instantly snap
+            api.scrollTo(currentLotIndex, false); // Animate to current
         } else if (nextLot) {
             const nextLotIndex = series.indexOf(nextLot);
             if (nextLotIndex !== -1) {
@@ -40,6 +40,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         if (lotNumber === currentLot) return 'current';
         if (completedLots.has(lotNumber)) return 'completed';
         if (lotNumber === nextLot) return 'next';
+        if (lotNumber < (nextLot || 0)) return 'missing';
         return 'future';
     };
 
@@ -55,7 +56,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
     return (
         <Carousel
             opts={{
-                align: "start",
+                align: "center",
                 dragFree: true,
             }}
             setApi={setApi}
@@ -71,7 +72,8 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
                                 status === 'completed' && "bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700 dark:text-green-300",
                                 status === 'current' && "bg-primary text-primary-foreground font-bold shadow-lg ring-2 ring-primary/50",
                                 status === 'next' && "bg-muted text-muted-foreground",
-                                status === 'future' && "bg-muted/50 text-muted-foreground/70 border-dashed"
+                                status === 'missing' && "bg-yellow-100/50 dark:bg-yellow-900/20 border-yellow-500/50 border-dashed text-yellow-600 dark:text-yellow-400",
+                                status === 'future' && "bg-muted/50 text-muted-foreground/70"
                            )}>
                                 {getStatusIcon(status)}
                                 <span className="font-mono text-sm font-medium">{lot}</span>
@@ -83,4 +85,3 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         </Carousel>
     );
 }
-
