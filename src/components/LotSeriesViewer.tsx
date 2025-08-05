@@ -15,6 +15,15 @@ interface LotSeriesViewerProps {
     lastCompletedLot: number | null;
 }
 
+const DiamondIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={cn("w-6 h-6", className)}>
+        <g className="diamond-piece-1"><path d="M12 2L3 9.75L12 22L21 9.75L12 2ZM12 4.53L18.7 10.5H5.3L12 4.53Z" /></g>
+        <g className="diamond-piece-2"><path d="M4.5 10.5L12 20.5L19.5 10.5H4.5Z" /></g>
+        <g className="diamond-piece-3"><path d="M12 2L5.3 10.5H18.7L12 2Z"/></g>
+    </svg>
+);
+
+
 export default function LotSeriesViewer({ series, completedLots, currentLot, nextLot, lastCompletedLot }: LotSeriesViewerProps) {
     const [api, setApi] = useState<CarouselApi>()
     const [isAnimating, setIsAnimating] = useState<number | null>(null);
@@ -22,22 +31,21 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
     useEffect(() => {
         if (!api) return;
 
-        // Prioritize centering the currently animating lot
         if (isAnimating) {
             const animatingIndex = series.indexOf(isAnimating);
             if (animatingIndex !== -1) {
-                api.scrollTo(animatingIndex, false);
+                api.scrollTo(animatingIndex, true);
                 return;
             }
         }
 
         const currentLotIndex = currentLot ? series.indexOf(currentLot) : -1;
         if (currentLotIndex !== -1) {
-            api.scrollTo(currentLotIndex, false); // Animate to current
+            api.scrollTo(currentLotIndex, true);
         } else if (nextLot) {
             const nextLotIndex = series.indexOf(nextLot);
             if (nextLotIndex !== -1) {
-                api.scrollTo(nextLotIndex, false); // Animate to next
+                api.scrollTo(nextLotIndex, true);
             }
         }
     }, [api, currentLot, nextLot, series, isAnimating]);
@@ -47,7 +55,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
             setIsAnimating(lastCompletedLot);
             const timer = setTimeout(() => {
                 setIsAnimating(null);
-            }, 2500); // Duration of the CSS animation
+            }, 2500); 
             return () => clearTimeout(timer);
         }
     }, [lastCompletedLot]);
@@ -98,8 +106,15 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
                                 status === 'missing' && "bg-yellow-100/50 dark:bg-yellow-900/20 border-yellow-500/50 border-dashed text-yellow-600 dark:text-yellow-400",
                                 status === 'future' && "bg-muted/50 text-muted-foreground/70"
                            )}>
-                                {getStatusIcon(status)}
-                                <span className="font-mono text-sm font-medium">{lot}</span>
+                                {status === 'cutting' ? (
+                                    <>
+                                        <div className="absolute top-1/2 left-0 w-full h-0.5 bg-red-500/80 laser-beam" style={{boxShadow: '0 0 5px red'}}/>
+                                        <DiamondIcon className="absolute w-6 h-6 text-white/90 diamond-main" />
+                                    </>
+                                ) : getStatusIcon(status)}
+                                <span className={cn("font-mono text-sm font-medium transition-opacity", status === 'cutting' && 'opacity-0')}>
+                                    {lot}
+                                </span>
                            </div>
                         </CarouselItem>
                     )
