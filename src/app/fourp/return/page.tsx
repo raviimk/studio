@@ -114,25 +114,26 @@ export default function FourPReturnPage() {
   };
 
   const handleSaveEdit = (lotId: string) => {
-      const updatedLotData = { ...editFormData };
+    const updatedLotData = { ...editFormData };
 
-      const totalPcs = updatedLotData.pcs || 0;
-      const blockingPcs = updatedLotData.blocking || 0;
+    const totalPcs = updatedLotData.pcs || 0;
+    const blockingPcs = updatedLotData.blocking || 0;
 
-      if (blockingPcs > totalPcs) {
-          toast({ variant: 'destructive', title: 'Invalid Input', description: 'Blocking PCS cannot be greater than Total PCS.' });
-          return;
-      }
-      
-      const newFinalPcs = totalPcs - blockingPcs;
-      updatedLotData.finalPcs = newFinalPcs;
-      updatedLotData.fourPAmount = newFinalPcs * priceMaster.fourP;
+    if (blockingPcs > totalPcs) {
+        toast({ variant: 'destructive', title: 'Invalid Input', description: 'Blocking PCS cannot be greater than Total PCS.' });
+        return;
+    }
+    
+    const newFinalPcs = totalPcs - blockingPcs;
+    updatedLotData.finalPcs = newFinalPcs;
+    updatedLotData.fourPAmount = newFinalPcs * priceMaster.fourP;
+    updatedLotData.techingAmount = newFinalPcs * priceMaster.fourPTeching;
 
-      setFourPTechingLots(prev =>
-          prev.map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
-      );
-      toast({ title: 'Success', description: 'Lot updated successfully.' });
-      handleCancelEdit();
+    setFourPTechingLots(prev =>
+        prev.map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
+    );
+    toast({ title: 'Success', description: 'Lot updated successfully.' });
+    handleCancelEdit();
   };
   
   const handleDeleteLot = (lotId: string) => {
@@ -321,5 +322,3 @@ export default function FourPReturnPage() {
     </div>
   );
 }
-
-    

@@ -193,8 +193,11 @@ export default function FourPTechingEntryPage() {
       return;
     }
 
-    updatedLotData.finalPcs = newPcs - newBlocking;
-    updatedLotData.techingAmount = updatedLotData.finalPcs * priceMaster.fourPTeching;
+    const newFinalPcs = newPcs - newBlocking;
+    updatedLotData.finalPcs = newFinalPcs;
+    updatedLotData.techingAmount = newFinalPcs * priceMaster.fourPTeching;
+    updatedLotData.fourPAmount = newFinalPcs * priceMaster.fourP;
+
 
     setFourPTechingLots(prev =>
       prev.map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
