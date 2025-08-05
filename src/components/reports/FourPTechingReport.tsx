@@ -46,7 +46,7 @@ export default function FourPTechingReport() {
 
   const summary = useMemo(() => {
     return filteredData.reduce((acc, lot) => {
-        acc.totalPcs += lot.pcs || 0;
+        acc.totalPcs += lot.finalPcs || 0;
         acc.totalAmount += lot.techingAmount || 0;
         return acc;
     }, { totalPcs: 0, totalAmount: 0 });
@@ -124,7 +124,7 @@ export default function FourPTechingReport() {
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
                     <TableCell><Badge variant="outline">{lot.techingOperator}</Badge></TableCell>
-                    <TableCell>{lot.pcs}</TableCell>
+                    <TableCell>{lot.finalPcs}</TableCell>
                     <TableCell>₹{(lot.techingAmount || 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
