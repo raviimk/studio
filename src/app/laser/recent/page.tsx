@@ -8,12 +8,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit, Save, Trash2, X } from 'lucide-react';
+import { CalendarIcon, Edit, Save, Trash2, X } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 export default function RecentLaserEntriesPage() {
   const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
@@ -38,6 +41,7 @@ export default function RecentLaserEntriesPage() {
         kapanNumber: lot.kapanNumber,
         packetCount: lot.packetCount,
         tensionType: lot.tensionType,
+        entryDate: lot.entryDate,
     });
   };
 
@@ -70,6 +74,15 @@ export default function RecentLaserEntriesPage() {
   
   const handleSelectChange = (value: string) => {
     setEditFormData(prev => ({ ...prev, tensionType: value }));
+  };
+  
+  const handleDateChange = (date: Date | undefined) => {
+    if (!date) return;
+    const originalTime = new Date(editFormData.entryDate!).toTimeString().split(' ')[0]; // "HH:mm:ss"
+    const newDate = new Date(date);
+    const [hours, minutes, seconds] = originalTime.split(':').map(Number);
+    newDate.setHours(hours, minutes, seconds);
+    setEditFormData(prev => ({...prev, entryDate: newDate.toISOString() }));
   };
 
   const sortedLots = useMemo(() => {
@@ -127,7 +140,24 @@ export default function RecentLaserEntriesPage() {
                             </TableCell>
                             <TableCell>{laserMappings.find(m => m.tensionType === editFormData.tensionType)?.machine || 'N/A'}</TableCell>
                             <TableCell><Input type="number" name="packetCount" value={editFormData.packetCount} onChange={handleInputChange} className="h-8 w-20" /></TableCell>
-                            <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
+                            <TableCell>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className={cn("h-8 w-[200px] justify-start text-left font-normal", !editFormData.entryDate && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {editFormData.entryDate ? format(new Date(editFormData.entryDate), "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={new Date(editFormData.entryDate!)}
+                                            onSelect={handleDateChange}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </TableCell>
                             <TableCell>
                                 <Badge variant={lot.isReturned ? 'secondary' : 'destructive'}>
                                 {lot.isReturned ? `Returned by ${lot.returnedBy}` : 'Not Returned'}
@@ -152,7 +182,7 @@ export default function RecentLaserEntriesPage() {
                                 </Badge>
                             </TableCell>
                             <TableCell className="flex gap-1">
-                                <Button variant="ghost" size="icon" onClick={() => handleEdit(lot)} disabled={lot.isReturned}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(lot)}><Edit className="h-4 w-4" /></Button>
                                 <Button variant="ghost" size="icon" onClick={() => handleDelete(lot.id)}><Trash2 className="h-4 w-4" /></Button>
                             </TableCell>
                         </>
