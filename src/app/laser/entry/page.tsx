@@ -62,16 +62,13 @@ export default function NewLaserLotPage() {
     },
   });
 
-  const selectedTension = form.watch('tensionType');
-  const currentKapan = form.watch('kapanNumber');
   const currentLotNumberStr = form.watch('lotNumber');
   
-  useEffect(() => {
-    if (selectedTension) {
-      const mapping = laserMappings.find(m => m.tensionType === selectedTension);
-      form.setValue('machine', mapping ? mapping.machine : 'N/A');
-    }
-  }, [selectedTension, laserMappings, form]);
+  const handleTensionChange = (value: string) => {
+    form.setValue('tensionType', value);
+    const mapping = laserMappings.find(m => m.tensionType === value);
+    form.setValue('machine', mapping ? mapping.machine : 'N/A');
+  };
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
@@ -221,7 +218,7 @@ export default function NewLaserLotPage() {
     const currentLotNum = parseInt(currentLotNumberStr, 10);
     const highestNum = Math.max(maxCompleted, isNaN(currentLotNum) ? 0 : currentLotNum);
 
-    const seriesEnd = highestNum + 5; // Show a few future lots for context
+    const seriesEnd = Math.max(1, highestNum + 5);
     const series = Array.from({ length: seriesEnd }, (_, i) => i + 1);
 
     let nextLotNumber: number | null = maxCompleted + 1;
@@ -258,7 +255,7 @@ export default function NewLaserLotPage() {
                     )} />
                     <FormField control={form.control} name="tensionType" render={({ field }) => (
                         <FormItem><FormLabel>Tension Type</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formSubmitted}>
+                            <Select onValueChange={handleTensionChange} value={field.value} disabled={formSubmitted}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
                                 <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
                             </Select><FormMessage />
