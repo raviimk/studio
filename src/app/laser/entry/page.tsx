@@ -277,7 +277,7 @@ export default function NewLaserLotPage() {
         </Card>
 
         <Card className="max-w-4xl mx-auto">
-            <CardHeader><CardTitle>Lot Series Viewer</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Laser Lot Series</CardTitle></CardHeader>
             <CardContent>
                 <LotSeriesViewer 
                     series={lotSeries}
