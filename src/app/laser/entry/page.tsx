@@ -49,6 +49,8 @@ export default function NewLaserLotPage() {
   const [duplicatePacketInfo, setDuplicatePacketInfo] = useState<{ packet: ScannedPacket, existingLotNumber: string } | null>(null);
   const duplicateDialogTriggerRef = useRef<HTMLButtonElement>(null);
 
+  const [lastCompletedLot, setLastCompletedLot] = useState<number | null>(null);
+
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FormValues>({
@@ -72,14 +74,14 @@ export default function NewLaserLotPage() {
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
-      (lot) => lot.kapanNumber === values.kapanNumber && lot.lotNumber === values.lotNumber
+      (lot) => isSameMonth(new Date(lot.entryDate), new Date()) && lot.lotNumber === values.lotNumber
     );
 
     if (existingLot) {
       toast({
         variant: 'destructive',
         title: 'Duplicate Lot Number',
-        description: `Lot Number ${values.lotNumber} already exists for Kapan ${values.kapanNumber}. Please do not reuse lot numbers in the same kapan.`,
+        description: `Lot Number ${values.lotNumber} already exists for the current month.`,
       });
       return;
     }
@@ -196,6 +198,7 @@ export default function NewLaserLotPage() {
       isReturned: false,
     };
     setLaserLots([...laserLots, newLot]);
+    setLastCompletedLot(parseInt(newLot.lotNumber, 10)); // Trigger animation
     toast({ title: 'Success', description: 'New laser lot has been created.' });
     
     form.reset();
@@ -221,11 +224,10 @@ export default function NewLaserLotPage() {
     const seriesEnd = Math.max(1, highestNum + 5);
     const series = Array.from({ length: seriesEnd }, (_, i) => i + 1);
 
-    let nextLotNumber: number | null = maxCompleted + 1;
+    let nextLotNumber: number | null = 1;
     while(completed.has(nextLotNumber!)) {
         nextLotNumber!++;
     }
-
 
     return {
         lotSeries: series,
@@ -282,6 +284,7 @@ export default function NewLaserLotPage() {
                     completedLots={completedLots}
                     currentLot={parseInt(currentLotNumberStr, 10)}
                     nextLot={nextLot}
+                    lastCompletedLot={lastCompletedLot}
                 />
             </CardContent>
         </Card>

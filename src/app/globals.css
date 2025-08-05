@@ -147,5 +147,35 @@ body {
     background: rgba(26, 37, 51, 0.3); /* Dark mode background */
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
+  
+  /* Laser Cut Animation */
+  @keyframes laser-cut {
+    0% {
+        box-shadow: 0 0 5px 2px hsl(var(--primary) / 0.5), inset 0 0 3px 1px hsl(var(--primary-foreground) / 0.7);
+        transform: scale(1.05);
+    }
+    10% {
+        background-image: linear-gradient(90deg, transparent 0%, hsl(var(--primary-foreground)/0.8) 50%, transparent 100%);
+        background-size: 200% 3px;
+        background-position: -100% 50%;
+        background-repeat: no-repeat;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    90% {
+        transform: scale(1);
+        box-shadow: 0 0 5px 2px hsl(var(--primary) / 0.5), inset 0 0 3px 1px hsl(var(--primary-foreground) / 0.7);
+    }
+    100% {
+        box-shadow: none;
+        background-image: none;
+        transform: scale(1);
+    }
+  }
+
+  .animate-laser-cut {
+      animation: laser-cut 2.5s ease-in-out forwards;
+  }
 
 }
