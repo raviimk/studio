@@ -141,8 +141,8 @@ export default function FourPReturnPage() {
       toast({title: 'Success', description: 'Lot entry deleted.'});
   }
 
-  const handleEditFormChange = (field: keyof FourPLot, value: string | number) => {
-      setEditFormData(prev => ({ ...prev, [field]: value }));
+  const handleEditFormChange = (field: keyof FourPLot, value: string | number | undefined) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
 
@@ -256,10 +256,10 @@ export default function FourPReturnPage() {
                                </Select>
                            </TableCell>
                            <TableCell>
-                                <Input type="number" value={editFormData.pcs} onChange={(e) => handleEditFormChange('pcs', parseInt(e.target.value, 10))} className="w-20" />
+                                <Input type="number" value={editFormData.pcs || ''} onChange={(e) => handleEditFormChange('pcs', e.target.value ? parseInt(e.target.value, 10) : undefined)} className="w-20" />
                            </TableCell>
                            <TableCell>
-                                <Input type="number" value={editFormData.blocking} onChange={(e) => handleEditFormChange('blocking', parseInt(e.target.value, 10))} className="w-20" />
+                                <Input type="number" value={editFormData.blocking || ''} onChange={(e) => handleEditFormChange('blocking', e.target.value ? parseInt(e.target.value, 10) : undefined)} className="w-20" />
                            </TableCell>
                            <TableCell className="font-bold">
                                 {((editFormData.pcs || 0) - (editFormData.blocking || 0))}
