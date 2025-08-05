@@ -20,6 +20,7 @@ import PageHeader from '@/components/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import LotSeriesViewer from '@/components/LotSeriesViewer';
 
 const formSchema = z.object({
   lotNumber: z.string().min(1, 'Lot number is required'),
@@ -41,16 +42,13 @@ export default function NewLaserLotPage() {
   const [scannedPackets, setScannedPackets] = useState<ScannedPacket[]>([]);
   const [barcode, setBarcode] = useState('');
   
-  // State for Kapan mismatch dialog
   const [mismatchedPacket, setMismatchedPacket] = useState<ScannedPacket | null>(null);
   const kapanMismatchDialogTriggerRef = useRef<HTMLButtonElement>(null);
   
-  // State for cross-lot duplicate dialog
   const [duplicatePacketInfo, setDuplicatePacketInfo] = useState<{ packet: ScannedPacket, existingLotNumber: string } | null>(null);
   const duplicateDialogTriggerRef = useRef<HTMLButtonElement>(null);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
-
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -64,6 +62,8 @@ export default function NewLaserLotPage() {
   });
 
   const selectedTension = form.watch('tensionType');
+  const currentKapan = form.watch('kapanNumber');
+  const currentLotNumberStr = form.watch('lotNumber');
   
   useEffect(() => {
     if (selectedTension) {
@@ -117,7 +117,6 @@ export default function NewLaserLotPage() {
     e.preventDefault();
     if (!barcode || !currentLotDetails) return;
     
-    // Regex to handle both "61-102" and "R61-102-A" formats
     const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
     if (!match) {
         toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: 'Expected "Kapan-Packet" or "R-Kapan-Packet-Suffix".' });
@@ -129,11 +128,10 @@ export default function NewLaserLotPage() {
         id: uuidv4(),
         kapanNumber: kapan,
         packetNumber: packetNumber,
-        suffix: suffix || '', // Store empty string if no suffix
+        suffix: suffix || '',
         fullBarcode: barcode
     };
 
-    // Cross-lot duplicate check in *unreturned* lots
     const existingLot = laserLots.find(lot => !lot.isReturned && lot.scannedPackets?.some(p => p.fullBarcode === barcode));
     if (existingLot) {
         setDuplicatePacketInfo({ packet: newPacket, existingLotNumber: existingLot.lotNumber });
@@ -141,7 +139,6 @@ export default function NewLaserLotPage() {
         return;
     }
 
-    // Kapan mismatch check
     if (kapan !== currentLotDetails.kapanNumber) {
         setMismatchedPacket(newPacket);
         kapanMismatchDialogTriggerRef.current?.click();
@@ -153,7 +150,6 @@ export default function NewLaserLotPage() {
   
   const proceedWithPacket = (packet: ScannedPacket | null) => {
       if (!packet || !currentLotDetails) return;
-       // Re-check for kapan mismatch after duplicate confirmation
        if (packet.kapanNumber !== currentLotDetails.kapanNumber) {
             setMismatchedPacket(packet);
             kapanMismatchDialogTriggerRef.current?.click();
@@ -162,7 +158,6 @@ export default function NewLaserLotPage() {
        }
   }
 
-  // Dialog actions
   const addMismatchedPacket = () => {
     if (mismatchedPacket) {
         handleAddPacket(mismatchedPacket);
@@ -189,7 +184,6 @@ export default function NewLaserLotPage() {
       barcodeInputRef.current?.focus();
   }
 
-
   function createFinalLot() {
      if (!currentLotDetails || scannedPackets.length !== currentLotDetails.packetCount) {
         toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${currentLotDetails?.packetCount} packets, but found ${scannedPackets.length}.` });
@@ -206,13 +200,54 @@ export default function NewLaserLotPage() {
     setLaserLots([...laserLots, newLot]);
     toast({ title: 'Success', description: 'New laser lot has been created.' });
     
-    // Reset state
     form.reset();
     setFormSubmitted(false);
     setScannedPackets([]);
     setBarcode('');
     setCurrentLotDetails(null);
   }
+
+  const { lotSeries, completedLots, nextLot } = React.useMemo(() => {
+    if (!currentKapan) return { lotSeries: [], completedLots: new Set(), nextLot: null };
+
+    const lotsForKapan = laserLots
+      .filter(lot => lot.kapanNumber === currentKapan)
+      .map(lot => parseInt(lot.lotNumber, 10))
+      .filter(num => !isNaN(num));
+    
+    const completed = new Set(lotsForKapan);
+    const maxCompleted = lotsForKapan.length > 0 ? Math.max(...lotsForKapan) : 0;
+    const currentLotNum = parseInt(currentLotNumberStr, 10);
+    const highestNum = Math.max(maxCompleted, isNaN(currentLotNum) ? 0 : currentLotNum);
+
+    const series = new Set<number>();
+    lotsForKapan.forEach(lot => series.add(lot));
+    if (!isNaN(currentLotNum)) {
+      series.add(currentLotNum);
+    }
+
+    let nextLotNumber: number | null = null;
+    if (maxCompleted > 0 && !completed.has(maxCompleted + 1)) {
+        nextLotNumber = maxCompleted + 1;
+        series.add(nextLotNumber);
+    } else if (isNaN(currentLotNum) && maxCompleted === 0) {
+        nextLotNumber = 1; // Default start
+        series.add(nextLotNumber);
+    }
+
+    // Add some future lots for context
+    const seriesStartPoint = highestNum > 0 ? highestNum : (nextLotNumber || 1);
+    for (let i = 1; i <= 5; i++) {
+        series.add(seriesStartPoint + i);
+    }
+
+    return {
+        lotSeries: Array.from(series).sort((a,b) => a-b),
+        completedLots: completed,
+        nextLot: nextLotNumber
+    }
+  }, [laserLots, currentKapan, currentLotNumberStr]);
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -225,11 +260,11 @@ export default function NewLaserLotPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="lotNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                )} />
                 <FormField control={form.control} name="kapanNumber" render={({ field }) => (
                     <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="lotNumber" render={({ field }) => (
+                    <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="tensionType" render={({ field }) => (
                     <FormItem><FormLabel>Tension Type</FormLabel>
@@ -251,6 +286,20 @@ export default function NewLaserLotPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {currentKapan && !formSubmitted && (
+        <Card className="max-w-4xl mx-auto mt-6">
+            <CardHeader><CardTitle>Lot Series Viewer</CardTitle></CardHeader>
+            <CardContent>
+                <LotSeriesViewer 
+                    series={lotSeries}
+                    completedLots={completedLots}
+                    currentLot={parseInt(currentLotNumberStr, 10)}
+                    nextLot={nextLot}
+                />
+            </CardContent>
+        </Card>
+      )}
 
       {formSubmitted && currentLotDetails && (
         <Card className="max-w-4xl mx-auto mt-8">
@@ -317,7 +366,6 @@ export default function NewLaserLotPage() {
         </Card>
       )}
 
-      {/* Kapan Mismatch Dialog */}
       <AlertDialog>
         <AlertDialogTrigger asChild>
             <button ref={kapanMismatchDialogTriggerRef} className="hidden">Open Kapan Mismatch Dialog</button>
@@ -341,7 +389,6 @@ export default function NewLaserLotPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Cross-Lot Duplicate Dialog */}
        <AlertDialog>
         <AlertDialogTrigger asChild>
             <button ref={duplicateDialogTriggerRef} className="hidden">Open Duplicate Dialog</button>
