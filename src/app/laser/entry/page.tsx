@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { Barcode, AlertTriangle, Trash2 } from 'lucide-react';
+import { isSameMonth, startOfMonth } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -208,87 +209,92 @@ export default function NewLaserLotPage() {
   }
 
   const { lotSeries, completedLots, nextLot } = React.useMemo(() => {
-    if (!currentKapan) return { lotSeries: [], completedLots: new Set(), nextLot: null };
-
-    const lotsForKapan = laserLots
-      .filter(lot => lot.kapanNumber === currentKapan)
+    const today = new Date();
+    const lotsThisMonth = laserLots
+      .filter(lot => isSameMonth(new Date(lot.entryDate), today))
       .map(lot => parseInt(lot.lotNumber, 10))
       .filter(num => !isNaN(num));
+
+    const completed = new Set(lotsThisMonth);
+    const maxCompleted = lotsThisMonth.length > 0 ? Math.max(...lotsThisMonth) : 0;
     
-    const completed = new Set(lotsForKapan);
-    const maxCompleted = lotsForKapan.length > 0 ? Math.max(...lotsForKapan) : 0;
+    let nextLotNumber: number | null = maxCompleted + 1;
+
     const currentLotNum = parseInt(currentLotNumberStr, 10);
     const highestNum = Math.max(maxCompleted, isNaN(currentLotNum) ? 0 : currentLotNum);
 
     const series = new Set<number>();
-    lotsForKapan.forEach(lot => series.add(lot));
+    lotsThisMonth.forEach(lot => series.add(lot));
     if (!isNaN(currentLotNum)) {
       series.add(currentLotNum);
     }
-
-    let nextLotNumber: number | null = null;
-    if (maxCompleted > 0 && !completed.has(maxCompleted + 1)) {
-        nextLotNumber = maxCompleted + 1;
-        series.add(nextLotNumber);
-    } else if (isNaN(currentLotNum) && maxCompleted === 0) {
-        nextLotNumber = 1; // Default start
-        series.add(nextLotNumber);
-    }
-
+    
     // Add some future lots for context
     const seriesStartPoint = highestNum > 0 ? highestNum : (nextLotNumber || 1);
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 10; i++) {
         series.add(seriesStartPoint + i);
     }
+     // Add some past lots for context
+    for (let i = 1; i <= 5; i++) {
+        if(seriesStartPoint - i > 0) {
+            series.add(seriesStartPoint - i);
+        }
+    }
+    
+    // If nextLot is already completed (manual entry), find the next available one
+    while(completed.has(nextLotNumber!)) {
+        nextLotNumber!++;
+    }
+
 
     return {
         lotSeries: Array.from(series).sort((a,b) => a-b),
         completedLots: completed,
         nextLot: nextLotNumber
     }
-  }, [laserLots, currentKapan, currentLotNumberStr]);
+  }, [laserLots, currentLotNumberStr]);
 
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="New Laser Lot" description="Create a new entry for a laser lot." />
-      <Card className="max-w-4xl mx-auto">
-        <CardHeader>
-          <CardTitle>Step 1: Lot Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="kapanNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="lotNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="tensionType" render={({ field }) => (
-                    <FormItem><FormLabel>Tension Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formSubmitted}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
-                            <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
-                        </Select><FormMessage />
-                    </FormItem>
-                )} />
-                <FormField control={form.control} name="machine" render={({ field }) => (
-                    <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="packetCount" render={({ field }) => (
-                    <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                )} />
-              </div>
-              {!formSubmitted && <Button type="submit">Next: Scan Packets</Button>}
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card className="max-w-4xl mx-auto">
+            <CardHeader>
+            <CardTitle>Step 1: Lot Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                    <FormField control={form.control} name="kapanNumber" render={({ field }) => (
+                        <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="lotNumber" render={({ field }) => (
+                        <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="tensionType" render={({ field }) => (
+                        <FormItem><FormLabel>Tension Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={formSubmitted}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
+                                <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
+                            </Select><FormMessage />
+                        </FormItem>
+                    )} />
+                    <FormField control={form.control} name="machine" render={({ field }) => (
+                        <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="packetCount" render={({ field }) => (
+                        <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                </div>
+                {!formSubmitted && <Button type="submit">Next: Scan Packets</Button>}
+                </form>
+            </Form>
+            </CardContent>
+        </Card>
 
-      {currentKapan && !formSubmitted && (
-        <Card className="max-w-4xl mx-auto mt-6">
+        <Card className="max-w-4xl mx-auto">
             <CardHeader><CardTitle>Lot Series Viewer</CardTitle></CardHeader>
             <CardContent>
                 <LotSeriesViewer 
@@ -299,72 +305,72 @@ export default function NewLaserLotPage() {
                 />
             </CardContent>
         </Card>
-      )}
 
-      {formSubmitted && currentLotDetails && (
-        <Card className="max-w-4xl mx-auto mt-8">
-            <CardHeader><CardTitle>Step 2: Scan Packets</CardTitle></CardHeader>
-            <CardContent>
-                <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
-                    <Input 
-                        ref={barcodeInputRef}
-                        placeholder="Scan barcode..."
-                        value={barcode}
-                        onChange={e => setBarcode(e.target.value)}
-                        disabled={scannedPackets.length >= packetCount}
-                    />
-                    <Button type="submit" disabled={scannedPackets.length >= packetCount || !barcode}>
-                        <Barcode className="mr-2 h-4 w-4" /> Add
-                    </Button>
-                </form>
+        {formSubmitted && currentLotDetails && (
+            <Card className="max-w-4xl mx-auto">
+                <CardHeader><CardTitle>Step 2: Scan Packets</CardTitle></CardHeader>
+                <CardContent>
+                    <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
+                        <Input 
+                            ref={barcodeInputRef}
+                            placeholder="Scan barcode..."
+                            value={barcode}
+                            onChange={e => setBarcode(e.target.value)}
+                            disabled={scannedPackets.length >= packetCount}
+                        />
+                        <Button type="submit" disabled={scannedPackets.length >= packetCount || !barcode}>
+                            <Barcode className="mr-2 h-4 w-4" /> Add
+                        </Button>
+                    </form>
 
-                <div className="border rounded-md">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px]">#</TableHead>
-                                <TableHead>Scanned Barcode</TableHead>
-                                <TableHead>Kapan</TableHead>
-                                <TableHead>Packet #</TableHead>
-                                <TableHead>Suffix</TableHead>
-                                <TableHead className="w-[80px] text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {Array.from({ length: packetCount }).map((_, index) => {
-                                const packet = scannedPackets[index];
-                                return (
-                                    <TableRow key={index} className={packet ? '' : 'bg-muted/50'}>
-                                        <TableCell>{index + 1}</TableCell>
-                                        <TableCell>{packet?.fullBarcode || '...'}</TableCell>
-                                        <TableCell>{packet?.kapanNumber || '...'}</TableCell>
-                                        <TableCell>{packet?.packetNumber || '...'}</TableCell>
-                                        <TableCell>{packet?.suffix || 'Main'}</TableCell>
-                                        <TableCell className="text-right">
-                                            {packet && (
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-                
-                <div className="flex justify-between items-center mt-4">
-                    <p className="text-sm text-muted-foreground font-semibold">
-                        Scanned: {scannedPackets.length} / {packetCount}
-                    </p>
-                    <Button onClick={createFinalLot} disabled={scannedPackets.length !== packetCount}>
-                        Create Laser Lot
-                    </Button>
-                </div>
-            </CardContent>
-        </Card>
-      )}
+                    <div className="border rounded-md">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[50px]">#</TableHead>
+                                    <TableHead>Scanned Barcode</TableHead>
+                                    <TableHead>Kapan</TableHead>
+                                    <TableHead>Packet #</TableHead>
+                                    <TableHead>Suffix</TableHead>
+                                    <TableHead className="w-[80px] text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {Array.from({ length: packetCount }).map((_, index) => {
+                                    const packet = scannedPackets[index];
+                                    return (
+                                        <TableRow key={index} className={packet ? '' : 'bg-muted/50'}>
+                                            <TableCell>{index + 1}</TableCell>
+                                            <TableCell>{packet?.fullBarcode || '...'}</TableCell>
+                                            <TableCell>{packet?.kapanNumber || '...'}</TableCell>
+                                            <TableCell>{packet?.packetNumber || '...'}</TableCell>
+                                            <TableCell>{packet?.suffix || 'Main'}</TableCell>
+                                            <TableCell className="text-right">
+                                                {packet && (
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    
+                    <div className="flex justify-between items-center mt-4">
+                        <p className="text-sm text-muted-foreground font-semibold">
+                            Scanned: {scannedPackets.length} / {packetCount}
+                        </p>
+                        <Button onClick={createFinalLot} disabled={scannedPackets.length !== packetCount}>
+                            Create Laser Lot
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        )}
+      </div>
 
       <AlertDialog>
         <AlertDialogTrigger asChild>
