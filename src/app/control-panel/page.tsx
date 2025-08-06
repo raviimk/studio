@@ -15,9 +15,10 @@ import {
   ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
-  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY
+  FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY,
+  DIAMETER_SORTING_RANGES_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -77,6 +78,15 @@ const boxSortingRangeSchema = z.object({
     path: ['to'],
 });
 
+const diameterSortingRangeSchema = z.object({
+    from: z.coerce.number(),
+    to: z.coerce.number(),
+    label: z.string().min(1, 'Box label is required'),
+}).refine(data => data.to > data.from, {
+    message: 'To must be greater than From.',
+    path: ['to'],
+});
+
 
 export default function ControlPanelPage() {
   const { toast } = useToast();
@@ -90,6 +100,7 @@ export default function ControlPanelPage() {
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   
@@ -104,6 +115,7 @@ export default function ControlPanelPage() {
   const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
   const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
+  const diameterSortingForm = useForm<z.infer<typeof diameterSortingRangeSchema>>({ resolver: zodResolver(diameterSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
 
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
@@ -188,6 +200,18 @@ export default function ControlPanelPage() {
     setBoxSortingRanges(boxSortingRanges.filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Box sorting range deleted.' });
   }
+  
+  function handleAddDiameterSortingRange(values: z.infer<typeof diameterSortingRangeSchema>) {
+    setDiameterSortingRanges([...diameterSortingRanges, { id: uuidv4(), ...values }]);
+    toast({ title: 'Success', description: 'Diameter sorting range added.' });
+    diameterSortingForm.reset();
+  }
+
+  function handleDeleteDiameterSortingRange(id: string) {
+    setDiameterSortingRanges(diameterSortingRanges.filter(range => range.id !== id));
+    toast({ title: 'Success', description: 'Diameter sorting range deleted.' });
+  }
+
 
   const doBackup = () => {
     try {
@@ -282,12 +306,13 @@ export default function ControlPanelPage() {
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-8">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
           <TabsTrigger value="udhdha">Udhda</TabsTrigger>
-          <TabsTrigger value="box-sorting">Box Sorting</TabsTrigger>
+          <TabsTrigger value="box-sorting">Box Sorting (Cent)</TabsTrigger>
+          <TabsTrigger value="diameter-sorting">Box Sorting (Diameter)</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
           <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
         </TabsList>
@@ -538,7 +563,7 @@ export default function ControlPanelPage() {
         <TabsContent value="box-sorting" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Add Box Sorting Range</CardTitle>
+              <CardTitle>Add Box Sorting Range (by Polish Weight)</CardTitle>
               <CardDescription>Define Polish Weight ranges to automatically sort packets into boxes.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -561,7 +586,7 @@ export default function ControlPanelPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Manage Box Sorting Ranges</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Manage Box Sorting Ranges (by Polish Weight)</CardTitle></CardHeader>
             <CardContent>
                 <Table>
                     <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
@@ -573,6 +598,52 @@ export default function ControlPanelPage() {
                                 <TableCell>{range.label}</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteBoxSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="diameter-sorting" className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Diameter Sorting Range (by mm)</CardTitle>
+              <CardDescription>Define diameter ranges (in mm) to automatically sort packets into boxes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...diameterSortingForm}>
+                <form onSubmit={diameterSortingForm.handleSubmit(handleAddDiameterSortingRange)} className="space-y-4 max-w-lg">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <FormField control={diameterSortingForm.control} name="from" render={({ field }) => (
+                        <FormItem><FormLabel>From (mm)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={diameterSortingForm.control} name="to" render={({ field }) => (
+                        <FormItem><FormLabel>To (mm)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={diameterSortingForm.control} name="label" render={({ field }) => (
+                        <FormItem><FormLabel>Box Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                  </div>
+                  <Button type="submit">Add Range</Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Manage Diameter Sorting Ranges</CardTitle></CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader><TableRow><TableHead>From (mm)</TableHead><TableHead>To (mm)</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {diameterSortingRanges.sort((a, b) => a.from - b.from).map(range => (
+                            <TableRow key={range.id}>
+                                <TableCell>{range.from.toFixed(2)}</TableCell>
+                                <TableCell>{range.to.toFixed(2)}</TableCell>
+                                <TableCell>{range.label}</TableCell>
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteDiameterSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
                                 </TableCell>
                             </TableRow>
                         ))}

@@ -2,15 +2,15 @@
 'use client';
 import React, { useState, useMemo, useRef, Fragment, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { BOX_SORTING_RANGES_KEY, BOX_SORTING_PACKETS_KEY } from '@/lib/constants';
-import { BoxSortingRange, BoxSortingPacket } from '@/lib/types';
+import { BOX_SORTING_RANGES_KEY, BOX_SORTING_PACKETS_KEY, DIAMETER_SORTING_RANGES_KEY, BOX_DIAMETER_PACKETS_KEY } from '@/lib/constants';
+import { BoxSortingRange, BoxSortingPacket, BoxDiameterRange } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil, Gem } from 'lucide-react';
+import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil, Gem, Replace } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 
 type ShapeSummary = {
@@ -55,12 +56,15 @@ type ManualEntry = {
     shape: string;
     roughWeight: string;
     polishWeight: string;
+    diameter: string;
 }
 
 type HighlightedItem = {
     shape: string;
     boxLabel: string;
 } | null;
+
+type SortingMode = 'cent' | 'diameter';
 
 // Shape-specific animated icons
 const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) => {
@@ -94,11 +98,13 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
 
 export default function BoxSortingPage() {
   const { toast } = useToast();
-  const [ranges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [centRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [diameterRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   
-  // Apply filtering logic when reading from localStorage
-  const [packets, setPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  const [centPackets, setCentPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  const [diameterPackets, setDiameterPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_DIAMETER_PACKETS_KEY, []);
   
+  const [sortingMode, setSortingMode] = useState<SortingMode>('cent');
   const [barcode, setBarcode] = useState('');
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   
@@ -106,11 +112,15 @@ export default function BoxSortingPage() {
       packetNumber: '',
       shape: '',
       roughWeight: '',
-      polishWeight: ''
+      polishWeight: '',
+      diameter: ''
   });
 
   const [viewingBox, setViewingBox] = useState<ViewingBox>(null);
   const [highlightedItem, setHighlightedItem] = useState<HighlightedItem>(null);
+  
+  const packets = sortingMode === 'cent' ? centPackets : diameterPackets;
+  const setPackets = sortingMode === 'cent' ? setCentPackets : setDiameterPackets;
 
   useEffect(() => {
     if (highlightedItem) {
@@ -122,25 +132,33 @@ export default function BoxSortingPage() {
   }, [highlightedItem]);
   
   const sortPacket = (packetData: Omit<BoxSortingPacket, 'id' | 'scanTime' | 'boxLabel'>) => {
-    if (ranges.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Setup Required',
-        description: 'Please define box sorting ranges in the Control Panel first.',
-      });
-      return false;
-    }
+    let matchedRange;
+    const { polishWeight, diameter } = packetData;
     
-    // Check moved to handleBarcodeScan to provide immediate feedback
-
-    const matchedRange = ranges.find(r => packetData.polishWeight >= r.from && packetData.polishWeight <= r.to);
-    if (!matchedRange) {
-        toast({
-            variant: 'destructive',
-            title: 'No Matching Box',
-            description: `No box range configured for polish weight ${packetData.polishWeight}.`,
-        });
-        return false;
+    if (sortingMode === 'cent') {
+        if (centRanges.length === 0) {
+          toast({ variant: 'destructive', title: 'Setup Required', description: 'Please define cent-based box sorting ranges in the Control Panel.' });
+          return false;
+        }
+        matchedRange = centRanges.find(r => polishWeight >= r.from && polishWeight <= r.to);
+        if (!matchedRange) {
+            toast({ variant: 'destructive', title: 'No Matching Box', description: `No box range configured for polish weight ${polishWeight}.` });
+            return false;
+        }
+    } else { // diameter
+        if (diameterRanges.length === 0) {
+          toast({ variant: 'destructive', title: 'Setup Required', description: 'Please define diameter-based box sorting ranges in the Control Panel.' });
+          return false;
+        }
+        if (diameter === undefined) {
+             toast({ variant: 'destructive', title: 'Missing Diameter', description: `Diameter value not found in the input.` });
+            return false;
+        }
+        matchedRange = diameterRanges.find(r => diameter >= r.from && diameter <= r.to);
+        if (!matchedRange) {
+            toast({ variant: 'destructive', title: 'No Matching Box', description: `No box range configured for diameter ${diameter}.` });
+            return false;
+        }
     }
 
     const newPacket: BoxSortingPacket = {
@@ -163,44 +181,31 @@ export default function BoxSortingPage() {
     e.preventDefault();
     if (!barcode) return;
 
-    // Check against all packets in memory for duplicates before parsing
     if (packets.some(p => p.barcode === barcode)) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Packet',
-            description: `Packet barcode has already been scanned.`,
-        });
-        setBarcode(''); // Clear the input on duplicate scan
+        toast({ variant: 'destructive', title: 'Duplicate Packet', description: `Packet barcode has already been scanned in this mode.` });
+        setBarcode('');
         barcodeInputRef.current?.focus();
         return;
     }
     
     const values = barcode.split(',');
-
     if (values.length < 15) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Barcode Format',
-        description: `Expected 15 comma-separated values, but got ${values.length}.`,
-      });
+      toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
       return;
     }
 
+    const diameter = parseFloat(values[0]);
     const roughWeight = parseFloat(values[7]);
     const polishWeight = parseFloat(values[8]);
     const shape = values[11]?.trim().toUpperCase();
     const packetNumber = values[14]?.trim();
 
-    if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber) {
-        toast({
-            variant: 'destructive',
-            title: 'Parsing Error',
-            description: 'Could not extract required fields (weights, shape, packet number) from the barcode.',
-        });
+    if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber || isNaN(diameter)) {
+        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not extract required fields (diameter, weights, shape, packet number) from barcode.' });
         return;
     }
 
-    if (sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight })) {
+    if (sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight, diameter })) {
       setBarcode('');
       barcodeInputRef.current?.focus();
     }
@@ -208,27 +213,24 @@ export default function BoxSortingPage() {
   
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { packetNumber, shape, roughWeight, polishWeight } = manualEntry;
+    const { packetNumber, shape, roughWeight, polishWeight, diameter } = manualEntry;
 
-    if (!packetNumber || !shape || !roughWeight || !polishWeight) {
-        toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all fields for manual entry.' });
+    if (!packetNumber || !shape || !roughWeight || !polishWeight || (sortingMode === 'diameter' && !diameter)) {
+        toast({ variant: 'destructive', title: 'Missing Fields', description: 'Please fill out all required fields for manual entry.' });
         return;
     }
     
     if (packets.some(p => p.packetNumber === packetNumber.trim())) {
-        toast({
-            variant: 'destructive',
-            title: 'Duplicate Packet',
-            description: `Packet ${packetNumber.trim()} has already been sorted.`,
-        });
+        toast({ variant: 'destructive', title: 'Duplicate Packet', description: `Packet ${packetNumber.trim()} has already been sorted in this mode.` });
         return;
     }
 
     const parsedRoughWeight = parseFloat(roughWeight);
     const parsedPolishWeight = parseFloat(polishWeight);
+    const parsedDiameter = parseFloat(diameter);
 
-    if (isNaN(parsedRoughWeight) || isNaN(parsedPolishWeight)) {
-        toast({ variant: 'destructive', title: 'Invalid Weight', description: 'Rough and Polish weight must be valid numbers.' });
+    if (isNaN(parsedRoughWeight) || isNaN(parsedPolishWeight) || (sortingMode === 'diameter' && isNaN(parsedDiameter))) {
+        toast({ variant: 'destructive', title: 'Invalid Number', description: 'Weight and diameter must be valid numbers.' });
         return;
     }
     
@@ -237,9 +239,10 @@ export default function BoxSortingPage() {
         packetNumber: packetNumber.trim(),
         shape: shape.trim().toUpperCase(),
         roughWeight: parsedRoughWeight,
-        polishWeight: parsedPolishWeight
+        polishWeight: parsedPolishWeight,
+        diameter: parsedDiameter
     })) {
-        setManualEntry({ packetNumber: '', shape: '', roughWeight: '', polishWeight: '' });
+        setManualEntry({ packetNumber: '', shape: '', roughWeight: '', polishWeight: '', diameter: '' });
     }
   }
 
@@ -267,7 +270,6 @@ export default function BoxSortingPage() {
         shapeGroup.totalRoughWeight += packet.roughWeight;
         shapeGroup.totalPolishWeight += packet.polishWeight;
         
-        // Extract kapan from packetNumber (e.g., 'R61-1057' -> '61')
         const kapanPart = packet.packetNumber.split('-')[0].replace('R', '');
         if(kapanPart) shapeGroup.kapanNumbers.add(kapanPart);
 
@@ -308,13 +310,8 @@ export default function BoxSortingPage() {
     const kapan = firstPacket.packetNumber.split('-')[0].replace('R', '') || 'N/A';
     
     const shapeMap: Record<string, string> = {
-        'ROUND': 'રાઉન્ડ 4P',
-        'PEAR': 'પાન',
-        'EMERALD': 'ચોકી',
-        'MARQUISE': 'માર્કિસ',
-        'PRINCESS': 'પ્રિન્સેસ',
-        'SQUARE': 'ચોકી',
-        'CHOKI': 'ચોકી',
+        'ROUND': 'રાઉન્ડ 4P', 'PEAR': 'પાન', 'EMERALD': 'ચોકી', 'MARQUISE': 'માર્કિસ',
+        'PRINCESS': 'પ્રિન્સેસ', 'SQUARE': 'ચોકી', 'CHOKI': 'ચોકી',
     };
     const gujaratiShape = shapeMap[firstPacket.shape.toUpperCase()] || firstPacket.shape;
 
@@ -323,47 +320,17 @@ export default function BoxSortingPage() {
     const totalPackets = packetsToPrint.length;
 
     const html = `
-        <html>
-        <head>
-            <title>Receipt</title>
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
-                body {
-                    font-family: 'Noto Sans Gujarati', sans-serif;
-                    font-size: 16px;
-                    padding: 10px 15px;
-                    box-sizing: border-box;
-                    width: 300px;
-                }
-                .top, .bottom {
-                    display: flex;
-                    justify-content: space-between;
-                    font-weight: bold;
-                }
-                .top { margin-bottom: 40px; }
-                .bottom { margin-top: 60px; }
-                .left-block, .right-block { line-height: 1.6; }
-                .left-block { text-align: left; }
-                .right-block { text-align: right; }
-            </style>
-        </head>
-        <body>
-            <div class="top">
-                <div>કાપણ: ${kapan}</div>
-                <div>${gujaratiShape} ${title}</div>
-            </div>
-            <div class="bottom">
-                <div class="left-block">
-                    <div>તૈ.વજન: ${totalPolishWeight.toFixed(3)}</div>
-                </div>
-                <div class="right-block">
-                    <div>થાન: ${totalPackets}</div>
-                    <div>કા.વજન: ${totalRoughWeight.toFixed(3)}</div>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
+        <html><head><title>Receipt</title><style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap');
+        body{font-family:'Noto Sans Gujarati',sans-serif;font-size:16px;padding:10px 15px;box-sizing:border-box;width:300px;}
+        .top,.bottom{display:flex;justify-content:space-between;font-weight:bold;}
+        .top{margin-bottom:40px;}.bottom{margin-top:60px;}.left-block,.right-block{line-height:1.6;}
+        .left-block{text-align:left;}.right-block{text-align:right;}
+        </style></head><body>
+        <div class="top"><div>કાપણ: ${kapan}</div><div>${gujaratiShape} ${title}</div></div>
+        <div class="bottom"><div class="left-block"><div>તૈ.વજન: ${totalPolishWeight.toFixed(3)}</div></div>
+        <div class="right-block"><div>થાન: ${totalPackets}</div><div>કા.વજન: ${totalRoughWeight.toFixed(3)}</div></div></div>
+        </body></html>`;
 
     const printWindow = window.open('', '', 'width=400,height=600');
     if(printWindow) {
@@ -374,7 +341,6 @@ export default function BoxSortingPage() {
         toast({variant: 'destructive', title: 'Print Error', description: 'Could not open print window. Check popup blocker.'})
     }
   }
-
 
   const handleDeleteShape = (shape: string) => {
     setPackets(prev => prev.filter(p => p.shape !== shape));
@@ -391,6 +357,8 @@ export default function BoxSortingPage() {
     return packets.filter(p => p.shape === viewingBox.shape && p.boxLabel === viewingBox.boxLabel);
   }, [packets, viewingBox]);
 
+  const ranges = sortingMode === 'cent' ? centRanges : diameterRanges;
+  const noRangesConfigured = ranges.length === 0;
 
   return (
     <>
@@ -398,9 +366,21 @@ export default function BoxSortingPage() {
         <PageHeader title="Auto Box Sorting" description="Scan or manually enter packet details to automatically sort them into boxes." />
 
         <Card>
-          <CardHeader>
-            <CardTitle>Packet Entry</CardTitle>
-          </CardHeader>
+            <CardHeader><CardTitle>Sorting Mode</CardTitle></CardHeader>
+            <CardContent>
+                 <RadioGroup value={sortingMode} onValueChange={(val) => setSortingMode(val as SortingMode)} className="flex gap-4">
+                     <Label htmlFor="mode-cent" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
+                         <RadioGroupItem value="cent" id="mode-cent" /> <Scale className="h-4 w-4" /> Sort by Cent
+                      </Label>
+                      <Label htmlFor="mode-diameter" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
+                         <RadioGroupItem value="diameter" id="mode-diameter" /> <Replace className="h-4 w-4" /> Sort by Diameter
+                      </Label>
+                  </RadioGroup>
+            </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Packet Entry</CardTitle></CardHeader>
           <CardContent>
             <Tabs defaultValue="scan">
               <TabsList className="grid w-full grid-cols-2 max-w-sm">
@@ -421,8 +401,8 @@ export default function BoxSortingPage() {
                 </form>
               </TabsContent>
               <TabsContent value="manual" className="mt-4">
-                 <form onSubmit={handleManualSubmit} className="space-y-4 max-w-sm">
-                   <div className="grid grid-cols-2 gap-4">
+                 <form onSubmit={handleManualSubmit} className="space-y-4 max-w-lg">
+                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                        <div>
                            <Label htmlFor="packetNumber">Packet Number</Label>
                            <Input id="packetNumber" name="packetNumber" value={manualEntry.packetNumber} onChange={handleManualInputChange} />
@@ -431,6 +411,12 @@ export default function BoxSortingPage() {
                            <Label htmlFor="shape">Shape</Label>
                            <Input id="shape" name="shape" value={manualEntry.shape} onChange={handleManualInputChange} />
                        </div>
+                       {sortingMode === 'diameter' && 
+                        <div>
+                           <Label htmlFor="diameter">Diameter (mm)</Label>
+                           <Input id="diameter" name="diameter" type="number" step="0.01" value={manualEntry.diameter} onChange={handleManualInputChange} />
+                       </div>
+                       }
                        <div>
                            <Label htmlFor="roughWeight">Rough Wt.</Label>
                            <Input id="roughWeight" name="roughWeight" type="number" step="0.001" value={manualEntry.roughWeight} onChange={handleManualInputChange} />
@@ -447,11 +433,11 @@ export default function BoxSortingPage() {
               </TabsContent>
             </Tabs>
             
-            {ranges.length === 0 && (
+            {noRangesConfigured && (
               <Alert variant="destructive" className="mt-4">
                   <AlertTitle>Configuration Needed</AlertTitle>
                   <AlertDescription>
-                    No box sorting ranges found. Please <Link href="/control-panel" className="underline font-semibold">go to the Control Panel</Link> to set them up first.
+                    No box sorting ranges found for the "{sortingMode}" mode. Please <Link href="/control-panel" className="underline font-semibold">go to the Control Panel</Link> to set them up first.
                   </AlertDescription>
               </Alert>
             )}
@@ -482,7 +468,7 @@ export default function BoxSortingPage() {
                                 <AlertDialogHeader>
                                     <AlertDialogTitle>Delete all packets for {summary.shape}?</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                    This will permanently delete all {summary.totalPackets} packets for the shape {summary.shape}. This action cannot be undone.
+                                    This will permanently delete all {summary.totalPackets} packets for the shape {summary.shape} in the current mode. This action cannot be undone.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -537,7 +523,7 @@ export default function BoxSortingPage() {
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Delete all packets in this box?</AlertDialogTitle>
                                                         <AlertDialogDescription>
-                                                        This will permanently delete all {data.count} packets from "{label}" in the {summary.shape} category. This action cannot be undone.
+                                                        This will permanently delete all {data.count} packets from "{label}" in the {summary.shape} category for the current mode. This action cannot be undone.
                                                         </AlertDialogDescription>
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
@@ -563,11 +549,11 @@ export default function BoxSortingPage() {
       </div>
       
       <Dialog open={!!viewingBox} onOpenChange={(isOpen) => !isOpen && setViewingBox(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
             <DialogHeader>
                 <DialogTitle>Packets in {viewingBox?.shape} / {viewingBox?.boxLabel}</DialogTitle>
                 <DialogDescription>
-                    Showing {packetsInViewingBox.length} packet(s).
+                    Showing {packetsInViewingBox.length} packet(s) for sorting mode: <span className="font-semibold capitalize">{sortingMode}</span>.
                 </DialogDescription>
             </DialogHeader>
             <div className="max-h-[60vh] overflow-y-auto pr-4">
@@ -575,6 +561,7 @@ export default function BoxSortingPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Packet Number</TableHead>
+                            {sortingMode === 'diameter' && <TableHead>Diameter</TableHead>}
                             <TableHead>Rough Wt.</TableHead>
                             <TableHead>Polish Wt.</TableHead>
                             <TableHead className="text-right">Action</TableHead>
@@ -584,6 +571,7 @@ export default function BoxSortingPage() {
                         {packetsInViewingBox.map(p => (
                             <TableRow key={p.id}>
                                 <TableCell className="font-mono">{p.packetNumber}</TableCell>
+                                {sortingMode === 'diameter' && <TableCell>{p.diameter?.toFixed(2)} mm</TableCell>}
                                 <TableCell>{p.roughWeight.toFixed(3)}</TableCell>
                                 <TableCell>{p.polishWeight.toFixed(3)}</TableCell>
                                 <TableCell className="text-right">

@@ -146,6 +146,13 @@ export interface BoxSortingRange {
     label: string;
 }
 
+export interface BoxDiameterRange {
+    id: string;
+    from: number;
+    to: number;
+    label: string;
+}
+
 export interface BoxSortingPacket {
     id: string;
     barcode: string;
@@ -155,6 +162,7 @@ export interface BoxSortingPacket {
     polishWeight: number;
     boxLabel: string;
     scanTime: string;
+    diameter?: number;
 }
 
 // Production History Types

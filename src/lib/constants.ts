@@ -26,6 +26,9 @@ export const JIRAM_REPORT_PACKETS_KEY = 'jiramReportPackets';
 // Box Sorting
 export const BOX_SORTING_RANGES_KEY = 'boxSortingRanges';
 export const BOX_SORTING_PACKETS_KEY = 'boxSortingPackets';
+export const DIAMETER_SORTING_RANGES_KEY = 'diameterSortingRanges';
+export const BOX_DIAMETER_PACKETS_KEY = 'boxDiameterPackets';
+
 
 // Sarin Chalu Progress
 export const CHALU_SARIN_PROGRESS_KEY = 'chaluSarinProgress';
@@ -58,6 +61,8 @@ export const ALL_APP_KEYS = [
     JIRAM_REPORT_PACKETS_KEY,
     BOX_SORTING_RANGES_KEY,
     BOX_SORTING_PACKETS_KEY,
+    DIAMETER_SORTING_RANGES_KEY,
+    BOX_DIAMETER_PACKETS_KEY,
     CHALU_SARIN_PROGRESS_KEY,
     PRODUCTION_HISTORY_KEY,
     AUTO_BACKUP_SETTINGS_KEY,
