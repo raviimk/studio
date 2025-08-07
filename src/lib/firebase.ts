@@ -1,6 +1,6 @@
 
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getDatabase, Database } from 'firebase/database';
 
 // Firebase configuration is loaded from environment variables
 export const firebaseConfig = {
@@ -15,13 +15,13 @@ export const firebaseConfig = {
 };
 
 let app: FirebaseApp;
-let db: Firestore;
+let db: Database;
 
 const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
 
 if (typeof window !== 'undefined' && isConfigValid) {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  db = getDatabase(app);
 }
 
 /**
