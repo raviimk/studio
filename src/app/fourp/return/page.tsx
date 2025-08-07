@@ -52,9 +52,9 @@ export default function FourPReturnPage() {
       return;
     }
 
-    const fourPAmount = (lotToReturn.finalPcs || 0) * priceMaster.fourP;
+    const fourPAmount = (lotToReturn.finalPcs || 0) * (priceMaster?.fourP ?? 0);
     
-    const updatedLots = fourPTechingLots.map(lot =>
+    const updatedLots = (fourPTechingLots || []).map(lot =>
       lot.id === lotToReturn.id
         ? {
             ...lot,
@@ -66,13 +66,13 @@ export default function FourPReturnPage() {
         : lot
     );
     setFourPTechingLots(updatedLots);
-    toast({ title: `Lot Returned`, description: `Assigned to ${selectedOperator}. Amount: ₹${fourPAmount.toFixed(2)}` });
+    toast({ title: `Lot Returned`, description: `Assigned to ${selectedOperator}. Amount: ₹${(fourPAmount ?? 0).toFixed(2)}` });
     setLotToReturn(null);
   };
   
   const unreturnedLots = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
-    return fourPTechingLots.filter(lot => {
+    return (fourPTechingLots || []).filter(lot => {
         if (lot.isReturnedToFourP) return false;
         if (!searchTerm) return true;
         return lot.lot.toLowerCase().includes(searchLower) ||
@@ -82,19 +82,19 @@ export default function FourPReturnPage() {
 
   const returnedLots = useMemo(() => {
     const searchLower = returnedSearchTerm.toLowerCase();
-    return fourPTechingLots
+    return (fourPTechingLots || [])
       .filter(lot => {
           if (!lot.isReturnedToFourP) return false;
           if (!returnedSearchTerm) return true;
           return lot.lot.toLowerCase().includes(searchLower) ||
                  lot.kapan.toLowerCase().includes(searchLower) ||
-                 lot.fourPOperator?.toLowerCase().includes(searchLower);
+                 (lot.fourPOperator ?? '').toLowerCase().includes(searchLower);
       })
       .sort((a,b) => new Date(b.returnDate!).getTime() - new Date(a.returnDate!).getTime());
   }, [fourPTechingLots, returnedSearchTerm]);
   
   const departmentNames = useMemo(() => {
-    return [deptSettings.belowThresholdDeptName, deptSettings.aboveThresholdDeptName];
+    return [deptSettings?.belowThresholdDeptName, deptSettings?.aboveThresholdDeptName].filter(Boolean) as string[];
   },[deptSettings]);
 
   // Edit/Delete handlers for returned lots
@@ -126,18 +126,18 @@ export default function FourPReturnPage() {
     
     const newFinalPcs = totalPcs - blockingPcs;
     updatedLotData.finalPcs = newFinalPcs;
-    updatedLotData.fourPAmount = newFinalPcs * priceMaster.fourP;
-    updatedLotData.techingAmount = newFinalPcs * priceMaster.fourPTeching;
+    updatedLotData.fourPAmount = newFinalPcs * (priceMaster?.fourP ?? 0);
+    updatedLotData.techingAmount = newFinalPcs * (priceMaster?.fourPTeching ?? 0);
 
     setFourPTechingLots(prev =>
-        prev.map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
+        (prev || []).map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
     );
     toast({ title: 'Success', description: 'Lot updated successfully.' });
     handleCancelEdit();
   };
   
   const handleDeleteLot = (lotId: string) => {
-      setFourPTechingLots(prev => prev.filter(lot => lot.id !== lotId));
+      setFourPTechingLots(prev => (prev || []).filter(lot => lot.id !== lotId));
       toast({title: 'Success', description: 'Lot entry deleted.'});
   }
 
@@ -171,7 +171,7 @@ export default function FourPReturnPage() {
                             <SelectValue placeholder="Select 4P Operator" />
                         </SelectTrigger>
                         <SelectContent>
-                            {fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
+                            {(fourPOperators || []).map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 </div>
@@ -183,7 +183,7 @@ export default function FourPReturnPage() {
               <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Teching Operator</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {unreturnedLots.map(lot => {
-                  const fourPAmount = (lot.finalPcs || 0) * priceMaster.fourP;
+                  const fourPAmount = (lot.finalPcs || 0) * (priceMaster?.fourP ?? 0);
                   return (
                   <TableRow key={lot.id}>
                     <TableCell>{lot.kapan}</TableCell>
@@ -191,7 +191,7 @@ export default function FourPReturnPage() {
                     <TableCell><Badge>{lot.department}</Badge></TableCell>
                     <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
-                    <TableCell className="font-bold text-green-600">₹{fourPAmount.toFixed(2)}</TableCell>
+                    <TableCell className="font-bold text-green-600">₹{(fourPAmount ?? 0).toFixed(2)}</TableCell>
                     <TableCell><Badge variant="outline">{lot.techingOperator}</Badge></TableCell>
                     <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                     <TableCell>
@@ -267,10 +267,10 @@ export default function FourPReturnPage() {
                            <TableCell>
                                 <Select value={editFormData.fourPOperator} onValueChange={(val) => handleEditFormChange('fourPOperator', val)}>
                                     <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-                                    <SelectContent>{fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                                    <SelectContent>{(fourPOperators || []).map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
                                 </Select>
                            </TableCell>
-                           <TableCell>₹{(((editFormData.pcs || 0) - (editFormData.blocking || 0)) * priceMaster.fourP).toFixed(2)}</TableCell>
+                           <TableCell>₹{(((editFormData.pcs || 0) - (editFormData.blocking || 0)) * (priceMaster?.fourP ?? 0)).toFixed(2)}</TableCell>
                            <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
                            <TableCell className="flex gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(lot.id)}><Save className="h-4 w-4 text-green-600" /></Button>
@@ -286,7 +286,7 @@ export default function FourPReturnPage() {
                             <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                             <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                             <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>
-                            <TableCell>₹{lot.fourPAmount?.toFixed(2)}</TableCell>
+                            <TableCell>₹{(lot.fourPAmount ?? 0).toFixed(2)}</TableCell>
                             <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
                              <TableCell className="flex gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleEditClick(lot)}><Edit className="h-4 w-4" /></Button>
@@ -322,5 +322,3 @@ export default function FourPReturnPage() {
     </div>
   );
 }
-
-    
