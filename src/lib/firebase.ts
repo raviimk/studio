@@ -20,22 +20,8 @@ let db: Firestore;
 const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
 
 if (typeof window !== 'undefined' && isConfigValid) {
-  if (!getApps().length) {
-    try {
-      // Initialize Firebase
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app);
-    } catch (e) {
-      console.error("Failed to initialize Firebase:", e);
-      // @ts-ignore
-      app = null;
-      // @ts-ignore
-      db = null;
-    }
-  } else {
-    app = getApp();
-    db = getFirestore(app);
-  }
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  db = getFirestore(app);
 }
 
 /**
