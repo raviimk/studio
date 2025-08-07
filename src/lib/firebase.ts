@@ -1,6 +1,6 @@
 
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getDatabase, Database } from 'firebase/database';
+import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase configuration is loaded from environment variables
 export const firebaseConfig = {
@@ -15,7 +15,7 @@ export const firebaseConfig = {
 };
 
 let app: FirebaseApp;
-let db: Database;
+let db: Firestore;
 
 const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
 
@@ -24,7 +24,7 @@ if (typeof window !== 'undefined' && isConfigValid) {
     try {
       // Initialize Firebase
       app = initializeApp(firebaseConfig);
-      db = getDatabase(app);
+      db = getFirestore(app);
     } catch (e) {
       console.error("Failed to initialize Firebase:", e);
       // @ts-ignore
@@ -34,7 +34,7 @@ if (typeof window !== 'undefined' && isConfigValid) {
     }
   } else {
     app = getApp();
-    db = getDatabase(app);
+    db = getFirestore(app);
   }
 }
 
