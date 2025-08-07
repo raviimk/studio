@@ -18,12 +18,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 
-// Extracts the base part of a barcode, e.g., "R89-83-A" -> "R89-83"
-const getBarcodeBase = (barcode: string): string | null => {
-    const parts = barcode.split('-');
-    if (parts.length < 2) return null;
-    if (parts.length === 2) return barcode; // e.g. 61-105
-    return parts.slice(0, -1).join('-'); // e.g. R89-83-A -> R89-83
+// Normalizes a barcode for Sarin return matching by removing the 'R' prefix and any letter suffix.
+// e.g., "R94-112-A" -> "94-112", "94-112" -> "94-112"
+const normalizeBarcodeForSarin = (barcode: string): string => {
+    let normalized = barcode.trim().toUpperCase();
+    if (normalized.startsWith('R')) {
+        normalized = normalized.substring(1);
+    }
+    // This regex removes a suffix like "-A", "-B", etc.
+    return normalized.replace(/-[A-Z]$/, '');
 };
 
 
@@ -85,9 +88,9 @@ export default function ReturnSarinLotPage() {
         return;
     }
     
-    const scannedBase = getBarcodeBase(scanInput);
-    const mainPacketBases = selectedLot.sarinMainPackets.map(p => getBarcodeBase(p.fullBarcode));
-    const isValid = mainPacketBases.some(mainBase => mainBase === scannedBase);
+    const normalizedScanned = normalizeBarcodeForSarin(scanInput);
+    const mainPacketBases = new Set(selectedLot.sarinMainPackets.map(p => normalizeBarcodeForSarin(p.fullBarcode)));
+    const isValid = mainPacketBases.has(normalizedScanned);
 
     if (isValid) {
         setScannedInDialog(prev => new Set(prev).add(scanInput));
@@ -306,5 +309,3 @@ export default function ReturnSarinLotPage() {
     </div>
   );
 }
-
-    
