@@ -51,9 +51,68 @@ export function useAutoBackup() {
       timeoutRef.current = setInterval(runBackup, intervalMillis);
     }
 
+    // Office End Time Backup Logic
+    let officeEndTimeout: NodeJS.Timeout | null = null;
+    if (settings.officeEndTime) {
+      const checkAndBackupAtOfficeEnd = () => {
+        const now = new Date();
+        const todayStr = format(now, 'yyyy-MM-dd');
+        
+        const [hours, minutes] = settings.officeEndTime.split(':').map(Number);
+        const officeEndTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+
+        // If it's already past the end time for today, do nothing until tomorrow
+        if (now > officeEndTimeToday) {
+            // Check if master backup for today has already been done
+            if (settings.lastMasterBackupDate === todayStr) {
+                return; // Already backed up today
+            }
+        }
+
+        const runMasterBackup = () => {
+             const nowForFilename = new Date();
+             const filename = `MASTER-backup-${format(nowForFilename, 'yyyy-MM-dd')}.json`;
+             const success = handleBackup(filename);
+             if (success) {
+                setSettings(prev => ({ ...prev, lastMasterBackupDate: format(nowForFilename, 'yyyy-MM-dd') }));
+                 toast({
+                  title: 'Office-End Backup Successful',
+                  description: `Master backup created: ${filename}.`,
+                  duration: 10000,
+                });
+              } else {
+                console.error('Office-end master backup failed.');
+              }
+        };
+
+        const timeUntilOfficeEnd = officeEndTimeToday.getTime() - now.getTime();
+
+        if (timeUntilOfficeEnd > 0) {
+            officeEndTimeout = setTimeout(() => {
+                // Check again to ensure we haven't already backed up via other means
+                if (settings.lastMasterBackupDate !== todayStr) {
+                    runMasterBackup();
+                }
+            }, timeUntilOfficeEnd);
+        }
+      };
+      
+      checkAndBackupAtOfficeEnd(); // Check when effect runs
+      const dailyCheckInterval = setInterval(checkAndBackupAtOfficeEnd, 60 * 60 * 1000); // Check every hour
+      
+      return () => {
+        clearInterval(dailyCheckInterval);
+        if (officeEndTimeout) clearTimeout(officeEndTimeout);
+      };
+    }
+
+
     return () => {
       if (timeoutRef.current) {
         clearInterval(timeoutRef.current);
+      }
+      if (officeEndTimeout) {
+        clearTimeout(officeEndTimeout);
       }
     };
   }, [settings, setSettings, toast]);

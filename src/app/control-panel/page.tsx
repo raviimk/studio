@@ -682,6 +682,67 @@ export default function ControlPanelPage() {
                 </AlertDialog>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+                <CardTitle>Return Scan Mode</CardTitle>
+                <CardDescription>
+                   Enable or disable mandatory barcode scanning when returning lots for Sarin and Laser departments.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+               <div className="flex items-center space-x-2">
+                 <Switch
+                    id="sarin-scan-mode"
+                    checked={returnScanSettings.sarin}
+                    onCheckedChange={(checked) => handleScanSettingChange('sarin', checked)}
+                  />
+                  <Label htmlFor="sarin-scan-mode">Sarin Return Scan</Label>
+               </div>
+               <div className="flex items-center space-x-2">
+                 <Switch
+                    id="laser-scan-mode"
+                    checked={returnScanSettings.laser}
+                    onCheckedChange={(checked) => handleScanSettingChange('laser', checked)}
+                  />
+                  <Label htmlFor="laser-scan-mode">Laser Return Scan</Label>
+               </div>
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader>
+                <CardTitle>Auto-Backup Settings</CardTitle>
+                <CardDescription>
+                    The app can automatically save a backup file for you.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                 <div className="grid md:grid-cols-2 gap-4 max-w-lg">
+                    <div>
+                        <Label htmlFor="backup-interval">Backup Interval (Hours)</Label>
+                        <Select name="intervalHours" value={String(autoBackupSettings.intervalHours)} onValueChange={(value) => handleAutoBackupChange({ target: { name: 'intervalHours', value } } as any)}>
+                            <SelectTrigger id="backup-interval"><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="0">Disabled</SelectItem>
+                                <SelectItem value="1">Every 1 Hour</SelectItem>
+                                <SelectItem value="2">Every 2 Hours</SelectItem>
+                                <SelectItem value="4">Every 4 Hours</SelectItem>
+                                <SelectItem value="8">Every 8 Hours</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div>
+                        <Label htmlFor="office-end-time">Office End Time</Label>
+                        <Input
+                            id="office-end-time"
+                            type="time"
+                            name="officeEndTime"
+                            value={autoBackupSettings.officeEndTime}
+                            onChange={handleAutoBackupChange}
+                        />
+                    </div>
+                </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
