@@ -27,7 +27,7 @@ export default function FourPWorkReport() {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredData = useMemo(() => {
-    return fourPTechingLots.filter(lot => {
+    return (fourPTechingLots || []).filter(lot => {
       if (!lot.isReturnedToFourP || !lot.returnDate) return false;
       const lotDate = new Date(lot.returnDate);
       const isOperatorMatch = selectedOperator === 'all' || lot.fourPOperator === selectedOperator;
@@ -46,7 +46,7 @@ export default function FourPWorkReport() {
 
   const summary = useMemo(() => {
     return filteredData.reduce((acc, lot) => {
-        acc.totalPcs += lot.pcs;
+        acc.totalPcs += lot.pcs || 0;
         acc.totalBlocking += lot.blocking || 0;
         acc.totalFinalPcs += lot.finalPcs || 0;
         acc.totalAmount += lot.fourPAmount || 0;
@@ -71,7 +71,7 @@ export default function FourPWorkReport() {
                 <SelectTrigger><SelectValue placeholder="Select Operator" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Operators</SelectItem>
-                  {fourPOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
+                  {(fourPOperators || []).map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -108,7 +108,7 @@ export default function FourPWorkReport() {
         </Card>
         <Card>
           <CardHeader><CardTitle>Total Amount (₹)</CardTitle></CardHeader>
-          <CardContent><p className="text-4xl font-bold">₹{summary.totalAmount.toFixed(2)}</p></CardContent>
+          <CardContent><p className="text-4xl font-bold">₹{(summary.totalAmount ?? 0).toFixed(2)}</p></CardContent>
         </Card>
       </div>
 
@@ -139,7 +139,7 @@ export default function FourPWorkReport() {
                     <TableCell>{lot.pcs}</TableCell>
                     <TableCell className="text-destructive">{lot.blocking || 0}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
-                    <TableCell>₹{lot.fourPAmount?.toFixed(2)}</TableCell>
+                    <TableCell>₹{(lot.fourPAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
                 {filteredData.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}

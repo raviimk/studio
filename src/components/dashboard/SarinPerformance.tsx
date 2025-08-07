@@ -30,6 +30,7 @@ export default function SarinPerformance() {
   });
 
   const filteredPackets = useMemo(() => {
+    if (!sarinPackets) return [];
     return sarinPackets.filter(packet => {
       const packetDate = new Date(packet.date);
       const isOperatorMatch = selectedOperator === 'all' || packet.operator === selectedOperator;
@@ -42,18 +43,18 @@ export default function SarinPerformance() {
 
   const performanceData = useMemo(() => {
     const dataByOperator: { [key: string]: { name: string, packets: number, jiram: number } } = {};
-
+    if (!filteredPackets) return [];
     filteredPackets.forEach(packet => {
       if (!dataByOperator[packet.operator]) {
         dataByOperator[packet.operator] = { name: packet.operator, packets: 0, jiram: 0 };
       }
-      dataByOperator[packet.operator].packets += packet.packetCount;
+      dataByOperator[packet.operator].packets += packet.packetCount || 0;
       dataByOperator[packet.operator].jiram += packet.jiramCount || 0;
     });
     return Object.values(dataByOperator);
   }, [filteredPackets]);
   
-  const totalPackets = filteredPackets.reduce((sum, p) => sum + p.packetCount, 0);
+  const totalPackets = filteredPackets.reduce((sum, p) => sum + (p.packetCount || 0), 0);
   const totalJiram = filteredPackets.reduce((sum, p) => sum + (p.jiramCount || 0), 0);
   const returnedLots = filteredPackets.filter(p => p.isReturned).length;
 
@@ -74,7 +75,7 @@ export default function SarinPerformance() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Operators</SelectItem>
-                {sarinOperators.map(op => (
+                {(sarinOperators || []).map(op => (
                   <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -200,5 +201,3 @@ export default function SarinPerformance() {
     </div>
   );
 }
-
-

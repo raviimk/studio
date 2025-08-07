@@ -111,67 +111,67 @@ export default function ControlPanelPage() {
   const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({ resolver: zodResolver(laserMappingSchema), defaultValues: { tensionType: '', machine: '' } });
   const fourPForm = useForm<z.infer<typeof fourPOperatorSchema>>({ resolver: zodResolver(fourPOperatorSchema), defaultValues: { name: '' } });
   const fourPTechingForm = useForm<z.infer<typeof fourPTechingOperatorSchema>>({ resolver: zodResolver(fourPTechingOperatorSchema), defaultValues: { name: '' } });
-  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster });
-  const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings });
-  const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings });
+  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster || { fourP: 0, fourPTeching: 0 } });
+  const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings || { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' } });
+  const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings || { returnTimeLimitMinutes: 60 } });
   const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
   const diameterSortingForm = useForm<z.infer<typeof diameterSortingRangeSchema>>({ resolver: zodResolver(diameterSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
 
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
-    setSarinOperators([...sarinOperators, { id: operatorId, name: values.name }]);
-    setSarinMappings([...sarinMappings, { id: uuidv4(), operatorId: operatorId, operatorName: values.name, machine: values.machine }]);
+    setSarinOperators([...(sarinOperators || []), { id: operatorId, name: values.name }]);
+    setSarinMappings([...(sarinMappings || []), { id: uuidv4(), operatorId: operatorId, operatorName: values.name, machine: values.machine }]);
     toast({ title: 'Success', description: 'Sarin operator and mapping added.' });
     sarinForm.reset();
   }
   
   function handleDeleteSarinOperator(id: string) {
-    setSarinOperators(sarinOperators.filter(op => op.id !== id));
-    setSarinMappings(sarinMappings.filter(map => map.operatorId !== id));
+    setSarinOperators((sarinOperators || []).filter(op => op.id !== id));
+    setSarinMappings((sarinMappings || []).filter(map => map.operatorId !== id));
     toast({ title: 'Success', description: 'Sarin operator and mapping deleted.' });
   }
 
   function handleAddLaserOperator(values: z.infer<typeof laserOperatorSchema>) {
-    setLaserOperators([...laserOperators, { id: uuidv4(), name: values.name }]);
+    setLaserOperators([...(laserOperators || []), { id: uuidv4(), name: values.name }]);
     toast({ title: 'Success', description: 'Laser operator added.' });
     laserOpForm.reset();
   }
   
   function handleDeleteLaserOperator(id: string) {
-    setLaserOperators(laserOperators.filter(op => op.id !== id));
+    setLaserOperators((laserOperators || []).filter(op => op.id !== id));
     toast({ title: 'Success', description: 'Laser operator deleted.' });
   }
 
   function handleAddLaserMapping(values: z.infer<typeof laserMappingSchema>) {
-    setLaserMappings([...laserMappings, { id: uuidv4(), ...values }]);
+    setLaserMappings([...(laserMappings || []), { id: uuidv4(), ...values }]);
     toast({ title: 'Success', description: 'Laser tension mapping added.' });
     laserMapForm.reset();
   }
 
   function handleDeleteLaserMapping(id: string) {
-    setLaserMappings(laserMappings.filter(map => map.id !== id));
+    setLaserMappings((laserMappings || []).filter(map => map.id !== id));
     toast({ title: 'Success', description: 'Laser tension mapping deleted.' });
   }
 
   function handleAddFourPOperator(values: z.infer<typeof fourPOperatorSchema>) {
-    setFourPOperators([...fourPOperators, { id: uuidv4(), ...values }]);
+    setFourPOperators([...(fourPOperators || []), { id: uuidv4(), ...values }]);
     toast({ title: 'Success', description: '4P operator added.' });
     fourPForm.reset();
   }
 
   function handleDeleteFourPOperator(id: string) {
-    setFourPOperators(fourPOperators.filter(op => op.id !== id));
+    setFourPOperators((fourPOperators || []).filter(op => op.id !== id));
     toast({ title: 'Success', description: '4P operator deleted.' });
   }
 
   function handleAddFourPTechingOperator(values: z.infer<typeof fourPTechingOperatorSchema>) {
-    setFourPTechingOperators([...fourPTechingOperators, { id: uuidv4(), ...values }]);
+    setFourPTechingOperators([...(fourPTechingOperators || []), { id: uuidv4(), ...values }]);
     toast({ title: 'Success', description: '4P Teching operator added.' });
     fourPTechingForm.reset();
   }
 
   function handleDeleteFourPTechingOperator(id: string) {
-    setFourPTechingOperators(fourPTechingOperators.filter(op => op.id !== id));
+    setFourPTechingOperators((fourPTechingOperators || []).filter(op => op.id !== id));
     toast({ title: 'Success', description: '4P Teching operator deleted.' });
   }
 
@@ -191,24 +191,24 @@ export default function ControlPanelPage() {
   }
 
   function handleAddBoxSortingRange(values: z.infer<typeof boxSortingRangeSchema>) {
-    setBoxSortingRanges([...boxSortingRanges, { id: uuidv4(), ...values }]);
+    setBoxSortingRanges([...(boxSortingRanges || []), { id: uuidv4(), ...values }]);
     toast({ title: 'Success', description: 'Box sorting range added.' });
     boxSortingForm.reset();
   }
 
   function handleDeleteBoxSortingRange(id: string) {
-    setBoxSortingRanges(boxSortingRanges.filter(range => range.id !== id));
+    setBoxSortingRanges((boxSortingRanges || []).filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Box sorting range deleted.' });
   }
   
   function handleAddDiameterSortingRange(values: z.infer<typeof diameterSortingRangeSchema>) {
-    setDiameterSortingRanges([...diameterSortingRanges, { id: uuidv4(), ...values }]);
+    setDiameterSortingRanges([...(diameterSortingRanges || []), { id: uuidv4(), ...values }]);
     toast({ title: 'Success', description: 'Diameter sorting range added.' });
     diameterSortingForm.reset();
   }
 
   function handleDeleteDiameterSortingRange(id: string) {
-    setDiameterSortingRanges(diameterSortingRanges.filter(range => range.id !== id));
+    setDiameterSortingRanges((diameterSortingRanges || []).filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Diameter sorting range deleted.' });
   }
 
@@ -286,16 +286,16 @@ export default function ControlPanelPage() {
     }
 
     setAutoBackupSettings(prev => ({
-        ...prev,
+        ...(prev || { intervalHours: 0, officeEndTime: "18:30" }),
         [name]: name === 'intervalHours' ? hours : value,
-        lastBackupTimestamp: name === 'intervalHours' && hours > 0 ? Date.now() : prev.lastBackupTimestamp,
+        lastBackupTimestamp: name === 'intervalHours' && hours > 0 ? Date.now() : prev?.lastBackupTimestamp,
     }));
     toast({ title: 'Settings Saved' });
   }
 
   const handleScanSettingChange = (department: 'sarin' | 'laser', checked: boolean) => {
       setReturnScanSettings(prev => ({
-          ...prev,
+          ...(prev || { sarin: true, laser: true }),
           [department]: checked
       }));
       toast({ title: 'Settings Saved' });
@@ -339,7 +339,7 @@ export default function ControlPanelPage() {
                 <Table>
                     <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
-                        {sarinMappings.map(map => (
+                        {(sarinMappings || []).map(map => (
                             <TableRow key={map.id}>
                                 <TableCell>{map.operatorName}</TableCell>
                                 <TableCell>{map.machine}</TableCell>
@@ -375,7 +375,7 @@ export default function ControlPanelPage() {
                         <Table>
                             <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {laserOperators.map(op => (
+                                {(laserOperators || []).map(op => (
                                     <TableRow key={op.id}>
                                         <TableCell>{op.name}</TableCell>
                                         <TableCell>
@@ -411,7 +411,7 @@ export default function ControlPanelPage() {
                         <Table>
                             <TableHeader><TableRow><TableHead>Tension</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {laserMappings.map(map => (
+                                {(laserMappings || []).map(map => (
                                     <TableRow key={map.id}>
                                         <TableCell>{map.tensionType}</TableCell>
                                         <TableCell>{map.machine}</TableCell>
@@ -494,7 +494,7 @@ export default function ControlPanelPage() {
                             <Table>
                                 <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {fourPOperators.map(op => (
+                                    {(fourPOperators || []).map(op => (
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
@@ -525,7 +525,7 @@ export default function ControlPanelPage() {
                             <Table>
                                 <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {fourPTechingOperators.map(op => (
+                                    {(fourPTechingOperators || []).map(op => (
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
@@ -591,10 +591,10 @@ export default function ControlPanelPage() {
                 <Table>
                     <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
-                        {boxSortingRanges.sort((a, b) => a.from - b.from).map(range => (
+                        {(boxSortingRanges || []).sort((a, b) => a.from - b.from).map(range => (
                             <TableRow key={range.id}>
-                                <TableCell>{range.from.toFixed(3)}</TableCell>
-                                <TableCell>{range.to.toFixed(3)}</TableCell>
+                                <TableCell>{(range.from ?? 0).toFixed(3)}</TableCell>
+                                <TableCell>{(range.to ?? 0).toFixed(3)}</TableCell>
                                 <TableCell>{range.label}</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteBoxSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -637,10 +637,10 @@ export default function ControlPanelPage() {
                 <Table>
                     <TableHeader><TableRow><TableHead>From (mm)</TableHead><TableHead>To (mm)</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
-                        {diameterSortingRanges.sort((a, b) => a.from - b.from).map(range => (
+                        {(diameterSortingRanges || []).sort((a, b) => a.from - b.from).map(range => (
                             <TableRow key={range.id}>
-                                <TableCell>{range.from.toFixed(2)}</TableCell>
-                                <TableCell>{range.to.toFixed(2)}</TableCell>
+                                <TableCell>{(range.from ?? 0).toFixed(2)}</TableCell>
+                                <TableCell>{(range.to ?? 0).toFixed(2)}</TableCell>
                                 <TableCell>{range.label}</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="icon" onClick={() => handleDeleteDiameterSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -664,7 +664,7 @@ export default function ControlPanelPage() {
                  <div className="flex items-center space-x-2">
                     <Switch
                         id="sarin-scan-mode"
-                        checked={returnScanSettings.sarin}
+                        checked={returnScanSettings?.sarin ?? true}
                         onCheckedChange={(checked) => handleScanSettingChange('sarin', checked)}
                     />
                     <Label htmlFor="sarin-scan-mode">Enable Sarin Return Scanning</Label>
@@ -672,7 +672,7 @@ export default function ControlPanelPage() {
                  <div className="flex items-center space-x-2">
                     <Switch
                         id="laser-scan-mode"
-                        checked={returnScanSettings.laser}
+                        checked={returnScanSettings?.laser ?? true}
                         onCheckedChange={(checked) => handleScanSettingChange('laser', checked)}
                     />
                     <Label htmlFor="laser-scan-mode">Enable Laser Return Scanning</Label>
@@ -697,7 +697,7 @@ export default function ControlPanelPage() {
                             name="intervalHours"
                             type="number"
                             min="0"
-                            value={String(autoBackupSettings.intervalHours)}
+                            value={String(autoBackupSettings?.intervalHours ?? 0)}
                             onChange={handleAutoBackupChange}
                             placeholder="0 for disabled"
                         />
@@ -708,7 +708,7 @@ export default function ControlPanelPage() {
                             id="office-end-time"
                             name="officeEndTime"
                             type="time"
-                            value={autoBackupSettings.officeEndTime || ''}
+                            value={autoBackupSettings?.officeEndTime || ''}
                             onChange={handleAutoBackupChange}
                         />
                     </div>

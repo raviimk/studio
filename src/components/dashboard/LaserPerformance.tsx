@@ -24,6 +24,7 @@ export default function LaserPerformance() {
   });
 
   const filteredLots = useMemo(() => {
+    if (!laserLots) return [];
     return laserLots.filter(lot => {
       const lotDate = new Date(lot.entryDate);
       const isOperatorMatch = selectedOperator === 'all' || lot.returnedBy === selectedOperator;
@@ -36,20 +37,20 @@ export default function LaserPerformance() {
 
   const performanceData = useMemo(() => {
     const dataByOperator: { [key: string]: { name: string, lots: number, packets: number } } = {};
-
+    if (!filteredLots) return [];
     filteredLots.forEach(lot => {
       const operator = lot.returnedBy || 'Unassigned';
       if (!dataByOperator[operator]) {
         dataByOperator[operator] = { name: operator, lots: 0, packets: 0 };
       }
       dataByOperator[operator].lots += 1;
-      dataByOperator[operator].packets += lot.packetCount;
+      dataByOperator[operator].packets += lot.packetCount || 0;
     });
     return Object.values(dataByOperator);
   }, [filteredLots]);
   
   const totalLots = filteredLots.length;
-  const totalPackets = filteredLots.reduce((sum, lot) => sum + lot.packetCount, 0);
+  const totalPackets = filteredLots.reduce((sum, lot) => sum + (lot.packetCount || 0), 0);
   const returnedLots = filteredLots.filter(lot => lot.isReturned).length;
 
   const topPerformers = [...performanceData].sort((a, b) => b.packets - a.packets).slice(0, 5);
@@ -69,7 +70,7 @@ export default function LaserPerformance() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Operators</SelectItem>
-                {laserOperators.map(op => (
+                {(laserOperators || []).map(op => (
                   <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>
                 ))}
               </SelectContent>
