@@ -105,6 +105,8 @@ export default function ControlPanelPage() {
   const [autoBackupSettings, setAutoBackupSettings] = useSyncedStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useSyncedStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
   const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({ resolver: zodResolver(laserMappingSchema), defaultValues: { tensionType: '', machine: '' } });
@@ -234,6 +236,70 @@ export default function ControlPanelPage() {
       }));
       toast({ title: 'Settings Saved' });
   };
+  
+  const handleManualBackup = () => {
+    const filename = `atixe-backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`;
+    const success = handleBackup(filename);
+    if(success) {
+      toast({ title: 'Backup Successful', description: `Data saved to ${filename}` });
+       setAutoBackupSettings(prev => ({
+        ...prev,
+        lastBackupTimestamp: Date.now()
+      }));
+    } else {
+      toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not save backup file. Check console for errors.' });
+    }
+  };
+  
+  const handleRestoreData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+          throw new Error('File could not be read as text.');
+        }
+        const data = JSON.parse(text);
+        
+        let restoredCount = 0;
+        for (const key of ALL_APP_KEYS) {
+          if (data[key]) {
+            localStorage.setItem(key, JSON.stringify(data[key]));
+            restoredCount++;
+          }
+        }
+        
+        toast({ title: 'Restore Successful', description: `Restored data for ${restoredCount} keys. The page will now reload.` });
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+
+      } catch (error) {
+        console.error('Restore failed:', error);
+        toast({ variant: 'destructive', title: 'Restore Failed', description: 'The selected file is not a valid backup file.' });
+      } finally {
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+  
+  const handleClearData = () => {
+      ALL_APP_KEYS.forEach(key => {
+        localStorage.removeItem(key);
+      });
+      toast({ title: 'All Data Cleared', description: 'Application data has been wiped. The page will reload.'});
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+  }
 
 
   return (
@@ -612,10 +678,77 @@ export default function ControlPanelPage() {
                 </div>
             </CardContent>
           </Card>
+          <Card>
+                <CardHeader>
+                    <CardTitle>Backup & Restore</CardTitle>
+                    <CardDescription>Manage application data backups.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                        <Button onClick={handleManualBackup}>Download Backup</Button>
+                        <Button variant="outline" onClick={() => fileInputRef.current?.click()}>Restore from Backup</Button>
+                         <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">Clear All Data</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. This will permanently delete all application data from your browser.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleClearData}>Yes, delete everything</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        Last backup: {autoBackupSettings.lastBackupTimestamp ? format(autoBackupSettings.lastBackupTimestamp, 'PPpp') : 'Never'}
+                    </p>
+                    <input type="file" ref={fileInputRef} onChange={handleRestoreData} className="hidden" accept=".json" />
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Auto Backup Settings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                     <div className="space-y-4 max-w-sm">
+                        <div>
+                            <Label htmlFor="intervalHours">Backup Frequency (in hours)</Label>
+                            <Select
+                                name="intervalHours"
+                                value={String(autoBackupSettings.intervalHours)}
+                                onValueChange={(value) => handleAutoBackupChange({ target: { name: 'intervalHours', value } } as any)}
+                            >
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">Disabled</SelectItem>
+                                    <SelectItem value="1">Every 1 Hour</SelectItem>
+                                    <SelectItem value="2">Every 2 Hours</SelectItem>
+                                    <SelectItem value="4">Every 4 Hours</SelectItem>
+                                    <SelectItem value="8">Every 8 Hours</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-sm text-muted-foreground mt-1">Set to 0 to disable automatic backups.</p>
+                        </div>
+                        <div>
+                            <Label htmlFor="officeEndTime">Office End Time</Label>
+                            <Input 
+                                id="officeEndTime" 
+                                name="officeEndTime"
+                                type="time"
+                                value={autoBackupSettings.officeEndTime || '18:30'}
+                                onChange={handleAutoBackupChange}
+                            />
+                             <p className="text-sm text-muted-foreground mt-1">A final backup for the day will be attempted at this time if auto-backup is enabled.</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>
   );
 }
-
-    
