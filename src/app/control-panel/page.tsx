@@ -213,18 +213,21 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'Diameter sorting range deleted.' });
   }
 
-
   const doBackup = () => {
-    try {
-        handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
-        return true;
-    } catch (error) {
-        console.error("Backup failed", error);
-        toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
-        return false;
+    const success = handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
+    if (success) {
+      toast({
+        title: 'Backup Successful',
+        description: 'All application data has been downloaded.',
+      });
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Backup Failed',
+        description: 'Could not create the backup file. Check the console for errors.',
+      });
     }
-  }
-
+  };
   
   const handleRestoreData = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -643,68 +646,42 @@ export default function ControlPanelPage() {
         <TabsContent value="system" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-                <CardTitle>Return Process Settings</CardTitle>
+                <CardTitle>Backup & Restore</CardTitle>
                 <CardDescription>
-                    Enable or disable mandatory scanning for lot returns in each department.
+                    Download all application data to a single JSON file for backup. You can restore from this file at any time.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                 <div className="flex items-center space-x-2">
-                    <Switch
-                        id="sarin-scan-mode"
-                        checked={returnScanSettings?.sarin ?? true}
-                        onCheckedChange={(checked) => handleScanSettingChange('sarin', checked)}
-                    />
-                    <Label htmlFor="sarin-scan-mode">Enable Sarin Return Scanning</Label>
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <Button onClick={doBackup}>Backup All Data</Button>
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                        Restore From File...
+                        <input type="file" ref={fileInputRef} onChange={handleRestoreData} accept=".json" className="hidden" />
+                    </Button>
                 </div>
-                 <div className="flex items-center space-x-2">
-                    <Switch
-                        id="laser-scan-mode"
-                        checked={returnScanSettings?.laser ?? true}
-                        onCheckedChange={(checked) => handleScanSettingChange('laser', checked)}
-                    />
-                    <Label htmlFor="laser-scan-mode">Enable Laser Return Scanning</Label>
-                </div>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="mt-4">Delete All Data</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete all data from this application.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => {
+                                ALL_APP_KEYS.forEach(key => localStorage.removeItem(key));
+                                toast({ title: 'All data deleted.', description: 'The page will now reload.' });
+                                setTimeout(() => window.location.reload(), 1500);
+                            }}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </CardContent>
           </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Auto Backup Settings</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <div className="space-y-4 max-w-sm">
-                        <div>
-                            <Label htmlFor="intervalHours">Backup Frequency (in hours)</Label>
-                            <Select
-                                name="intervalHours"
-                                value={String(autoBackupSettings.intervalHours)}
-                                onValueChange={(value) => handleAutoBackupChange({ target: { name: 'intervalHours', value } } as any)}
-                            >
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">Disabled</SelectItem>
-                                    <SelectItem value="1">Every 1 Hour</SelectItem>
-                                    <SelectItem value="2">Every 2 Hours</SelectItem>
-                                    <SelectItem value="4">Every 4 Hours</SelectItem>
-                                    <SelectItem value="8">Every 8 Hours</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-sm text-muted-foreground mt-1">Set to 0 to disable automatic backups.</p>
-                        </div>
-                        <div>
-                            <Label htmlFor="officeEndTime">Office End Time</Label>
-                            <Input 
-                                id="officeEndTime" 
-                                name="officeEndTime"
-                                type="time"
-                                value={autoBackupSettings.officeEndTime || '18:30'}
-                                onChange={handleAutoBackupChange}
-                            />
-                             <p className="text-sm text-muted-foreground mt-1">A final backup for the day will be attempted at this time if auto-backup is enabled.</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
         </TabsContent>
       </Tabs>
     </div>
