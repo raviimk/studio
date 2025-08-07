@@ -51,21 +51,40 @@ export default function KapanCheckerPage() {
     const normalizedSearchTerm = normalizeBarcode(searchedTerm);
     const searchIsKapanOnly = /^\d+$/.test(searchedTerm);
 
-    // Process Sarin Packets
-    sarinPackets.forEach(p => {
-        const sarinIdentifier = `${p.kapanNumber}-${p.mainPacketNumber}`;
-        const matchesKapan = searchIsKapanOnly && p.kapanNumber === searchedTerm;
-        const matchesIdentifier = !searchIsKapanOnly && sarinIdentifier === normalizedSearchTerm;
+    // Process Sarin Packets (including individual return scans)
+    sarinPackets.forEach(lot => {
+        const lotMatchesKapan = searchIsKapanOnly && lot.kapanNumber === searchedTerm;
 
-        if (matchesKapan || matchesIdentifier) {
-            results.push({
-                id: p.id,
-                identifier: sarinIdentifier,
-                source: 'Sarin',
-                operator: p.operator,
-                timestamp: p.date,
-                status: p.isReturned ? 'Returned' : 'Running'
-            });
+        // Check individual scanned return packets
+        lot.scannedReturnPackets?.forEach(p => {
+            const packetMatchesKapan = searchIsKapanOnly && getKapanFromIdentifier(p.fullBarcode) === searchedTerm;
+            const packetMatchesIdentifier = !searchIsKapanOnly && normalizeBarcode(p.fullBarcode) === normalizedSearchTerm;
+
+            if (packetMatchesKapan || packetMatchesIdentifier) {
+                 results.push({
+                    id: p.id,
+                    identifier: p.fullBarcode,
+                    source: 'Sarin',
+                    operator: lot.returnedBy || lot.operator,
+                    timestamp: lot.returnDate || lot.date,
+                    status: 'Returned'
+                });
+            }
+        });
+        
+        // If searching by Kapan and no individual packets matched, add the lot itself if it's not returned yet
+        if (lotMatchesKapan && !lot.isReturned) {
+             const alreadyAdded = lot.scannedReturnPackets?.some(p => results.find(r => r.id === p.id));
+             if (!alreadyAdded) {
+                 results.push({
+                    id: lot.id,
+                    identifier: `${lot.kapanNumber}-${lot.lotNumber}`,
+                    source: 'Sarin',
+                    operator: lot.operator,
+                    timestamp: lot.date,
+                    status: 'Running'
+                });
+             }
         }
     });
 
@@ -106,7 +125,14 @@ export default function KapanCheckerPage() {
         }
     });
     
-    const sortedResults = results.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // Remove duplicates based on identifier and source
+    const uniqueResults = results.filter((value, index, self) => 
+        index === self.findIndex((t) => (
+            t.identifier === value.identifier && t.source === value.source
+        ))
+    );
+
+    const sortedResults = uniqueResults.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     if (!packetFilter) {
       return sortedResults;
