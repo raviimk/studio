@@ -2,52 +2,53 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { db, isFirebaseConnected } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { ref, onValue, set, get, DatabaseReference } from 'firebase/database';
 import { useLocalStorage } from './useLocalStorage';
 
 // This is the primary hook for data storage.
-// It automatically handles synchronization with Firebase Realtime Database if connected,
-// otherwise it falls back to using simple localStorage.
+// It handles synchronization with Firebase Realtime Database.
 export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
   const [localValue, setLocalValue] = useLocalStorage<T>(key, initialValue);
   const [syncedValue, setSyncedValue] = useState<T>(initialValue);
   
-  const firebaseConnected = isFirebaseConnected();
   const DATA_ROOT = 'data';
 
   useEffect(() => {
-    // If not using Firebase, the source of truth is always localValue
-    if (!firebaseConnected || !key) {
-      setSyncedValue(localValue);
+    // We need to ensure we don't proceed if the key is not valid.
+    if (!key) {
       return;
     }
+    
+    console.log(`[useSyncedStorage] Initializing for key: ${key}`);
 
     const dbRef: DatabaseReference = ref(db, `${DATA_ROOT}/${key}`);
 
     const syncWithFirebase = async () => {
       try {
+        console.log(`[useSyncedStorage] Checking Firebase for key: ${key}`);
         const snapshot = await get(dbRef);
 
         if (snapshot.exists()) {
-          // Data exists in Firebase, it is the source of truth.
+          console.log(`[useSyncedStorage] Data found in Firebase for key: ${key}. Syncing to local state.`);
           const firebaseData = snapshot.val() as T;
           if (firebaseData !== null && firebaseData !== undefined) {
             setSyncedValue(firebaseData);
-            // Overwrite local storage to ensure consistency.
+            // Ensure localStorage is in sync with Firebase.
             if (JSON.stringify(firebaseData) !== JSON.stringify(localValue)) {
-              setLocalValue(firebaseData);
+                setLocalValue(firebaseData);
             }
           }
         } else {
-          // Data does not exist in Firebase. Local data is the source of truth (one-time migration).
-          console.log(`Data for '${key}' not found in Realtime DB. Migrating local data...`);
+          // Data does not exist in Firebase. The current localValue (from localStorage) is the source of truth.
+          // This serves as the one-time migration.
+          console.log(`[useSyncedStorage] No data in Firebase for key: ${key}. Migrating local data.`);
           await set(dbRef, localValue);
           setSyncedValue(localValue);
         }
       } catch(error) {
-        console.error(`Error during initial sync for key '${key}':`, error);
-        // On error, fall back to local value
+        console.error(`[useSyncedStorage] Error during initial sync for key '${key}':`, error);
+        // On error, fall back to local value.
         setSyncedValue(localValue);
       }
     };
@@ -60,19 +61,21 @@ export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T
             const firebaseData = snapshot.val() as T;
              if (firebaseData !== null && firebaseData !== undefined) {
                 // Update state only if it's different to prevent loops
-                if (JSON.stringify(firebaseData) !== JSON.stringify(syncedValue)) {
+                 if (JSON.stringify(firebaseData) !== JSON.stringify(syncedValue)) {
+                    console.log(`[useSyncedStorage] Remote change detected for key: ${key}. Updating state.`);
                     setSyncedValue(firebaseData);
                     setLocalValue(firebaseData);
                 }
             }
         }
     }, (error) => {
-        console.error(`Error listening to Firebase Realtime DB for key '${key}':`, error);
+        console.error(`[useSyncedStorage] Error listening to Firebase Realtime DB for key '${key}':`, error);
     });
 
+    // Cleanup the listener when the component unmounts or the key changes.
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firebaseConnected, key]);
+    // This dependency array is CRITICAL. It ensures this effect re-runs if the key changes.
+  }, [key]);
 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
@@ -81,19 +84,16 @@ export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T
       // Update state immediately for a responsive UI
       setSyncedValue(valueToStore);
       
-      if (firebaseConnected && key) {
-        // If connected, write the new value to Realtime DB.
+      // Write the new value to Realtime DB.
+      if (key) {
         const dbRef = ref(db, `${DATA_ROOT}/${key}`);
         set(dbRef, valueToStore).catch(error => {
-            console.error(`Error writing to Realtime DB for key '${key}':`, error);
+            console.error(`[useSyncedStorage] Error writing to Realtime DB for key '${key}':`, error);
         });
-      } else {
-        // Fallback to only updating local storage if not connected
-        setLocalValue(valueToStore);
       }
     },
-    [firebaseConnected, key, syncedValue, setLocalValue]
+    [key, syncedValue]
   );
 
-  return [firebaseConnected ? syncedValue : localValue, setValue];
+  return [syncedValue, setValue];
 }
