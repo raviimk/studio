@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { db, isFirebaseConnected, firebaseConfig } from '@/lib/firebase';
+import { db, isFirebaseConnected } from '@/lib/firebase';
 import { ref, onValue, set } from 'firebase/database';
 import { useLocalStorage } from './useLocalStorage';
 
@@ -12,12 +12,11 @@ import { useLocalStorage } from './useLocalStorage';
 export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
   const [localValue, setLocalValue] = useLocalStorage<T>(`local_${key}`, initialValue);
   const [syncedValue, setSyncedValue] = useState<T>(initialValue);
-
-  const connectionCode = firebaseConfig?.connectionCode;
-  const firebaseConnected = isFirebaseConnected() && connectionCode;
+  
+  const firebaseConnected = isFirebaseConnected();
   
   // Path in Firebase Realtime Database
-  const dbPath = connectionCode ? `rooms/${connectionCode}/${key}` : '';
+  const dbPath = `data/${key}`;
 
   useEffect(() => {
     if (firebaseConnected && dbPath) {

@@ -2,22 +2,24 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
 import { getDatabase, Database } from 'firebase/database';
 
-// Hardcoded Firebase configuration object provided by the user.
+// Firebase configuration is loaded from environment variables
 export const firebaseConfig = {
-  projectId: "gem-tracker-b71hl",
-  appId: "1:607236477290:web:939188363a59434aef1513",
-  storageBucket: "gem-tracker-b71hl.firebasestorage.app",
-  apiKey: "AIzaSyBckbnkKF7I_uqEZEgwvdYQ968F-pItmmE",
-  authDomain: "gem-tracker-b71hl.firebaseapp.com",
-  measurementId: "",
-  messagingSenderId: "607236477290",
-  databaseURL: "https://gem-tracker-b71hl-default-rtdb.firebaseio.com"
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 let app: FirebaseApp;
 let db: Database;
 
-if (typeof window !== 'undefined') {
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+if (typeof window !== 'undefined' && isConfigValid) {
   if (!getApps().length) {
     try {
       // Initialize Firebase
@@ -41,9 +43,7 @@ if (typeof window !== 'undefined') {
  * @returns {boolean} True if Firebase is connected, false otherwise.
  */
 function isFirebaseConnected(): boolean {
-  return !!db;
+  return !!db && isConfigValid;
 }
 
 export { app, db, isFirebaseConnected };
-
-    
