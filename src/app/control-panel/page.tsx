@@ -225,8 +225,7 @@ export default function ControlPanelPage() {
   }
 
   const triggerAutoBackupAndRestore = () => {
-    const backupSuccess = handleBackup(`auto-backup-before-restore-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
-    if (backupSuccess) {
+    if (handleBackup(`auto-backup-before-restore-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`)) {
       toast({ title: 'Auto-Backup Created', description: 'A safety backup of your current data has been downloaded.' });
       restoreFileInputRef.current?.click();
     }
