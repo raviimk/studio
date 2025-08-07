@@ -45,8 +45,17 @@ export default function ReturnSarinLotPage() {
   const [scannedInDialog, setScannedInDialog] = useState<Set<string>>(new Set());
   const [scanInput, setScanInput] = useState('');
   const [lastScanned, setLastScanned] = useState<{barcode: string, isValid: boolean} | null>(null);
-  const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
   const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const lastScannedRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (lastScannedRef.current) {
+        lastScannedRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [lastScanned]);
 
 
   const unreturnedEntries: SarinPacket[] = useMemo(() => {
@@ -98,6 +107,8 @@ export default function ReturnSarinLotPage() {
         toast({ title: 'Packet Verified', description: scanInput });
     } else {
         setLastScanned({ barcode: scanInput, isValid: false });
+        setShake(true);
+        setTimeout(() => setShake(false), 820);
         toast({ 
             variant: 'destructive', 
             title: 'Incorrect Packet', 
@@ -280,7 +291,7 @@ export default function ReturnSarinLotPage() {
               </DialogHeader>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                   <form onSubmit={handleDialogScan}><Input placeholder="Scan packet barcode..." value={scanInput} onChange={e => setScanInput(e.target.value)} autoFocus disabled={allPacketsScanned} /></form>
+                   <form onSubmit={handleDialogScan}><Input ref={scanInputRef} placeholder="Scan packet barcode..." value={scanInput} onChange={e => setScanInput(e.target.value)} autoFocus disabled={allPacketsScanned} className={cn(shake && 'animate-shake')} /></form>
                    <div className="mt-4"><Progress value={(scannedInDialog.size / (selectedLot?.packetCount || 1)) * 100} /><p className="text-sm text-center mt-2 text-muted-foreground">Verified: {scannedInDialog.size} / {selectedLot?.packetCount}</p></div>
                 </div>
                 <div className="border rounded-md max-h-64 overflow-y-auto">
@@ -288,13 +299,13 @@ export default function ReturnSarinLotPage() {
                        <TableHeader><TableRow><TableHead>Scanned Packet</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                        <TableBody>
                            {[...scannedInDialog].map(barcode => (
-                               <TableRow key={barcode} className="bg-green-100 dark:bg-green-900/30">
+                               <TableRow key={barcode} ref={lastScanned?.barcode === barcode ? lastScannedRef : null} className="bg-green-100 dark:bg-green-900/30">
                                    <TableCell className="font-mono">{barcode}</TableCell>
                                    <TableCell><Check className="h-5 w-5 text-green-500" /></TableCell>
                                </TableRow>
                            ))}
                            {lastScanned && !lastScanned.isValid && (
-                                <TableRow className="bg-destructive/10">
+                                <TableRow ref={lastScannedRef} className="bg-destructive/10">
                                     <TableCell className="font-mono text-destructive">{lastScanned.barcode}</TableCell>
                                     <TableCell><X className="h-5 w-5 text-destructive" /></TableCell>
                                 </TableRow>

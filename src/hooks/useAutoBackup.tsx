@@ -5,89 +5,56 @@ import { useEffect, useRef } from 'react';
 import { useLocalStorage } from './useLocalStorage';
 import { AUTO_BACKUP_SETTINGS_KEY } from '@/lib/constants';
 import { AutoBackupSettings } from '@/lib/types';
-import { toast } from './use-toast';
+import { useToast } from './use-toast';
 import { handleBackup } from '@/lib/backup';
-import { format, formatISO, parse } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import React from 'react';
 
 export function useAutoBackup() {
-  const [settings, setSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: "18:30" });
-  const toastIdRef = useRef<string | null>(null);
+  const [settings, setSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, {
+    intervalHours: 0,
+    officeEndTime: '18:30',
+  });
+  const { toast } = useToast();
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const checkAndTriggerBackup = () => {
-      const now = new Date();
+    if (timeoutRef.current) {
+      clearInterval(timeoutRef.current);
+    }
+
+    if (settings.intervalHours > 0) {
+      const intervalMillis = settings.intervalHours * 60 * 60 * 1000;
       
-      // Regular interval backup
-      if (settings.intervalHours > 0) {
-        const intervalMillis = settings.intervalHours * 60 * 60 * 1000;
+      const runBackup = () => {
         const lastBackup = settings.lastBackupTimestamp || 0;
-
-        if (now.getTime() - lastBackup > intervalMillis) {
-          const triggerBackup = () => {
-            const success = handleBackup(`auto-backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
-            if (success) {
-                setSettings(prev => ({ ...prev, lastBackupTimestamp: Date.now() }));
-            }
-            if(toastIdRef.current) {
-               toast.dismiss(toastIdRef.current);
-               toastIdRef.current = null;
-            }
-          };
-
-          const toastContent = (
-            <div>
-              <p className="mb-2">⏰ It’s time to back up your data!</p>
-              <Button onClick={triggerBackup} size="sm">Backup Now</Button>
-            </div>
-          );
-
-          const { id } = toast({
-            title: 'Auto Backup',
-            description: toastContent,
-            duration: 5000,
-          });
-          toastIdRef.current = id;
-          
-          const timeoutId = setTimeout(() => {
-              if(toastIdRef.current === id) {
-                   triggerBackup();
-              }
-          }, 5000);
-          
-          return () => clearTimeout(timeoutId);
+        const now = Date.now();
+        if (now - lastBackup > intervalMillis) {
+          console.log('Performing automatic backup...');
+          const filename = `auto-backup-${format(now, 'yyyy-MM-dd-HH-mm')}.json`;
+          const success = handleBackup(filename);
+          if (success) {
+            setSettings(prev => ({ ...prev, lastBackupTimestamp: now }));
+             toast({
+              title: 'Auto-backup Successful',
+              description: `Data automatically backed up to ${filename}.`,
+            });
+          } else {
+            console.error('Auto-backup failed.');
+          }
         }
-      }
+      };
+      
+      // Run backup check immediately and then set interval
+      runBackup();
+      timeoutRef.current = setInterval(runBackup, intervalMillis);
+    }
 
-      // Office End Time backup
-      if (settings.officeEndTime) {
-        const todayStr = format(now, 'yyyy-MM-dd');
-        if (settings.lastMasterBackupDate !== todayStr) {
-           const [hours, minutes] = settings.officeEndTime.split(':').map(Number);
-           const officeCloseTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-
-           if (now >= officeCloseTimeToday) {
-               const success = handleBackup(`master-backup-${format(now, 'yyyy-MM-dd-HH-mm')}.json`);
-               if (success) {
-                  setSettings(prev => ({...prev, lastMasterBackupDate: todayStr }));
-                  toast({
-                    title: 'Office Closed',
-                    description: 'Final backup saved. Jai Mataji 🙏.',
-                    duration: 10000,
-                  });
-               }
-           }
-        }
+    return () => {
+      if (timeoutRef.current) {
+        clearInterval(timeoutRef.current);
       }
     };
-    
-    // Check every minute
-    const timerId = setInterval(checkAndTriggerBackup, 60 * 1000);
-
-    // Also check on initial load
-    checkAndTriggerBackup();
-
-    return () => clearInterval(timerId);
-
-  }, [settings, setSettings]);
+  }, [settings, setSettings, toast]);
 }

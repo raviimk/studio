@@ -1,46 +1,35 @@
+
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getDatabase, ref, onValue, set, get, Database } from 'firebase/database';
-import { FIREBASE_CONFIG_KEY } from './constants';
+import { getDatabase, Database } from 'firebase/database';
 
-let app: FirebaseApp | null = null;
-let db: Database | null = null;
-let firebaseConfig: any = null;
+// Firebase configuration is loaded from environment variables
+export const firebaseConfig = {
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+};
 
-if (typeof window !== 'undefined') {
-    const configStr = localStorage.getItem(FIREBASE_CONFIG_KEY);
-    if (configStr) {
-        try {
-            firebaseConfig = JSON.parse(configStr);
-            // The Firebase Realtime Database SDK can derive the database URL from the project ID.
-            // But if a user provides a full URL with a path, it fails.
-            // This ensures we only use the root domain if databaseURL is provided.
-            if (firebaseConfig.databaseURL) {
-                const url = new URL(firebaseConfig.databaseURL);
-                firebaseConfig.databaseURL = `${url.protocol}//${url.hostname}`;
-            }
-        } catch (e) {
-            console.error("Failed to parse Firebase config from localStorage", e);
-            firebaseConfig = null;
-        }
-    }
+let app: FirebaseApp;
+let db: Database;
+
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId;
+
+if (typeof window !== 'undefined' && isConfigValid) {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  db = getDatabase(app);
 }
 
-if (firebaseConfig && !getApps().length) {
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getDatabase(app);
-    } catch (e) {
-        console.error("Failed to initialize Firebase:", e);
-        app = null;
-        db = null;
-    }
-} else if (getApps().length > 0) {
-    app = getApp();
-    db = getDatabase(app);
+/**
+ * Checks if the Firebase database instance is available.
+ * @returns {boolean} True if Firebase is connected, false otherwise.
+ */
+function isFirebaseConnected(): boolean {
+  return !!db && isConfigValid;
 }
 
-function isFirebaseConnected() {
-    return !!db;
-}
-
-export { app, db, isFirebaseConnected, firebaseConfig };
+export { app, db, isFirebaseConnected };
