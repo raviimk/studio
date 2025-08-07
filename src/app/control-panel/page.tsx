@@ -10,7 +10,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { 
   ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
@@ -30,6 +30,7 @@ import { handleBackup } from '@/lib/backup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { firebaseConfig } from '@/lib/firebase';
 
 // Schemas
 const sarinOperatorSchema = z.object({
@@ -90,22 +91,20 @@ const diameterSortingRangeSchema = z.object({
 
 export default function ControlPanelPage() {
   const { toast } = useToast();
-  const [sarinOperators, setSarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [sarinMappings, setSarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
-  const [laserOperators, setLaserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
-  const [laserMappings, setLaserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
-  const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
-  const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
-  const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
-  const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
-  const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
-  const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
-  const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
-  const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [sarinOperators, setSarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinMappings, setSarinMappings] = useSyncedStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [laserOperators, setLaserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [laserMappings, setLaserMappings] = useSyncedStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [fourPOperators, setFourPOperators] = useSyncedStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [fourPTechingOperators, setFourPTechingOperators] = useSyncedStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
+  const [priceMaster, setPriceMaster] = useSyncedStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [udhdhaSettings, setUdhdhaSettings] = useSyncedStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
+  const [fourPDeptSettings, setFourPDeptSettings] = useSyncedStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [boxSortingRanges, setBoxSortingRanges] = useSyncedStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [diameterSortingRanges, setDiameterSortingRanges] = useSyncedStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
+  const [autoBackupSettings, setAutoBackupSettings] = useSyncedStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
+  const [returnScanSettings, setReturnScanSettings] = useSyncedStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   
-  const restoreFileInputRef = useRef<HTMLInputElement>(null);
-
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
   const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({ resolver: zodResolver(laserMappingSchema), defaultValues: { tensionType: '', machine: '' } });
@@ -211,71 +210,6 @@ export default function ControlPanelPage() {
     setDiameterSortingRanges(diameterSortingRanges.filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Diameter sorting range deleted.' });
   }
-
-
-  const doBackup = () => {
-    try {
-        handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
-        return true;
-    } catch (error) {
-        console.error("Backup failed", error);
-        toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
-        return false;
-    }
-  }
-
-  const triggerAutoBackupAndRestore = () => {
-    const backupSuccess = handleBackup(`auto-backup-before-restore-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
-    if (backupSuccess) {
-      toast({ title: 'Auto-Backup Created', description: 'A safety backup of your current data has been downloaded.' });
-      restoreFileInputRef.current?.click();
-    }
-  };
-  
-  const handleRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result;
-        if (typeof text !== 'string') {
-          throw new Error('Invalid file content');
-        }
-        
-        const backupData = JSON.parse(text);
-
-        const hasKnownKey = ALL_APP_KEYS.some(key => key in backupData);
-        if (!hasKnownKey) {
-            throw new Error("File does not appear to be a valid backup.");
-        }
-
-        localStorage.clear();
-        Object.keys(backupData).forEach(key => {
-            if (ALL_APP_KEYS.includes(key)) {
-                localStorage.setItem(key, JSON.stringify(backupData[key]));
-            }
-        });
-
-        toast({ title: 'Restore Successful', description: 'Data restored. The app will now reload.' });
-        
-        setTimeout(() => {
-            window.location.reload();
-        }, 1500);
-
-      } catch (error) {
-        console.error('Restore failed:', error);
-        const errorMessage = error instanceof Error ? error.message : 'The selected file is not a valid backup.';
-        toast({ variant: 'destructive', title: 'Restore Failed', description: `${errorMessage} Your existing data has not been changed.` });
-      } finally {
-        if (event.target) {
-            event.target.value = '';
-        }
-      }
-    };
-    reader.readAsText(file);
-  };
   
   const handleAutoBackupChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -306,7 +240,7 @@ export default function ControlPanelPage() {
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
       <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-8">
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
           <TabsTrigger value="sarin">Sarin</TabsTrigger>
           <TabsTrigger value="laser">Laser</TabsTrigger>
           <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
@@ -314,7 +248,6 @@ export default function ControlPanelPage() {
           <TabsTrigger value="box-sorting">Box Sorting (Cent)</TabsTrigger>
           <TabsTrigger value="diameter-sorting">Box Sorting (Diameter)</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
-          <TabsTrigger value="backup">Backup & Restore</TabsTrigger>
         </TabsList>
         <TabsContent value="sarin" className="space-y-6 mt-6">
           <Card>
@@ -680,94 +613,9 @@ export default function ControlPanelPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="backup" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-                <CardTitle>Auto Backup Settings</CardTitle>
-                <CardDescription>
-                    Automatically create a backup of your data at a set interval and at the end of the day.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div className="max-w-sm space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="auto-backup-interval">Backup Frequency (in hours)</Label>
-                        <Input
-                            id="auto-backup-interval"
-                            name="intervalHours"
-                            type="number"
-                            min="0"
-                            value={String(autoBackupSettings.intervalHours)}
-                            onChange={handleAutoBackupChange}
-                            placeholder="0 for disabled"
-                        />
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="office-end-time">Office End Time (24h format)</Label>
-                        <Input
-                            id="office-end-time"
-                            name="officeEndTime"
-                            type="time"
-                            value={autoBackupSettings.officeEndTime || ''}
-                            onChange={handleAutoBackupChange}
-                        />
-                    </div>
-                 </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Manual Backup</CardTitle>
-              <CardDescription>
-                Download a single JSON file containing all your application data. 
-                Store this file in a safe place.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={doBackup}>Backup Now</Button>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Restore from Backup</CardTitle>
-              <CardDescription>
-                Restore your application data from a previously saved backup file.
-                Warning: This will create a safety backup of your current data, then overwrite it.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">Restore Backup</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action will first create a safety backup of your current data, then it will permanently
-                      delete all current data in your browser and replace it with the
-                      data from the backup file you upload.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={triggerAutoBackupAndRestore}>
-                        Proceed
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <input
-                ref={restoreFileInputRef}
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={handleRestore}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+    

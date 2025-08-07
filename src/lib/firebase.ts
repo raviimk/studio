@@ -1,46 +1,49 @@
-import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getDatabase, ref, onValue, set, get, Database } from 'firebase/database';
-import { FIREBASE_CONFIG_KEY } from './constants';
 
-let app: FirebaseApp | null = null;
-let db: Database | null = null;
-let firebaseConfig: any = null;
+import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
+import { getDatabase, Database } from 'firebase/database';
+
+// Hardcoded Firebase configuration object provided by the user.
+export const firebaseConfig = {
+  projectId: "gem-tracker-b71hl",
+  appId: "1:607236477290:web:939188363a59434aef1513",
+  storageBucket: "gem-tracker-b71hl.firebasestorage.app",
+  apiKey: "AIzaSyBckbnkKF7I_uqEZEgwvdYQ968F-pItmmE",
+  authDomain: "gem-tracker-b71hl.firebaseapp.com",
+  measurementId: "",
+  messagingSenderId: "607236477290",
+  databaseURL: "https://gem-tracker-b71hl-default-rtdb.firebaseio.com"
+};
+
+let app: FirebaseApp;
+let db: Database;
 
 if (typeof window !== 'undefined') {
-    const configStr = localStorage.getItem(FIREBASE_CONFIG_KEY);
-    if (configStr) {
-        try {
-            firebaseConfig = JSON.parse(configStr);
-            // The Firebase Realtime Database SDK can derive the database URL from the project ID.
-            // But if a user provides a full URL with a path, it fails.
-            // This ensures we only use the root domain if databaseURL is provided.
-            if (firebaseConfig.databaseURL) {
-                const url = new URL(firebaseConfig.databaseURL);
-                firebaseConfig.databaseURL = `${url.protocol}//${url.hostname}`;
-            }
-        } catch (e) {
-            console.error("Failed to parse Firebase config from localStorage", e);
-            firebaseConfig = null;
-        }
-    }
-}
-
-if (firebaseConfig && !getApps().length) {
+  if (!getApps().length) {
     try {
-        app = initializeApp(firebaseConfig);
-        db = getDatabase(app);
+      // Initialize Firebase
+      app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
     } catch (e) {
-        console.error("Failed to initialize Firebase:", e);
-        app = null;
-        db = null;
+      console.error("Failed to initialize Firebase:", e);
+      // @ts-ignore
+      app = null;
+      // @ts-ignore
+      db = null;
     }
-} else if (getApps().length > 0) {
+  } else {
     app = getApp();
     db = getDatabase(app);
+  }
 }
 
-function isFirebaseConnected() {
-    return !!db;
+/**
+ * Checks if the Firebase database instance is available.
+ * @returns {boolean} True if Firebase is connected, false otherwise.
+ */
+function isFirebaseConnected(): boolean {
+  return !!db;
 }
 
-export { app, db, isFirebaseConnected, firebaseConfig };
+export { app, db, isFirebaseConnected };
+
+    
