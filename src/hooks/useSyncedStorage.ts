@@ -10,8 +10,9 @@ import { useLocalStorage } from './useLocalStorage';
 // It automatically handles synchronization with Firestore if connected,
 // otherwise it falls back to using simple localStorage.
 export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
-  const [localValue, setLocalValue] = useLocalStorage<T>(`local_${key}`, initialValue);
-  const [syncedValue, setSyncedValue] = useState<T>(initialValue);
+  // Always use local storage as the initial state and for offline fallback.
+  const [localValue, setLocalValue] = useLocalStorage<T>(key, initialValue);
+  const [syncedValue, setSyncedValue] = useState<T>(localValue);
   
   const firebaseConnected = isFirebaseConnected();
   
@@ -22,36 +23,40 @@ export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T
     if (firebaseConnected && key) {
       const docRef = doc(db, COLLECTION_NAME, key);
 
+      // Listener for real-time updates from Firestore
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data()?.value as T;
           if (data !== undefined && data !== null) {
             setSyncedValue(data);
-            // Keep local storage in sync with Firebase for offline access
-            setLocalValue(data);
           }
         } else {
-          // If no document in Firestore, perform a one-time migration from localStorage
+          // If no document in Firestore, it's the first run for this key.
+          // The 'localValue' from useLocalStorage already holds the legacy data.
+          // Write this legacy data to Firestore to migrate it.
           console.log(`Document '${key}' not found in Firestore. Migrating local data...`);
-          getDoc(docRef).then(docSnap => {
-            // Check again to prevent race conditions
-            if (!docSnap.exists()) {
-                // Use the value from localStorage (which was loaded into localValue)
-                setDoc(docRef, { value: localValue });
-                setSyncedValue(localValue);
-            }
-          });
+          setDoc(docRef, { value: localValue });
+          setSyncedValue(localValue);
         }
       }, (error) => {
         console.error(`Error listening to Firestore document '${key}':`, error);
       });
+
       return () => unsubscribe();
+    } else {
+      // If not connected to firebase, the local value is the source of truth.
+      setSyncedValue(localValue);
     }
-  }, [firebaseConnected, key, setLocalValue, localValue]);
+  }, [firebaseConnected, key, localValue]);
 
   const setValue = useCallback(
     (value: T | ((val: T) => T)) => {
-      const valueToStore = value instanceof Function ? value(firebaseConnected ? syncedValue : localValue) : value;
+      // Allow value to be a function, like in useState
+      const valueToStore = value instanceof Function ? value(syncedValue) : value;
+      
+      // Update the local state immediately for a responsive UI
+      setLocalValue(valueToStore);
+      setSyncedValue(valueToStore);
       
       if (firebaseConnected && key) {
         const docRef = doc(db, COLLECTION_NAME, key);
@@ -59,17 +64,10 @@ export function useSyncedStorage<T>(key: string, initialValue: T): [T, (value: T
         setDoc(docRef, { value: valueToStore }).catch(error => {
             console.error(`Error writing to Firestore document '${key}':`, error);
         });
-        // The onValue listener will update the state, no need to call setSyncedValue here.
-      }
-      
-      // Always update local storage for offline access and speed
-      setLocalValue(valueToStore);
-      if (!firebaseConnected) {
-        setSyncedValue(valueToStore); // If offline, update the state directly
       }
     },
-    [firebaseConnected, key, localValue, syncedValue, setLocalValue]
+    [firebaseConnected, key, syncedValue, setLocalValue]
   );
 
-  return [firebaseConnected ? syncedValue : localValue, setValue];
+  return [syncedValue, setValue];
 }
