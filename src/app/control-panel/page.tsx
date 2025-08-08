@@ -25,12 +25,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import PageHeader from '@/components/PageHeader';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import { format } from 'date-fns';
 import { handleBackup } from '@/lib/backup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { firebaseConfig } from '@/lib/firebase';
+import { useSystemState } from '@/hooks/useSystemState';
+
 
 // Schemas
 const sarinOperatorSchema = z.object({
@@ -89,6 +93,8 @@ const diameterSortingRangeSchema = z.object({
 });
 
 
+const PASSKEY = "raviix07";
+
 export default function ControlPanelPage() {
   const { toast } = useToast();
   const [sarinOperators, setSarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
@@ -106,6 +112,12 @@ export default function ControlPanelPage() {
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Passkey state
+  const { isDeleteDisabled, setDeleteDisabled } = useSystemState();
+  const [isPasskeyDialogOpen, setPasskeyDialogOpen] = useState(false);
+  const [passkeyInput, setPasskeyInput] = useState('');
+  const [passkeyAttempts, setPasskeyAttempts] = useState(3);
 
   const sarinForm = useForm<z.infer<typeof sarinOperatorSchema>>({ resolver: zodResolver(sarinOperatorSchema), defaultValues: { name: '', machine: '' } });
   const laserOpForm = useForm<z.infer<typeof laserOperatorSchema>>({ resolver: zodResolver(laserOperatorSchema), defaultValues: { name: '' } });
@@ -293,458 +305,507 @@ export default function ControlPanelPage() {
       toast({ title: 'Settings Saved' });
   };
 
+  const handleOpenPasskeyDialog = () => {
+    setPasskeyDialogOpen(true);
+    setPasskeyInput('');
+  };
+
+  const handlePasskeyCheck = () => {
+    if (passkeyInput === PASSKEY) {
+      toast({ title: 'Passkey Correct!', description: 'Deleting all data now...' });
+      setPasskeyDialogOpen(false);
+      // Perform deletion
+      ALL_APP_KEYS.forEach(key => localStorage.removeItem(key));
+      toast({ title: 'All data deleted.', description: 'The page will now reload.' });
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      const newAttempts = passkeyAttempts - 1;
+      setPasskeyAttempts(newAttempts);
+      if (newAttempts > 0) {
+        toast({ variant: 'destructive', title: 'Incorrect Passkey', description: `You have ${newAttempts} attempts remaining.` });
+      } else {
+        toast({ variant: 'destructive', title: 'Too Many Attempts', description: 'Delete functionality has been disabled.' });
+        setDeleteDisabled(true);
+        setPasskeyDialogOpen(false);
+      }
+    }
+  };
+
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
-      <Tabs defaultValue="sarin" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
-          <TabsTrigger value="sarin">Sarin</TabsTrigger>
-          <TabsTrigger value="laser">Laser</TabsTrigger>
-          <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
-          <TabsTrigger value="udhdha">Udhda</TabsTrigger>
-          <TabsTrigger value="box-sorting">Box Sorting (Cent)</TabsTrigger>
-          <TabsTrigger value="diameter-sorting">Box Sorting (Diameter)</TabsTrigger>
-          <TabsTrigger value="system">System</TabsTrigger>
-        </TabsList>
-        <TabsContent value="sarin" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader><CardTitle>Add Sarin Operator & Machine</CardTitle></CardHeader>
-            <CardContent>
-              <Form {...sarinForm}>
-                <form onSubmit={sarinForm.handleSubmit(handleAddSarinOperator)} className="space-y-4">
-                  <FormField control={sarinForm.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <FormField control={sarinForm.control} name="machine" render={({ field }) => (
-                    <FormItem><FormLabel>Assigned Machine</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )} />
-                  <Button type="submit">Add Sarin Operator</Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-           <Card>
-            <CardHeader><CardTitle>Manage Sarin Operators</CardTitle></CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {(sarinMappings || []).map(map => (
-                            <TableRow key={map.id}>
-                                <TableCell>{map.operatorName}</TableCell>
-                                <TableCell>{map.machine}</TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteSarinOperator(map.operatorId)}><Trash2 className="h-4 w-4" /></Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="laser" className="space-y-6 mt-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>Add Laser Operator</CardTitle></CardHeader>
-                    <CardContent>
-                        <Form {...laserOpForm}>
-                            <form onSubmit={laserOpForm.handleSubmit(handleAddLaserOperator)} className="space-y-4">
-                                <FormField control={laserOpForm.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <Button type="submit">Add Laser Operator</Button>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader><CardTitle>Manage Laser Operators</CardTitle></CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {(laserOperators || []).map(op => (
-                                    <TableRow key={op.id}>
-                                        <TableCell>{op.name}</TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </div>
-            <div className="space-y-6">
-                <Card>
-                    <CardHeader><CardTitle>Add Laser Tension Mapping</CardTitle></CardHeader>
-                    <CardContent>
-                        <Form {...laserMapForm}>
-                            <form onSubmit={laserMapForm.handleSubmit(handleAddLaserMapping)} className="space-y-4">
-                                <FormField control={laserMapForm.control} name="tensionType" render={({ field }) => (
-                                    <FormItem><FormLabel>Tension Type</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={laserMapForm.control} name="machine" render={({ field }) => (
-                                    <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <Button type="submit">Add Mapping</Button>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader><CardTitle>Manage Laser Mappings</CardTitle></CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>Tension</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {(laserMappings || []).map(map => (
-                                    <TableRow key={map.id}>
-                                        <TableCell>{map.tensionType}</TableCell>
-                                        <TableCell>{map.machine}</TableCell>
-                                        <TableCell>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserMapping(map.id)}><Trash2 className="h-4 w-4" /></Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="4p" className="space-y-6 mt-6">
+    <>
+      <div className="container mx-auto py-8 px-4 md:px-6">
+        <PageHeader title="Control Panel" description="Manage operators, machine mappings, and price rates." />
+        <Tabs defaultValue="sarin" className="w-full">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-7">
+            <TabsTrigger value="sarin">Sarin</TabsTrigger>
+            <TabsTrigger value="laser">Laser</TabsTrigger>
+            <TabsTrigger value="4p">4P & 4P Teching</TabsTrigger>
+            <TabsTrigger value="udhdha">Udhda</TabsTrigger>
+            <TabsTrigger value="box-sorting">Box Sorting (Cent)</TabsTrigger>
+            <TabsTrigger value="diameter-sorting">Box Sorting (Diameter)</TabsTrigger>
+            <TabsTrigger value="system">System</TabsTrigger>
+          </TabsList>
+          <TabsContent value="sarin" className="space-y-6 mt-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>4P Department Sorting</CardTitle>
-                    <CardDescription>Define rules for automatically sorting packets based on carat weight from hire barcodes.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...fourPDeptSettingsForm}>
-                        <form onSubmit={fourPDeptSettingsForm.handleSubmit(handleUpdateFourPDeptSettings)} className="space-y-4 max-w-lg">
-                             <div className="grid md:grid-cols-3 gap-4">
-                                <FormField control={fourPDeptSettingsForm.control} name="caratThreshold" render={({ field }) => (
-                                    <FormItem><FormLabel>Carat Threshold</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={fourPDeptSettingsForm.control} name="belowThresholdDeptName" render={({ field }) => (
-                                    <FormItem><FormLabel>&le; Threshold Dept Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={fourPDeptSettingsForm.control} name="aboveThresholdDeptName" render={({ field }) => (
-                                    <FormItem><FormLabel>&gt; Threshold Dept Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                             </div>
-                            <Button type="submit">Update Sorting Rules</Button>
-                        </form>
-                    </Form>
-                </CardContent>
+              <CardHeader><CardTitle>Add Sarin Operator & Machine</CardTitle></CardHeader>
+              <CardContent>
+                <Form {...sarinForm}>
+                  <form onSubmit={sarinForm.handleSubmit(handleAddSarinOperator)} className="space-y-4">
+                    <FormField control={sarinForm.control} name="name" render={({ field }) => (
+                      <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <FormField control={sarinForm.control} name="machine" render={({ field }) => (
+                      <FormItem><FormLabel>Assigned Machine</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
+                    <Button type="submit">Add Sarin Operator</Button>
+                  </form>
+                </Form>
+              </CardContent>
             </Card>
-
             <Card>
-                <CardHeader>
-                    <CardTitle>Price Master</CardTitle>
-                    <CardDescription>Set the per-piece rates for 4P and 4P Teching work.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...priceMasterForm}>
-                        <form onSubmit={priceMasterForm.handleSubmit(handleUpdatePriceMaster)} className="space-y-4 max-w-sm">
-                             <FormField control={priceMasterForm.control} name="fourP" render={({ field }) => (
-                                <FormItem><FormLabel>4P Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <FormField control={priceMasterForm.control} name="fourPTeching" render={({ field }) => (
-                                <FormItem><FormLabel>4P Teching Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                            )} />
-                            <Button type="submit">Update Rates</Button>
-                        </form>
-                    </Form>
-                </CardContent>
+              <CardHeader><CardTitle>Manage Sarin Operators</CardTitle></CardHeader>
+              <CardContent>
+                  <Table>
+                      <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                          {(sarinMappings || []).map(map => (
+                              <TableRow key={map.id}>
+                                  <TableCell>{map.operatorName}</TableCell>
+                                  <TableCell>{map.machine}</TableCell>
+                                  <TableCell>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteSarinOperator(map.operatorId)}><Trash2 className="h-4 w-4" /></Button>
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+              </CardContent>
             </Card>
-
+          </TabsContent>
+          <TabsContent value="laser" className="space-y-6 mt-6">
             <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle>Add 4P Operator</CardTitle></CardHeader>
-                        <CardContent>
-                            <Form {...fourPForm}>
-                                <form onSubmit={fourPForm.handleSubmit(handleAddFourPOperator)} className="space-y-4">
-                                    <FormField control={fourPForm.control} name="name" render={({ field }) => (
-                                        <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <Button type="submit">Add 4P Operator</Button>
-                                </form>
-                            </Form>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitle>Manage 4P Operators</CardTitle></CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {(fourPOperators || []).map(op => (
-                                        <TableRow key={op.id}>
-                                            <TableCell>{op.name}</TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle>Add 4P Teching Operator</CardTitle></CardHeader>
-                        <CardContent>
-                            <Form {...fourPTechingForm}>
-                                <form onSubmit={fourPTechingForm.handleSubmit(handleAddFourPTechingOperator)} className="space-y-4">
-                                    <FormField control={fourPTechingForm.control} name="name" render={({ field }) => (
-                                        <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                    )} />
-                                    <Button type="submit">Add 4P Teching Operator</Button>
-                                </form>
-                            </Form>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitle>Manage 4P Teching Operators</CardTitle></CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                                <TableBody>
-                                    {(fourPTechingOperators || []).map(op => (
-                                        <TableRow key={op.id}>
-                                            <TableCell>{op.name}</TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
+              <div className="space-y-6">
+                  <Card>
+                      <CardHeader><CardTitle>Add Laser Operator</CardTitle></CardHeader>
+                      <CardContent>
+                          <Form {...laserOpForm}>
+                              <form onSubmit={laserOpForm.handleSubmit(handleAddLaserOperator)} className="space-y-4">
+                                  <FormField control={laserOpForm.control} name="name" render={({ field }) => (
+                                      <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <Button type="submit">Add Laser Operator</Button>
+                              </form>
+                          </Form>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader><CardTitle>Manage Laser Operators</CardTitle></CardHeader>
+                      <CardContent>
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {(laserOperators || []).map(op => (
+                                      <TableRow key={op.id}>
+                                          <TableCell>{op.name}</TableCell>
+                                          <TableCell>
+                                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </CardContent>
+                  </Card>
+              </div>
+              <div className="space-y-6">
+                  <Card>
+                      <CardHeader><CardTitle>Add Laser Tension Mapping</CardTitle></CardHeader>
+                      <CardContent>
+                          <Form {...laserMapForm}>
+                              <form onSubmit={laserMapForm.handleSubmit(handleAddLaserMapping)} className="space-y-4">
+                                  <FormField control={laserMapForm.control} name="tensionType" render={({ field }) => (
+                                      <FormItem><FormLabel>Tension Type</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <FormField control={laserMapForm.control} name="machine" render={({ field }) => (
+                                      <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <Button type="submit">Add Mapping</Button>
+                              </form>
+                          </Form>
+                      </CardContent>
+                  </Card>
+                  <Card>
+                      <CardHeader><CardTitle>Manage Laser Mappings</CardTitle></CardHeader>
+                      <CardContent>
+                          <Table>
+                              <TableHeader><TableRow><TableHead>Tension</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                              <TableBody>
+                                  {(laserMappings || []).map(map => (
+                                      <TableRow key={map.id}>
+                                          <TableCell>{map.tensionType}</TableCell>
+                                          <TableCell>{map.machine}</TableCell>
+                                          <TableCell>
+                                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserMapping(map.id)}><Trash2 className="h-4 w-4" /></Button>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </CardContent>
+                  </Card>
+              </div>
             </div>
-        </TabsContent>
-        <TabsContent value="udhdha" className="space-y-6 mt-6">
+          </TabsContent>
+          <TabsContent value="4p" className="space-y-6 mt-6">
+              <Card>
+                  <CardHeader>
+                      <CardTitle>4P Department Sorting</CardTitle>
+                      <CardDescription>Define rules for automatically sorting packets based on carat weight from hire barcodes.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <Form {...fourPDeptSettingsForm}>
+                          <form onSubmit={fourPDeptSettingsForm.handleSubmit(handleUpdateFourPDeptSettings)} className="space-y-4 max-w-lg">
+                              <div className="grid md:grid-cols-3 gap-4">
+                                  <FormField control={fourPDeptSettingsForm.control} name="caratThreshold" render={({ field }) => (
+                                      <FormItem><FormLabel>Carat Threshold</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <FormField control={fourPDeptSettingsForm.control} name="belowThresholdDeptName" render={({ field }) => (
+                                      <FormItem><FormLabel>&le; Threshold Dept Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                                  <FormField control={fourPDeptSettingsForm.control} name="aboveThresholdDeptName" render={({ field }) => (
+                                      <FormItem><FormLabel>&gt; Threshold Dept Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                  )} />
+                              </div>
+                              <Button type="submit">Update Sorting Rules</Button>
+                          </form>
+                      </Form>
+                  </CardContent>
+              </Card>
+
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Price Master</CardTitle>
+                      <CardDescription>Set the per-piece rates for 4P and 4P Teching work.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <Form {...priceMasterForm}>
+                          <form onSubmit={priceMasterForm.handleSubmit(handleUpdatePriceMaster)} className="space-y-4 max-w-sm">
+                              <FormField control={priceMasterForm.control} name="fourP" render={({ field }) => (
+                                  <FormItem><FormLabel>4P Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                              <FormField control={priceMasterForm.control} name="fourPTeching" render={({ field }) => (
+                                  <FormItem><FormLabel>4P Teching Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                              <Button type="submit">Update Rates</Button>
+                          </form>
+                      </Form>
+                  </CardContent>
+              </Card>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-6">
+                      <Card>
+                          <CardHeader><CardTitle>Add 4P Operator</CardTitle></CardHeader>
+                          <CardContent>
+                              <Form {...fourPForm}>
+                                  <form onSubmit={fourPForm.handleSubmit(handleAddFourPOperator)} className="space-y-4">
+                                      <FormField control={fourPForm.control} name="name" render={({ field }) => (
+                                          <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                      )} />
+                                      <Button type="submit">Add 4P Operator</Button>
+                                  </form>
+                              </Form>
+                          </CardContent>
+                      </Card>
+                      <Card>
+                          <CardHeader><CardTitle>Manage 4P Operators</CardTitle></CardHeader>
+                          <CardContent>
+                              <Table>
+                                  <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                  <TableBody>
+                                      {(fourPOperators || []).map(op => (
+                                          <TableRow key={op.id}>
+                                              <TableCell>{op.name}</TableCell>
+                                              <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                          </TableRow>
+                                      ))}
+                                  </TableBody>
+                              </Table>
+                          </CardContent>
+                      </Card>
+                  </div>
+                  <div className="space-y-6">
+                      <Card>
+                          <CardHeader><CardTitle>Add 4P Teching Operator</CardTitle></CardHeader>
+                          <CardContent>
+                              <Form {...fourPTechingForm}>
+                                  <form onSubmit={fourPTechingForm.handleSubmit(handleAddFourPTechingOperator)} className="space-y-4">
+                                      <FormField control={fourPTechingForm.control} name="name" render={({ field }) => (
+                                          <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                      )} />
+                                      <Button type="submit">Add 4P Teching Operator</Button>
+                                  </form>
+                              </Form>
+                          </CardContent>
+                      </Card>
+                      <Card>
+                          <CardHeader><CardTitle>Manage 4P Teching Operators</CardTitle></CardHeader>
+                          <CardContent>
+                              <Table>
+                                  <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                  <TableBody>
+                                      {(fourPTechingOperators || []).map(op => (
+                                          <TableRow key={op.id}>
+                                              <TableCell>{op.name}</TableCell>
+                                              <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                          </TableRow>
+                                      ))}
+                                  </TableBody>
+                              </Table>
+                          </CardContent>
+                      </Card>
+                  </div>
+              </div>
+          </TabsContent>
+          <TabsContent value="udhdha" className="space-y-6 mt-6">
+              <Card>
+                  <CardHeader>
+                      <CardTitle>Udhda Packet Settings</CardTitle>
+                      <CardDescription>Configure settings for individual packet tracking.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      <Form {...udhdhaSettingsForm}>
+                          <form onSubmit={udhdhaSettingsForm.handleSubmit(handleUpdateUdhdhaSettings)} className="space-y-4 max-w-sm">
+                              <FormField control={udhdhaSettingsForm.control} name="returnTimeLimitMinutes" render={({ field }) => (
+                                  <FormItem>
+                                      <FormLabel>Return Time Limit (Minutes)</FormLabel>
+                                      <FormControl><Input type="number" {...field} /></FormControl>
+                                      <FormMessage />
+                                  </FormItem>
+                              )} />
+                              <Button type="submit">Update Settings</Button>
+                          </form>
+                      </Form>
+                  </CardContent>
+              </Card>
+          </TabsContent>
+          <TabsContent value="box-sorting" className="space-y-6 mt-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>Udhda Packet Settings</CardTitle>
-                    <CardDescription>Configure settings for individual packet tracking.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...udhdhaSettingsForm}>
-                        <form onSubmit={udhdhaSettingsForm.handleSubmit(handleUpdateUdhdhaSettings)} className="space-y-4 max-w-sm">
-                            <FormField control={udhdhaSettingsForm.control} name="returnTimeLimitMinutes" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Return Time Limit (Minutes)</FormLabel>
-                                    <FormControl><Input type="number" {...field} /></FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )} />
-                            <Button type="submit">Update Settings</Button>
-                        </form>
-                    </Form>
-                </CardContent>
+              <CardHeader>
+                <CardTitle>Add Box Sorting Range (by Polish Weight)</CardTitle>
+                <CardDescription>Define Polish Weight ranges to automatically sort packets into boxes.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...boxSortingForm}>
+                  <form onSubmit={boxSortingForm.handleSubmit(handleAddBoxSortingRange)} className="space-y-4 max-w-lg">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <FormField control={boxSortingForm.control} name="from" render={({ field }) => (
+                          <FormItem><FormLabel>From (Polish Wt.)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={boxSortingForm.control} name="to" render={({ field }) => (
+                          <FormItem><FormLabel>To (Polish Wt.)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={boxSortingForm.control} name="label" render={({ field }) => (
+                          <FormItem><FormLabel>Box Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                    </div>
+                    <Button type="submit">Add Range</Button>
+                  </form>
+                </Form>
+              </CardContent>
             </Card>
-        </TabsContent>
-        <TabsContent value="box-sorting" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Box Sorting Range (by Polish Weight)</CardTitle>
-              <CardDescription>Define Polish Weight ranges to automatically sort packets into boxes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...boxSortingForm}>
-                <form onSubmit={boxSortingForm.handleSubmit(handleAddBoxSortingRange)} className="space-y-4 max-w-lg">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <FormField control={boxSortingForm.control} name="from" render={({ field }) => (
-                        <FormItem><FormLabel>From (Polish Wt.)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={boxSortingForm.control} name="to" render={({ field }) => (
-                        <FormItem><FormLabel>To (Polish Wt.)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={boxSortingForm.control} name="label" render={({ field }) => (
-                        <FormItem><FormLabel>Box Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
-                  <Button type="submit">Add Range</Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>Manage Box Sorting Ranges (by Polish Weight)</CardTitle></CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {(boxSortingRanges || []).sort((a, b) => a.from - b.from).map(range => (
-                            <TableRow key={range.id}>
-                                <TableCell>{(range.from ?? 0).toFixed(3)}</TableCell>
-                                <TableCell>{(range.to ?? 0).toFixed(3)}</TableCell>
-                                <TableCell>{range.label}</TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteBoxSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="diameter-sorting" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add Diameter Sorting Range (by mm)</CardTitle>
-              <CardDescription>Define diameter ranges (in mm) to automatically sort packets into boxes.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...diameterSortingForm}>
-                <form onSubmit={diameterSortingForm.handleSubmit(handleAddDiameterSortingRange)} className="space-y-4 max-w-lg">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <FormField control={diameterSortingForm.control} name="from" render={({ field }) => (
-                        <FormItem><FormLabel>From (mm)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={diameterSortingForm.control} name="to" render={({ field }) => (
-                        <FormItem><FormLabel>To (mm)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={diameterSortingForm.control} name="label" render={({ field }) => (
-                        <FormItem><FormLabel>Box Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                  </div>
-                  <Button type="submit">Add Range</Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><CardTitle>Manage Diameter Sorting Ranges</CardTitle></CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader><TableRow><TableHead>From (mm)</TableHead><TableHead>To (mm)</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {(diameterSortingRanges || []).sort((a, b) => a.from - b.from).map(range => (
-                            <TableRow key={range.id}>
-                                <TableCell>{(range.from ?? 0).toFixed(2)}</TableCell>
-                                <TableCell>{(range.to ?? 0).toFixed(2)}</TableCell>
-                                <TableCell>{range.label}</TableCell>
-                                <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteDiameterSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="system" className="space-y-6 mt-6">
-          <Card>
-            <CardHeader>
-                <CardTitle>Backup & Restore</CardTitle>
-                <CardDescription>
-                    Download all application data to a single JSON file for backup. You can restore from this file at any time.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex flex-col sm:flex-row gap-4">
-                    <Button onClick={doBackup}>Backup All Data</Button>
-                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                        Restore From File...
-                        <input type="file" ref={fileInputRef} onChange={handleRestoreData} accept=".json" className="hidden" />
-                    </Button>
-                </div>
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="mt-4">Delete All Data</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete all data from this application.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => {
-                                ALL_APP_KEYS.forEach(key => localStorage.removeItem(key));
-                                toast({ title: 'All data deleted.', description: 'The page will now reload.' });
-                                setTimeout(() => window.location.reload(), 1500);
-                            }}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-                <CardTitle>Return Scan Mode</CardTitle>
-                <CardDescription>
-                   Enable or disable mandatory barcode scanning when returning lots for Sarin and Laser departments.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="flex items-center space-x-2">
-                 <Switch
-                    id="sarin-scan-mode"
-                    checked={returnScanSettings.sarin}
-                    onCheckedChange={(checked) => handleScanSettingChange('sarin', checked)}
-                  />
-                  <Label htmlFor="sarin-scan-mode">Sarin Return Scan</Label>
-               </div>
-               <div className="flex items-center space-x-2">
-                 <Switch
-                    id="laser-scan-mode"
-                    checked={returnScanSettings.laser}
-                    onCheckedChange={(checked) => handleScanSettingChange('laser', checked)}
-                  />
-                  <Label htmlFor="laser-scan-mode">Laser Return Scan</Label>
-               </div>
-            </CardContent>
-          </Card>
-           <Card>
-            <CardHeader>
-                <CardTitle>Auto-Backup Settings</CardTitle>
-                <CardDescription>
-                    The app can automatically save a backup file for you.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                 <div className="grid md:grid-cols-2 gap-4 max-w-lg">
-                    <div>
-                        <Label htmlFor="backup-interval">Backup Interval (Hours)</Label>
-                        <Select name="intervalHours" value={String(autoBackupSettings.intervalHours)} onValueChange={(value) => handleAutoBackupChange({ target: { name: 'intervalHours', value } } as any)}>
-                            <SelectTrigger id="backup-interval"><SelectValue/></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="0">Disabled</SelectItem>
-                                <SelectItem value="1">Every 1 Hour</SelectItem>
-                                <SelectItem value="2">Every 2 Hours</SelectItem>
-                                <SelectItem value="4">Every 4 Hours</SelectItem>
-                                <SelectItem value="8">Every 8 Hours</SelectItem>
-                            </SelectContent>
-                        </Select>
+            <Card>
+              <CardHeader><CardTitle>Manage Box Sorting Ranges (by Polish Weight)</CardTitle></CardHeader>
+              <CardContent>
+                  <Table>
+                      <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                          {(boxSortingRanges || []).sort((a, b) => a.from - b.from).map(range => (
+                              <TableRow key={range.id}>
+                                  <TableCell>{(range.from ?? 0).toFixed(3)}</TableCell>
+                                  <TableCell>{(range.to ?? 0).toFixed(3)}</TableCell>
+                                  <TableCell>{range.label}</TableCell>
+                                  <TableCell>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteBoxSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="diameter-sorting" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Diameter Sorting Range (by mm)</CardTitle>
+                <CardDescription>Define diameter ranges (in mm) to automatically sort packets into boxes.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Form {...diameterSortingForm}>
+                  <form onSubmit={diameterSortingForm.handleSubmit(handleAddDiameterSortingRange)} className="space-y-4 max-w-lg">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <FormField control={diameterSortingForm.control} name="from" render={({ field }) => (
+                          <FormItem><FormLabel>From (mm)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={diameterSortingForm.control} name="to" render={({ field }) => (
+                          <FormItem><FormLabel>To (mm)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={diameterSortingForm.control} name="label" render={({ field }) => (
+                          <FormItem><FormLabel>Box Label</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
                     </div>
-                     <div>
-                        <Label htmlFor="office-end-time">Office End Time</Label>
-                        <Input
-                            id="office-end-time"
-                            type="time"
-                            name="officeEndTime"
-                            value={autoBackupSettings.officeEndTime}
-                            onChange={handleAutoBackupChange}
-                        />
-                    </div>
+                    <Button type="submit">Add Range</Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle>Manage Diameter Sorting Ranges</CardTitle></CardHeader>
+              <CardContent>
+                  <Table>
+                      <TableHeader><TableRow><TableHead>From (mm)</TableHead><TableHead>To (mm)</TableHead><TableHead>Box Label</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                          {(diameterSortingRanges || []).sort((a, b) => a.from - b.from).map(range => (
+                              <TableRow key={range.id}>
+                                  <TableCell>{(range.from ?? 0).toFixed(2)}</TableCell>
+                                  <TableCell>{(range.to ?? 0).toFixed(2)}</TableCell>
+                                  <TableCell>{range.label}</TableCell>
+                                  <TableCell>
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteDiameterSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
+                                  </TableCell>
+                              </TableRow>
+                          ))}
+                      </TableBody>
+                  </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="system" className="space-y-6 mt-6">
+            <Card>
+              <CardHeader>
+                  <CardTitle>Backup & Restore</CardTitle>
+                  <CardDescription>
+                      Download all application data to a single JSON file for backup. You can restore from this file at any time.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                      <Button onClick={doBackup}>Backup All Data</Button>
+                      <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                          Restore From File...
+                          <input type="file" ref={fileInputRef} onChange={handleRestoreData} accept=".json" className="hidden" />
+                      </Button>
+                  </div>
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="mt-4" disabled={isDeleteDisabled}>
+                            {isDeleteDisabled ? "Deletion Disabled" : "Delete All Data"}
+                          </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete all data from this application.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleOpenPasskeyDialog}>Continue</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                  </AlertDialog>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                  <CardTitle>Return Scan Mode</CardTitle>
+                  <CardDescription>
+                    Enable or disable mandatory barcode scanning when returning lots for Sarin and Laser departments.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                      id="sarin-scan-mode"
+                      checked={returnScanSettings.sarin}
+                      onCheckedChange={(checked) => handleScanSettingChange('sarin', checked)}
+                    />
+                    <Label htmlFor="sarin-scan-mode">Sarin Return Scan</Label>
                 </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                      id="laser-scan-mode"
+                      checked={returnScanSettings.laser}
+                      onCheckedChange={(checked) => handleScanSettingChange('laser', checked)}
+                    />
+                    <Label htmlFor="laser-scan-mode">Laser Return Scan</Label>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                  <CardTitle>Auto-Backup Settings</CardTitle>
+                  <CardDescription>
+                      The app can automatically save a backup file for you.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4 max-w-lg">
+                      <div>
+                          <Label htmlFor="backup-interval">Backup Interval (Hours)</Label>
+                          <Select name="intervalHours" value={String(autoBackupSettings.intervalHours)} onValueChange={(value) => handleAutoBackupChange({ target: { name: 'intervalHours', value } } as any)}>
+                              <SelectTrigger id="backup-interval"><SelectValue/></SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="0">Disabled</SelectItem>
+                                  <SelectItem value="1">Every 1 Hour</SelectItem>
+                                  <SelectItem value="2">Every 2 Hours</SelectItem>
+                                  <SelectItem value="4">Every 4 Hours</SelectItem>
+                                  <SelectItem value="8">Every 8 Hours</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                      <div>
+                          <Label htmlFor="office-end-time">Office End Time</Label>
+                          <Input
+                              id="office-end-time"
+                              type="time"
+                              name="officeEndTime"
+                              value={autoBackupSettings.officeEndTime}
+                              onChange={handleAutoBackupChange}
+                          />
+                      </div>
+                  </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+      <Dialog open={isPasskeyDialogOpen} onOpenChange={setPasskeyDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Enter Passkey to Confirm Deletion</DialogTitle>
+                <DialogDescription>
+                    This is a final confirmation. This action is irreversible. You have {passkeyAttempts} attempts remaining.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+                <Label htmlFor="passkey">Passkey</Label>
+                <Input
+                    id="passkey"
+                    type="password"
+                    value={passkeyInput}
+                    onChange={(e) => setPasskeyInput(e.target.value)}
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setPasskeyDialogOpen(false)}>Cancel</Button>
+                <Button variant="destructive" onClick={handlePasskeyCheck}>Confirm Delete</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

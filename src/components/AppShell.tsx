@@ -44,6 +44,7 @@ import { cn } from '@/lib/utils';
 import { Toaster } from './ui/toaster';
 import { useAutoBackup } from '@/hooks/useAutoBackup';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { useSystemState } from '@/hooks/useSystemState';
 
 const menuItems = [
   {
@@ -142,6 +143,7 @@ const menuItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   useAutoBackup();
+  const { resetDeleteButton } = useSystemState();
 
   // Hide AI Insights and combine reports
   const updatedMenuItems = menuItems.map(item => {
@@ -171,7 +173,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </Button>
             <div className="flex flex-col">
-              <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up">
+              <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up cursor-pointer" onClick={resetDeleteButton}>
                 ATIXE DIAMOND
               </h1>
               <p 
