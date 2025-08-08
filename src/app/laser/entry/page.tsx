@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import LotSeriesViewer from '@/components/LotSeriesViewer';
+import LotDetailPopup from '@/components/LotDetailPopup';
 
 const formSchema = z.object({
   lotNumber: z.string().min(1, 'Lot number is required'),
@@ -50,6 +51,10 @@ export default function NewLaserLotPage() {
   const duplicateDialogTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [lastCompletedLot, setLastCompletedLot] = useState<number | null>(null);
+  
+  // State for Lot Quick View Popup
+  const [viewingLot, setViewingLot] = useState<LaserLot | null>(null);
+
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -236,170 +241,179 @@ export default function NewLaserLotPage() {
     }
   }, [laserLots, currentLotNumberStr]);
 
+  const handleLotClick = (lotNumber: number) => {
+    const lot = laserLots.find(l => parseInt(l.lotNumber, 10) === lotNumber && isSameMonth(new Date(l.entryDate), new Date()));
+    setViewingLot(lot || null);
+  }
+
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6">
-      <PageHeader title="New Laser Lot" description="Create a new entry for a laser lot." />
-      <div className="space-y-6">
-        <Card className="max-w-4xl mx-auto">
-            <CardHeader>
-            <CardTitle>Step 1: Lot Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
-                    <FormField control={form.control} name="kapanNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="lotNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="tensionType" render={({ field }) => (
-                        <FormItem><FormLabel>Tension Type</FormLabel>
-                            <Select onValueChange={handleTensionChange} value={field.value} disabled={formSubmitted}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
-                                <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
-                            </Select><FormMessage />
-                        </FormItem>
-                    )} />
-                    <FormField control={form.control} name="machine" render={({ field }) => (
-                        <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="packetCount" render={({ field }) => (
-                        <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </div>
-                {!formSubmitted && <Button type="submit">Next: Scan Packets</Button>}
-                </form>
-            </Form>
-            </CardContent>
-        </Card>
+    <>
+      <div className="container mx-auto py-8 px-4 md:px-6">
+        <PageHeader title="New Laser Lot" description="Create a new entry for a laser lot." />
+        <div className="space-y-6">
+          <Card className="max-w-4xl mx-auto">
+              <CardHeader>
+              <CardTitle>Step 1: Lot Details</CardTitle>
+              </CardHeader>
+              <CardContent>
+              <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                      <FormField control={form.control} name="kapanNumber" render={({ field }) => (
+                          <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="lotNumber" render={({ field }) => (
+                          <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="tensionType" render={({ field }) => (
+                          <FormItem><FormLabel>Tension Type</FormLabel>
+                              <Select onValueChange={handleTensionChange} value={field.value} disabled={formSubmitted}>
+                                  <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
+                                  <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
+                              </Select><FormMessage />
+                          </FormItem>
+                      )} />
+                      <FormField control={form.control} name="machine" render={({ field }) => (
+                          <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="packetCount" render={({ field }) => (
+                          <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                  </div>
+                  {!formSubmitted && <Button type="submit">Next: Scan Packets</Button>}
+                  </form>
+              </Form>
+              </CardContent>
+          </Card>
 
-        <Card className="max-w-4xl mx-auto">
-            <CardHeader><CardTitle>Laser Lot Series</CardTitle></CardHeader>
-            <CardContent>
-                <LotSeriesViewer 
-                    series={lotSeries}
-                    completedLots={completedLots}
-                    currentLot={parseInt(currentLotNumberStr, 10)}
-                    nextLot={nextLot}
-                    lastCompletedLot={lastCompletedLot}
-                />
-            </CardContent>
-        </Card>
+          <Card className="max-w-4xl mx-auto">
+              <CardHeader><CardTitle>Laser Lot Series</CardTitle></CardHeader>
+              <CardContent>
+                  <LotSeriesViewer 
+                      series={lotSeries}
+                      completedLots={completedLots}
+                      currentLot={parseInt(currentLotNumberStr, 10)}
+                      nextLot={nextLot}
+                      lastCompletedLot={lastCompletedLot}
+                      onLotClick={handleLotClick}
+                  />
+              </CardContent>
+          </Card>
 
-        {formSubmitted && currentLotDetails && (
-            <Card className="max-w-4xl mx-auto">
-                <CardHeader><CardTitle>Step 2: Scan Packets</CardTitle></CardHeader>
-                <CardContent>
-                    <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
-                        <Input 
-                            ref={barcodeInputRef}
-                            placeholder="Scan barcode..."
-                            value={barcode}
-                            onChange={e => setBarcode(e.target.value)}
-                            disabled={scannedPackets.length >= packetCount}
-                        />
-                        <Button type="submit" disabled={scannedPackets.length >= packetCount || !barcode}>
-                            <Barcode className="mr-2 h-4 w-4" /> Add
-                        </Button>
-                    </form>
+          {formSubmitted && currentLotDetails && (
+              <Card className="max-w-4xl mx-auto">
+                  <CardHeader><CardTitle>Step 2: Scan Packets</CardTitle></CardHeader>
+                  <CardContent>
+                      <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
+                          <Input 
+                              ref={barcodeInputRef}
+                              placeholder="Scan barcode..."
+                              value={barcode}
+                              onChange={e => setBarcode(e.target.value)}
+                              disabled={scannedPackets.length >= packetCount}
+                          />
+                          <Button type="submit" disabled={scannedPackets.length >= packetCount || !barcode}>
+                              <Barcode className="mr-2 h-4 w-4" /> Add
+                          </Button>
+                      </form>
 
-                    <div className="border rounded-md">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[50px]">#</TableHead>
-                                    <TableHead>Scanned Barcode</TableHead>
-                                    <TableHead>Kapan</TableHead>
-                                    <TableHead>Packet #</TableHead>
-                                    <TableHead>Suffix</TableHead>
-                                    <TableHead className="w-[80px] text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {Array.from({ length: packetCount }).map((_, index) => {
-                                    const packet = scannedPackets[index];
-                                    return (
-                                        <TableRow key={index} className={packet ? '' : 'bg-muted/50'}>
-                                            <TableCell>{index + 1}</TableCell>
-                                            <TableCell>{packet?.fullBarcode || '...'}</TableCell>
-                                            <TableCell>{packet?.kapanNumber || '...'}</TableCell>
-                                            <TableCell>{packet?.packetNumber || '...'}</TableCell>
-                                            <TableCell>{packet?.suffix || 'Main'}</TableCell>
-                                            <TableCell className="text-right">
-                                                {packet && (
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mt-4">
-                        <p className="text-sm text-muted-foreground font-semibold">
-                            Scanned: {scannedPackets.length} / {packetCount}
-                        </p>
-                        <Button onClick={createFinalLot} disabled={scannedPackets.length !== packetCount}>
-                            Create Laser Lot
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        )}
+                      <div className="border rounded-md">
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead className="w-[50px]">#</TableHead>
+                                      <TableHead>Scanned Barcode</TableHead>
+                                      <TableHead>Kapan</TableHead>
+                                      <TableHead>Packet #</TableHead>
+                                      <TableHead>Suffix</TableHead>
+                                      <TableHead className="w-[80px] text-right">Actions</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {Array.from({ length: packetCount }).map((_, index) => {
+                                      const packet = scannedPackets[index];
+                                      return (
+                                          <TableRow key={index} className={packet ? '' : 'bg-muted/50'}>
+                                              <TableCell>{index + 1}</TableCell>
+                                              <TableCell>{packet?.fullBarcode || '...'}</TableCell>
+                                              <TableCell>{packet?.kapanNumber || '...'}</TableCell>
+                                              <TableCell>{packet?.packetNumber || '...'}</TableCell>
+                                              <TableCell>{packet?.suffix || 'Main'}</TableCell>
+                                              <TableCell className="text-right">
+                                                  {packet && (
+                                                      <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
+                                                          <Trash2 className="h-4 w-4" />
+                                                      </Button>
+                                                  )}
+                                              </TableCell>
+                                          </TableRow>
+                                      );
+                                  })}
+                              </TableBody>
+                          </Table>
+                      </div>
+                      
+                      <div className="flex justify-between items-center mt-4">
+                          <p className="text-sm text-muted-foreground font-semibold">
+                              Scanned: {scannedPackets.length} / {packetCount}
+                          </p>
+                          <Button onClick={createFinalLot} disabled={scannedPackets.length !== packetCount}>
+                              Create Laser Lot
+                          </Button>
+                      </div>
+                  </CardContent>
+              </Card>
+          )}
+        </div>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+              <button ref={kapanMismatchDialogTriggerRef} className="hidden">Open Kapan Mismatch Dialog</button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle className='flex items-center gap-2'>
+                      <AlertTriangle className="text-yellow-500" /> Kapan Mismatch
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                      Scanned packet belongs to Kapan <span className="font-bold">{mismatchedPacket?.kapanNumber}</span>.
+                      Your current lot's Kapan is <span className="font-bold">{currentLotDetails?.kapanNumber}</span>.
+                      <br />
+                      Do you want to add this packet anyway?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel onClick={ignoreMismatchedPacket}>No, Ignore</AlertDialogCancel>
+                  <AlertDialogAction onClick={addMismatchedPacket}>Yes, Add Anyway</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+              <button ref={duplicateDialogTriggerRef} className="hidden">Open Duplicate Dialog</button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitle className='flex items-center gap-2'>
+                      <AlertTriangle className="text-yellow-500" /> Duplicate Packet Found
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                      This packet (<span className="font-bold font-mono">{duplicatePacketInfo?.packet.fullBarcode}</span>) is already in an active lot (<span className="font-bold">{duplicatePacketInfo?.existingLotNumber}</span>).
+                      <br />
+                      Are you sure you want to add it again to this new lot?
+                  </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel onClick={ignoreDuplicatePacket}>No, Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={addDuplicatePacket}>Yes, Add Anyway</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
       </div>
-
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-            <button ref={kapanMismatchDialogTriggerRef} className="hidden">Open Kapan Mismatch Dialog</button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle className='flex items-center gap-2'>
-                    <AlertTriangle className="text-yellow-500" /> Kapan Mismatch
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                    Scanned packet belongs to Kapan <span className="font-bold">{mismatchedPacket?.kapanNumber}</span>.
-                    Your current lot's Kapan is <span className="font-bold">{currentLotDetails?.kapanNumber}</span>.
-                    <br />
-                    Do you want to add this packet anyway?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={ignoreMismatchedPacket}>No, Ignore</AlertDialogCancel>
-                <AlertDialogAction onClick={addMismatchedPacket}>Yes, Add Anyway</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-       <AlertDialog>
-        <AlertDialogTrigger asChild>
-            <button ref={duplicateDialogTriggerRef} className="hidden">Open Duplicate Dialog</button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle className='flex items-center gap-2'>
-                    <AlertTriangle className="text-yellow-500" /> Duplicate Packet Found
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                    This packet (<span className="font-bold font-mono">{duplicatePacketInfo?.packet.fullBarcode}</span>) is already in an active lot (<span className="font-bold">{duplicatePacketInfo?.existingLotNumber}</span>).
-                    <br />
-                    Are you sure you want to add it again to this new lot?
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel onClick={ignoreDuplicatePacket}>No, Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={addDuplicatePacket}>Yes, Add Anyway</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-    </div>
+      <LotDetailPopup lot={viewingLot} isOpen={!!viewingLot} onOpenChange={(open) => !open && setViewingLot(null)} />
+    </>
   );
 }

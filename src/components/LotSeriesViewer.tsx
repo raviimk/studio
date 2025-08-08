@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { cn } from '@/lib/utils';
 import { Check, Circle, Dot } from 'lucide-react';
+import { LaserLot } from '@/lib/types';
 
 type LotStatus = 'completed' | 'current' | 'next' | 'future' | 'missing' | 'cutting';
 
@@ -13,6 +14,7 @@ interface LotSeriesViewerProps {
     currentLot: number | null | undefined;
     nextLot: number | null | undefined;
     lastCompletedLot: number | null;
+    onLotClick: (lotNumber: number) => void;
 }
 
 const DiamondIcon = ({ className }: { className?: string }) => (
@@ -24,7 +26,7 @@ const DiamondIcon = ({ className }: { className?: string }) => (
 );
 
 
-export default function LotSeriesViewer({ series, completedLots, currentLot, nextLot, lastCompletedLot }: LotSeriesViewerProps) {
+export default function LotSeriesViewer({ series, completedLots, currentLot, nextLot, lastCompletedLot, onLotClick }: LotSeriesViewerProps) {
     const [api, setApi] = useState<CarouselApi>()
     const [isAnimating, setIsAnimating] = useState<number | null>(null);
 
@@ -97,8 +99,10 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
                     const status = getLotStatus(lot);
                     return (
                         <CarouselItem key={lot} className="basis-auto">
-                           <div className={cn(
+                           <div onClick={() => status !== 'future' && status !== 'missing' && onLotClick(lot)}
+                                className={cn(
                                 "relative overflow-hidden flex items-center justify-center gap-1.5 h-10 px-4 rounded-full border transition-all duration-300",
+                                (status === 'completed' || status === 'current' || status === 'next' || status === 'cutting') && 'cursor-pointer',
                                 status === 'cutting' && "bg-primary text-primary-foreground font-bold shadow-lg ring-2 ring-primary/50 animate-laser-cut",
                                 status === 'completed' && "bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700 dark:text-green-300",
                                 status === 'current' && "bg-primary text-primary-foreground font-bold shadow-lg ring-2 ring-primary/50",
