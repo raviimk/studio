@@ -84,6 +84,15 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
             default: return null;
         }
     }
+    
+    const handleWheelScroll = (e: React.WheelEvent<HTMLDivElement>) => {
+        if (!api) return;
+        if (e.deltaY > 0) {
+            api.scrollNext();
+        } else if (e.deltaY < 0) {
+            api.scrollPrev();
+        }
+    }
 
     return (
         <Carousel
@@ -93,6 +102,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
             }}
             setApi={setApi}
             className="w-full"
+            onWheel={handleWheelScroll}
         >
             <CarouselContent>
                 {series.map((lot) => {
