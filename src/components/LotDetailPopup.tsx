@@ -1,13 +1,16 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState }from 'react';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { LaserLot } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, History, Diamond, User, Calendar, Hash, X } from 'lucide-react';
+import { CheckCircle2, History, Diamond, User, Calendar, Hash, X, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { ScrollArea } from './ui/scroll-area';
+
 
 interface LotDetailPopupProps {
   lot: LaserLot | null;
@@ -56,6 +59,7 @@ const LaserGrid = () => (
 
 
 export default function LotDetailPopup({ lot, isOpen, onOpenChange }: LotDetailPopupProps) {
+  const [isPacketsOpen, setIsPacketsOpen] = useState(false);
   if (!lot) return null;
 
   const isReturned = lot.isReturned;
@@ -70,14 +74,34 @@ export default function LotDetailPopup({ lot, isOpen, onOpenChange }: LotDetailP
 
             <div className="relative z-10 p-8 text-white space-y-6">
                 <div className="text-center space-y-2">
+                    <p className="font-mono text-lg text-shadow-lg" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>Lot # {lot.lotNumber}</p>
                     <div className="flex items-center justify-center gap-3">
                         {statusIcon}
                         <h2 className="text-2xl font-bold tracking-wider uppercase">{statusText}</h2>
                     </div>
-                    <Badge variant="secondary" className="bg-white/10 text-white border-white/20">Lot Number</Badge>
-                    <p className="text-5xl font-bold font-mono text-shadow-lg" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>{lot.lotNumber}</p>
                 </div>
                 
+                <Collapsible open={isPacketsOpen} onOpenChange={setIsPacketsOpen}>
+                    <CollapsibleTrigger className="w-full">
+                        <div className="text-center space-y-2 cursor-pointer group">
+                             <Badge variant="secondary" className="bg-white/10 text-white border-white/20">Total Packets</Badge>
+                             <div className="flex items-center justify-center gap-2">
+                                <p className="text-5xl font-bold font-mono text-shadow-lg" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>{lot.packetCount}</p>
+                                <ChevronDown className={cn("h-6 w-6 transition-transform duration-300", isPacketsOpen && 'rotate-180')} />
+                             </div>
+                        </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        <ScrollArea className="h-40 mt-4 rounded-md border border-white/20 bg-black/20 p-2">
+                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 font-mono text-sm">
+                            {lot.scannedPackets?.map((packet) => (
+                                <div key={packet.id}>{packet.fullBarcode}</div>
+                            ))}
+                           </div>
+                        </ScrollArea>
+                    </CollapsibleContent>
+                </Collapsible>
+
                 <div className="space-y-4 text-lg">
                     <div className="flex items-center justify-between">
                         <span className="flex items-center gap-2 text-white/70"><Hash size={18}/> Kapan</span>
