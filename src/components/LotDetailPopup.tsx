@@ -2,10 +2,10 @@
 'use client';
 
 import React from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { LaserLot } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { CheckCircle2, History, Diamond, User, Calendar, Hash } from 'lucide-react';
+import { CheckCircle2, History, Diamond, User, Calendar, Hash, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 
@@ -64,45 +64,47 @@ export default function LotDetailPopup({ lot, isOpen, onOpenChange }: LotDetailP
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(
-          "max-w-md p-0 border-none rounded-2xl overflow-hidden",
-          "bg-background/60 dark:bg-zinc-900/60 backdrop-blur-2xl shadow-2xl",
-          "relative grainy-bg"
-      )}>
-        {isReturned ? <LaserGrid/> : <DiamondRain/>}
+      <DialogContent className="max-w-md p-0 border-none rounded-2xl overflow-hidden bg-background/60 dark:bg-zinc-900/60 backdrop-blur-2xl shadow-2xl">
+        <div className="relative grainy-bg overflow-hidden">
+            {isReturned ? <LaserGrid/> : <DiamondRain/>}
 
-        <div className="relative z-10 p-8 text-white space-y-6">
-            <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-3">
-                    {statusIcon}
-                    <h2 className="text-2xl font-bold tracking-wider uppercase">{statusText}</h2>
+            <div className="relative z-10 p-8 text-white space-y-6">
+                <div className="text-center space-y-2">
+                    <div className="flex items-center justify-center gap-3">
+                        {statusIcon}
+                        <h2 className="text-2xl font-bold tracking-wider uppercase">{statusText}</h2>
+                    </div>
+                    <Badge variant="secondary" className="bg-white/10 text-white border-white/20">Lot Number</Badge>
+                    <p className="text-5xl font-bold font-mono text-shadow-lg" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>{lot.lotNumber}</p>
                 </div>
-                <Badge variant="secondary" className="bg-white/10 text-white border-white/20">Lot Number</Badge>
-                <p className="text-5xl font-bold font-mono text-shadow-lg" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>{lot.lotNumber}</p>
-            </div>
-            
-            <div className="space-y-4 text-lg">
-                <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-white/70"><Hash size={18}/> Kapan</span>
-                    <span className="font-semibold">{lot.kapanNumber}</span>
-                </div>
-                 <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-white/70"><Calendar size={18}/> Entry Date</span>
-                    <span className="font-semibold">{format(new Date(lot.entryDate), 'PP')}</span>
-                </div>
-                {isReturned && lot.returnDate && (
+                
+                <div className="space-y-4 text-lg">
                     <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-white/70"><Calendar size={18}/> Return Date</span>
-                        <span className="font-semibold">{format(new Date(lot.returnDate), 'PP')}</span>
+                        <span className="flex items-center gap-2 text-white/70"><Hash size={18}/> Kapan</span>
+                        <span className="font-semibold">{lot.kapanNumber}</span>
                     </div>
-                )}
-                {isReturned && lot.returnedBy && (
-                     <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-white/70"><User size={18}/> Returned By</span>
-                        <span className="font-semibold">{lot.returnedBy}</span>
+                    <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-2 text-white/70"><Calendar size={18}/> Entry Date</span>
+                        <span className="font-semibold">{format(new Date(lot.entryDate), 'PP')}</span>
                     </div>
-                )}
+                    {isReturned && lot.returnDate && (
+                        <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-2 text-white/70"><Calendar size={18}/> Return Date</span>
+                            <span className="font-semibold">{format(new Date(lot.returnDate), 'PP')}</span>
+                        </div>
+                    )}
+                    {isReturned && lot.returnedBy && (
+                        <div className="flex items-center justify-between">
+                            <span className="flex items-center gap-2 text-white/70"><User size={18}/> Returned By</span>
+                            <span className="font-semibold">{lot.returnedBy}</span>
+                        </div>
+                    )}
+                </div>
             </div>
+             <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-20">
+                <X className="h-4 w-4 text-white" />
+                <span className="sr-only">Close</span>
+            </DialogClose>
         </div>
       </DialogContent>
     </Dialog>
