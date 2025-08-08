@@ -67,9 +67,6 @@ export default function LotDetailPopup({ lot, isOpen, onOpenChange }: LotDetailP
       <DialogContent className={cn(
           "max-w-md p-0 border-none rounded-2xl overflow-hidden",
           "bg-background/60 dark:bg-zinc-900/60 backdrop-blur-2xl shadow-2xl",
-          "transition-all duration-500 ease-in-out",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-90",
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-90",
           "relative grainy-bg"
       )}>
         {isReturned ? <LaserGrid/> : <DiamondRain/>}
