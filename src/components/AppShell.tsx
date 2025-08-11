@@ -124,22 +124,43 @@ const menuItems = [
 ];
 
 const SparklingDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <path d="M50 95L5 40h90L50 95z" fill="currentColor"/>
-        <path d="M50 95L5 40l45-35 45 35L50 95z" stroke="currentColor" strokeWidth="3" fill="none"/>
-        <path d="M5 40L25 40 50 5z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M95 40L75 40 50 5z" stroke="currentColor" strokeWidth="2" fill="none"/>
-        <path d="M25 40L50 95 75 40" stroke="currentColor" strokeWidth="2" fill="none"/>
-        {/* Sparkles */}
-        <path d="M5 25L15 35" stroke="currentColor" strokeWidth="3"/>
-        <path d="M10 15L20 25" stroke="currentColor" strokeWidth="3"/>
-        <path d="M20 10L30 20" stroke="currentColor" strokeWidth="3"/>
-        
-        <path d="M95 25L85 35" stroke="currentColor" strokeWidth="3"/>
-        <path d="M90 15L80 25" stroke="currentColor" strokeWidth="3"/>
-        <path d="M80 10L70 20" stroke="currentColor" strokeWidth="3"/>
-    </svg>
+  <svg
+    viewBox="0 0 120 120"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="black"
+    stroke="black"
+    {...props}
+  >
+    {/* Diamond shape */}
+    <path
+      d="M60 100 L20 40 L40 20 L80 20 L100 40 Z"
+      fill="black"
+    />
+    <path
+      d="M20 40 L60 100 L100 40 L80 20 L40 20 Z"
+      fill="none"
+      stroke="black"
+      strokeWidth="3"
+    />
+    {/* Facet lines */}
+    <path d="M40 20 L60 40 L80 20" stroke="black" strokeWidth="3" fill="none" />
+    <path d="M60 40 L60 100" stroke="black" strokeWidth="3" fill="none" />
+    <path d="M40 20 L60 100" stroke="black" strokeWidth="3" fill="none" />
+    <path d="M80 20 L60 100" stroke="black" strokeWidth="3" fill="none" />
+
+    {/* Sparkle lines left */}
+    <path d="M10 50 L20 45" stroke="black" strokeWidth="3" />
+    <path d="M8 40 L18 38" stroke="black" strokeWidth="3" />
+    <path d="M12 30 L22 32" stroke="black" strokeWidth="3" />
+
+    {/* Sparkle lines right */}
+    <path d="M110 50 L100 45" stroke="black" strokeWidth="3" />
+    <path d="M112 40 L102 38" stroke="black" strokeWidth="3" />
+    <path d="M108 30 L98 32" stroke="black" strokeWidth="3" />
+  </svg>
 );
+
+
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
