@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithRange } from '../ui/date-picker-range';
 import type { DateRange } from 'react-day-picker';
-import { subDays } from 'date-fns';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const COLORS = [
@@ -25,8 +25,8 @@ export default function SarinPerformance() {
   const [sarinOperators] = useLocalStorage<SarinOperator[]>('sarinOperators', []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
-    to: new Date(),
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
   });
 
   const filteredPackets = useMemo(() => {

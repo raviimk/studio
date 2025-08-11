@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '../ui/button';
 import { DatePickerWithRange } from '../ui/date-picker-range';
 import type { DateRange } from 'react-day-picker';
-import { subDays } from 'date-fns';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -19,8 +19,8 @@ export default function LaserPerformance() {
   const [laserOperators] = useLocalStorage<LaserOperator[]>('laserOperators', []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
-    to: new Date(),
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
   });
 
   const filteredLots = useMemo(() => {
