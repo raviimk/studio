@@ -277,7 +277,6 @@ body {
 
   /* Premium Diamond Facet Animation */
   .facet {
-    fill: currentColor;
     animation: shine 3s infinite ease-in-out;
   }
   .facet:nth-child(1) { animation-delay: 0s; }
