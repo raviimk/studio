@@ -123,25 +123,21 @@ const menuItems = [
   },
 ];
 
-const RoundDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
+const SparklingDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <polygon points="50,0 85.35,14.65 100,50 85.35,85.35 50,100 14.65,85.35 0,50 14.65,14.65" fill="currentColor"/>
-        <polygon points="50,0 14.65,14.65 25,25" fill="rgba(255,255,255,0.4)"/>
-        <polygon points="50,0 85.35,14.65 75,25" fill="rgba(255,255,255,0.4)"/>
-        <polygon points="100,50 85.35,14.65 75,25" fill="rgba(0,0,0,0.1)"/>
-        <polygon points="100,50 85.35,85.35 75,75" fill="rgba(0,0,0,0.1)"/>
-        <polygon points="50,100 85.35,85.35 75,75" fill="rgba(255,255,255,0.4)"/>
-        <polygon points="50,100 14.65,85.35 25,75" fill="rgba(255,255,255,0.4)"/>
-        <polygon points="0,50 14.65,85.35 25,75" fill="rgba(0,0,0,0.1)"/>
-        <polygon points="0,50 14.65,14.65 25,25" fill="rgba(0,0,0,0.1)"/>
-        <polygon points="50,86 25,75 50,50" fill="rgba(0,0,0,0.2)"/>
-        <polygon points="50,86 75,75 50,50" fill="rgba(0,0,0,0.2)"/>
-        <polygon points="15,65 25,75 50,50" fill="rgba(255,255,255,0.3)"/>
-        <polygon points="15,35 25,25 50,50" fill="rgba(255,255,255,0.3)"/>
-        <polygon points="85,35 75,25 50,50" fill="rgba(255,255,255,0.3)"/>
-        <polygon points="85,65 75,75 50,50" fill="rgba(255,255,255,0.3)"/>
-        <polygon points="50,14 25,25 50,50" fill="rgba(0,0,0,0.2)"/>
-        <polygon points="50,14 75,25 50,50" fill="rgba(0,0,0,0.2)"/>
+        <path d="M50 95L5 40h90L50 95z" fill="currentColor"/>
+        <path d="M50 95L5 40l45-35 45 35L50 95z" stroke="currentColor" strokeWidth="3" fill="none"/>
+        <path d="M5 40L25 40 50 5z" stroke="currentColor" strokeWidth="2" fill="none"/>
+        <path d="M95 40L75 40 50 5z" stroke="currentColor" strokeWidth="2" fill="none"/>
+        <path d="M25 40L50 95 75 40" stroke="currentColor" strokeWidth="2" fill="none"/>
+        {/* Sparkles */}
+        <path d="M5 25L15 35" stroke="currentColor" strokeWidth="3"/>
+        <path d="M10 15L20 25" stroke="currentColor" strokeWidth="3"/>
+        <path d="M20 10L30 20" stroke="currentColor" strokeWidth="3"/>
+        
+        <path d="M95 25L85 35" stroke="currentColor" strokeWidth="3"/>
+        <path d="M90 15L80 25" stroke="currentColor" strokeWidth="3"/>
+        <path d="M80 10L70 20" stroke="currentColor" strokeWidth="3"/>
     </svg>
 );
 
@@ -183,7 +179,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span>ATIXE DIAM</span>
                  <span className="relative w-[1ch] h-[1em] inline-flex items-center justify-center">
                     <span className="absolute inset-0 animate-text-o-out flex items-center justify-center">O</span>
-                    <RoundDiamondIcon className="absolute m-auto h-[0.7em] w-[0.7em] animate-diamond-in text-primary-foreground" />
+                    <SparklingDiamondIcon className="absolute m-auto h-[0.7em] w-[0.7em] animate-diamond-in text-primary-foreground" />
                 </span>
                 <span>ND</span>
               </h1>
