@@ -23,6 +23,7 @@ import {
   TestTubeDiagonal,
   Box,
   ClipboardCheck,
+  Wrench,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -90,34 +91,16 @@ const menuItems = [
     ],
   },
   {
-    label: 'Box Sorting',
-    href: '/box-sorting',
-    icon: Box,
-  },
-  {
-    label: 'Packet Verifier',
-    href: '/packet-verifier',
-    icon: ListTodo,
-  },
-   {
-    label: 'Kapan Verifier',
-    href: '/kapan-verifier',
-    icon: ClipboardCheck,
-  },
-  {
-    label: 'Packet Reassignment',
-    href: '/reassignment',
-    icon: Replace,
-  },
-  {
-    label: 'Packet History',
-    href: '/packet-history',
-    icon: History,
-  },
-  {
-    label: 'Kapan Checker',
-    href: '/kapan-checker',
-    icon: ClipboardCheck,
+    label: "Tools",
+    icon: Wrench,
+    subItems: [
+      { label: 'Box Sorting', href: '/box-sorting', icon: Box, },
+      { label: 'Packet Verifier', href: '/packet-verifier', icon: ListTodo, },
+      { label: 'Kapan Verifier', href: '/kapan-verifier', icon: ClipboardCheck, },
+      { label: 'Packet Reassignment', href: '/reassignment', icon: Replace, },
+      { label: 'Packet History', href: '/packet-history', icon: History, },
+      { label: 'Kapan Checker', href: '/kapan-checker', icon: ClipboardCheck, },
+    ]
   },
    {
     label: 'Reports Center',
