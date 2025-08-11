@@ -174,7 +174,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span>ATIXE DIAM</span>
                  <span className="relative w-[1.5ch] h-[1em] inline-flex items-center justify-center">
                     <span className="absolute inset-0 animate-text-o-out flex items-center justify-center">O</span>
-                    <PremiumDiamondIcon className="absolute m-auto h-[0.9em] w-[0.9em] animate-diamond-in" style={{fill: 'hsl(var(--primary-foreground))'}} />
+                    <PremiumDiamondIcon className="absolute m-auto h-[0.9em] w-[0.9em] animate-diamond-in" style={{fill: 'hsl(var(--foreground))'}} />
                 </span>
                 <span>ND</span>
               </h1>
