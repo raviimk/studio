@@ -256,4 +256,21 @@ body {
     0% { transform: translateY(-100%); }
     50%, 100% { transform: translateY(200%); }
   }
+
+  /* Title 'O' to Diamond Animation */
+  @keyframes text-o-out {
+    0%, 20% { opacity: 1; transform: scale(1); }
+    40%, 100% { opacity: 0; transform: scale(0.5); }
+  }
+  .animate-text-o-out {
+    animation: text-o-out 4s ease-in-out infinite;
+  }
+  @keyframes diamond-in {
+    0%, 30% { opacity: 0; transform: scale(0.3) rotate(-45deg); }
+    50%, 90% { opacity: 1; transform: scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: scale(0.3) rotate(45deg); }
+  }
+  .animate-diamond-in {
+    animation: diamond-in 4s ease-in-out infinite;
+  }
 }

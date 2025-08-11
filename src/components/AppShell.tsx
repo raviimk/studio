@@ -156,8 +156,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Link>
             </Button>
             <div className="flex flex-col">
-              <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up cursor-pointer" onClick={resetDeleteButton}>
-                ATIXE DIAMOND
+              <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up cursor-pointer flex items-center" onClick={resetDeleteButton}>
+                <span>ATIXE DIAM</span>
+                <span className="relative w-[1ch] h-[1em]">
+                  <span className="absolute inset-0 animate-text-o-out">O</span>
+                  <Diamond className="absolute inset-0 m-auto h-[0.6em] w-[0.6em] animate-diamond-in" />
+                </span>
+                <span>ND</span>
               </h1>
               <p 
                 className="text-xs italic text-muted-foreground animate-fade-in-slide-up tracking-wider" 
