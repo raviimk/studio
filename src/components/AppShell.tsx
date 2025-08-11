@@ -123,44 +123,18 @@ const menuItems = [
   },
 ];
 
-const SparklingDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 120 120"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="black"
-    stroke="black"
-    {...props}
-  >
-    {/* Diamond shape */}
-    <path
-      d="M60 100 L20 40 L40 20 L80 20 L100 40 Z"
-      fill="black"
-    />
-    <path
-      d="M20 40 L60 100 L100 40 L80 20 L40 20 Z"
-      fill="none"
-      stroke="black"
-      strokeWidth="3"
-    />
-    {/* Facet lines */}
-    <path d="M40 20 L60 40 L80 20" stroke="black" strokeWidth="3" fill="none" />
-    <path d="M60 40 L60 100" stroke="black" strokeWidth="3" fill="none" />
-    <path d="M40 20 L60 100" stroke="black" strokeWidth="3" fill="none" />
-    <path d="M80 20 L60 100" stroke="black" strokeWidth="3" fill="none" />
-
-    {/* Sparkle lines left */}
-    <path d="M10 50 L20 45" stroke="black" strokeWidth="3" />
-    <path d="M8 40 L18 38" stroke="black" strokeWidth="3" />
-    <path d="M12 30 L22 32" stroke="black" strokeWidth="3" />
-
-    {/* Sparkle lines right */}
-    <path d="M110 50 L100 45" stroke="black" strokeWidth="3" />
-    <path d="M112 40 L102 38" stroke="black" strokeWidth="3" />
-    <path d="M108 30 L98 32" stroke="black" strokeWidth="3" />
+const PremiumDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 253 207" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <polygon className="facet" points="94,80 82,0 60,50" />
+    <polygon className="facet" points="118,87 112,20 61,61" />
+    <polygon className="facet" points="126,95 51,80 162,80" />
+    <polygon className="facet" points="126,107 119,207 51,126" />
+    <polygon className="facet" points="127,82 158,220 162,127" />
+    <polygon className="facet" points="127,127 134,207 162,127" />
+    <polygon className="facet" points="159,0 171,0 253,62 203,62" />
+    <polygon className="facet" points="135,127 141,227 163,141" />
   </svg>
 );
-
-
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -198,9 +172,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex flex-col">
               <h1 className="font-display text-lg font-bold truncate animate-fade-in-slide-up cursor-pointer flex items-center" onClick={resetDeleteButton}>
                 <span>ATIXE DIAM</span>
-                 <span className="relative w-[1ch] h-[1em] inline-flex items-center justify-center">
+                 <span className="relative w-[1.5ch] h-[1em] inline-flex items-center justify-center">
                     <span className="absolute inset-0 animate-text-o-out flex items-center justify-center">O</span>
-                    <SparklingDiamondIcon className="absolute m-auto h-[0.7em] w-[0.7em] animate-diamond-in text-primary-foreground" />
+                    <PremiumDiamondIcon className="absolute m-auto h-[0.9em] w-[0.9em] animate-diamond-in text-primary-foreground fill-current" />
                 </span>
                 <span>ND</span>
               </h1>
