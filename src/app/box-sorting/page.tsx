@@ -315,9 +315,16 @@ export default function BoxSortingPage() {
     };
     const gujaratiShape = shapeMap[firstPacket.shape.toUpperCase()] || firstPacket.shape;
 
-    const totalPolishWeight = packetsToPrint.reduce((sum, p) => sum + p.polishWeight, 0);
-    const totalRoughWeight = packetsToPrint.reduce((sum, p) => sum + p.roughWeight, 0);
-    const totalPackets = packetsToPrint.length;
+    const rawRoughWeight = packetsToPrint.reduce((sum, p) => sum + p.roughWeight, 0);
+    const rawPolishWeight = packetsToPrint.reduce((sum, p) => sum + p.polishWeight, 0);
+
+    const totalRoughWeight = rawRoughWeight.toFixed(3);
+    const totalPolishWeight = rawPolishWeight.toFixed(3);
+    const percentage = rawRoughWeight !== 0 ? ((rawPolishWeight / rawRoughWeight) * 100).toFixed(2) : '0.00';
+    // Assuming 'main' packets are those ending in '-A' case-insensitive.
+    const mainPackets = packetsToPrint.filter(p => /[Aa]$/.test(p.packetNumber)).length;
+    const grandTotalPcs = packetsToPrint.length;
+    const showPercentage = sortingMode === 'cent';
 
     const html = `
         <html><head><title>Receipt</title><style>
@@ -328,8 +335,12 @@ export default function BoxSortingPage() {
         .left-block{text-align:left;}.right-block{text-align:right;}
         </style></head><body>
         <div class="top"><div>કાપણ: ${kapan}</div><div>${gujaratiShape} ${title}</div></div>
-        <div class="bottom"><div class="left-block"><div>તૈ.વજન: ${totalPolishWeight.toFixed(3)}</div></div>
-        <div class="right-block"><div>થાન: ${totalPackets}</div><div>કા.વજન: ${totalRoughWeight.toFixed(3)}</div></div></div>
+        <div class="bottom"><div class="left-block"><div>તૈ.વજન: ${totalPolishWeight}</div>
+        ${showPercentage ? `<div>ટકા: ${percentage}%</div>` : ''}
+        </div>
+        <div class="right-block">
+        ${showPercentage ? `<div>મેન: ${mainPackets}</div>` : ''}
+        <div>થાન: ${grandTotalPcs}</div><div>કા.વજન: ${totalRoughWeight}</div></div></div>
         </body></html>`;
 
     const printWindow = window.open('', '', 'width=400,height=600');
