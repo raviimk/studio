@@ -40,6 +40,7 @@ export default function RecentLaserEntriesPage() {
         lotNumber: lot.lotNumber,
         kapanNumber: lot.kapanNumber,
         packetCount: lot.packetCount,
+        subPacketCount: lot.subPacketCount,
         tensionType: lot.tensionType,
         entryDate: lot.entryDate,
     });
@@ -69,7 +70,7 @@ export default function RecentLaserEntriesPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditFormData(prev => ({ ...prev, [name]: name === 'packetCount' ? parseInt(value, 10) : value }));
+    setEditFormData(prev => ({ ...prev, [name]: value === '' ? undefined : parseInt(value, 10) }));
   };
   
   const handleSelectChange = (value: string) => {
@@ -117,7 +118,8 @@ export default function RecentLaserEntriesPage() {
                     <TableHead>Kapan No.</TableHead>
                     <TableHead>Tension</TableHead>
                     <TableHead>Machine</TableHead>
-                    <TableHead>Packets</TableHead>
+                    <TableHead>Main Pkts</TableHead>
+                    <TableHead>Sub Pkts</TableHead>
                     <TableHead>Entry Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -139,7 +141,8 @@ export default function RecentLaserEntriesPage() {
                                 </Select>
                             </TableCell>
                             <TableCell>{laserMappings.find(m => m.tensionType === editFormData.tensionType)?.machine || 'N/A'}</TableCell>
-                            <TableCell><Input type="number" name="packetCount" value={editFormData.packetCount} onChange={handleInputChange} className="h-8 w-20" /></TableCell>
+                            <TableCell><Input type="number" name="packetCount" value={editFormData.packetCount || ''} onChange={handleInputChange} className="h-8 w-20" /></TableCell>
+                             <TableCell><Input type="number" name="subPacketCount" value={editFormData.subPacketCount || ''} onChange={handleInputChange} className="h-8 w-20" /></TableCell>
                             <TableCell>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -175,6 +178,7 @@ export default function RecentLaserEntriesPage() {
                             <TableCell>{lot.tensionType}</TableCell>
                             <TableCell>{lot.machine}</TableCell>
                             <TableCell>{lot.packetCount}</TableCell>
+                            <TableCell>{lot.subPacketCount ?? 'N/A'}</TableCell>
                             <TableCell>{format(new Date(lot.entryDate), 'PPp')}</TableCell>
                             <TableCell>
                                 <Badge variant={lot.isReturned ? 'secondary' : 'destructive'}>
