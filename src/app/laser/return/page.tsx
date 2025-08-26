@@ -37,6 +37,7 @@ export default function ReturnLaserLotPage() {
   const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
   const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
   const [subPacketCount, setSubPacketCount] = useState<number | string>('');
+  const subPacketInputRef = useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
@@ -146,6 +147,12 @@ export default function ReturnLaserLotPage() {
       const timer = setTimeout(() => {
         setShowVictoryAnimation(false);
       }, 3000); // Animation lasts for 3 seconds
+      
+      // Focus the sub-packet input when it appears
+      setTimeout(() => {
+        subPacketInputRef.current?.focus();
+      }, 100);
+
       return () => clearTimeout(timer);
     }
   }, [allPacketsScanned]);
@@ -293,6 +300,7 @@ export default function ReturnLaserLotPage() {
                         <label htmlFor="sub-packets" className="font-medium">Total Sub Packets</label>
                         <Input
                           id="sub-packets"
+                          ref={subPacketInputRef}
                           type="number"
                           placeholder="Enter count of sub-packets..."
                           value={subPacketCount}
