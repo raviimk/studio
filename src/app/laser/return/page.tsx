@@ -133,6 +133,10 @@ export default function ReturnLaserLotPage() {
 
   const allPacketsScanned = useMemo(() => {
     if (!selectedLot) return false;
+    // For lots created before scanning was mandatory
+    if (!selectedLot.scannedPackets || selectedLot.scannedPackets.length === 0) {
+        return true;
+    }
     return selectedLot.packetCount === scannedInDialog.size;
   }, [selectedLot, scannedInDialog]);
   
@@ -145,6 +149,12 @@ export default function ReturnLaserLotPage() {
       return () => clearTimeout(timer);
     }
   }, [allPacketsScanned]);
+
+  const isConfirmDisabled = useMemo(() => {
+    if (!allPacketsScanned) return true;
+    const numSubPackets = parseInt(String(subPacketCount), 10);
+    return isNaN(numSubPackets) || numSubPackets < 0;
+  }, [allPacketsScanned, subPacketCount]);
   
   if (!scanSettings.laser) {
       return (
@@ -275,7 +285,7 @@ export default function ReturnLaserLotPage() {
                    <div className="mt-4">
                        <Progress value={(scannedInDialog.size / (selectedLot?.packetCount || 1)) * 100} />
                        <p className="text-sm text-center mt-2 text-muted-foreground">
-                           Verified: {scannedInDialog.size} / {selectedLot?.packetCount}
+                           Verified: {scannedInDialog.size} / {selectedLot?.packetCount || 0}
                        </p>
                    </div>
                    {allPacketsScanned && (
@@ -318,7 +328,7 @@ export default function ReturnLaserLotPage() {
                 </div>
               </div>
               <div className="flex justify-end mt-4">
-                  <Button onClick={handleReturnLot} disabled={!allPacketsScanned}>
+                  <Button onClick={handleReturnLot} disabled={isConfirmDisabled}>
                       Confirm Return
                   </Button>
               </div>
