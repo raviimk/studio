@@ -160,7 +160,8 @@ export default function TodaysProductionReport() {
             if (!summary[operator]) {
                 summary[operator] = { operator, pcs: 0, date: format(parseISO(l.returnDate!), 'PP') };
             }
-            summary[operator].pcs += l.packetCount;
+            // Prioritize subPacketCount, fall back to packetCount
+            summary[operator].pcs += l.subPacketCount ?? l.packetCount;
         });
         
         return Object.values(summary);
