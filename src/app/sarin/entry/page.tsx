@@ -31,10 +31,10 @@ const formSchema = z.object({
   lotNumber: z.string().min(1, 'Lot number is required.'),
   sarinMainPackets: z.array(z.any()).optional(),
   mainPacketNumber: z.coerce.number().min(1, "Main Laser packets are required."),
-  packetCount: z.coerce.number().min(1, 'Packet count must be at least 1.'),
+  packetCount: z.coerce.number().min(0, 'Packet count must be a positive number.'),
   hasJiram: z.boolean().default(false),
   jiramCount: z.coerce.number().optional(),
-}).refine(data => !data.hasJiram || (data.jiramCount && data.jiramCount > 0), {
+}).refine(data => !data.hasJiram || (data.jiramCount && data.jiramCount >= 0), {
   message: "Jiram packet count is required if Jiram is checked.",
   path: ["jiramCount"],
 });
@@ -48,6 +48,7 @@ export default function SarinPacketEntryPage() {
 
   const [laserLotLoading, setLaserLotLoading] = useState(false);
   const [foundLaserLot, setFoundLaserLot] = useState<boolean>(false);
+  const [initialPacketCount, setInitialPacketCount] = useState(0);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,11 +66,12 @@ export default function SarinPacketEntryPage() {
     },
   });
   
-  const { control, watch, setValue } = form;
+  const { control, watch, setValue, getValues } = form;
   const watchKapan = watch('kapanNumber');
   const watchLot = watch('lotNumber');
   const selectedOperatorName = watch('operator');
   const hasJiram = watch('hasJiram');
+  const jiramCount = watch('jiramCount');
 
 
   useEffect(() => {
@@ -87,17 +89,22 @@ export default function SarinPacketEntryPage() {
   useEffect(() => {
     if (watchKapan && watchLot) {
       setLaserLotLoading(true);
-      const found = laserLots.find(l => l.kapanNumber === watchKapan && l.lotNumber === watchLot);
+      const found = laserLots.find(l => l.kapanNumber === watchKapan && l.lotNumber === watchLot && l.isReturned);
       
       setTimeout(() => { // simulate loading
         if (found) {
             setFoundLaserLot(true);
             setValue('sarinMainPackets', found.scannedPackets || []);
             setValue('mainPacketNumber', found.scannedPackets?.length || 0);
+            const subPackets = found.subPacketCount || 0;
+            setValue('packetCount', subPackets);
+            setInitialPacketCount(subPackets); // Store initial value
         } else {
             setFoundLaserLot(false);
             setValue('sarinMainPackets', []);
             setValue('mainPacketNumber', 0);
+            setValue('packetCount', 0);
+            setInitialPacketCount(0);
         }
         setLaserLotLoading(false);
       }, 500);
@@ -106,8 +113,20 @@ export default function SarinPacketEntryPage() {
         setFoundLaserLot(false);
         setValue('sarinMainPackets', []);
         setValue('mainPacketNumber', 0);
+        setValue('packetCount', 0);
+        setInitialPacketCount(0);
     }
   }, [watchKapan, watchLot, laserLots, setValue]);
+  
+  useEffect(() => {
+    if (hasJiram) {
+        const jiramVal = jiramCount || 0;
+        const newPacketCount = initialPacketCount - jiramVal;
+        setValue('packetCount', newPacketCount >= 0 ? newPacketCount : 0);
+    } else {
+        setValue('packetCount', initialPacketCount);
+    }
+  }, [hasJiram, jiramCount, initialPacketCount, setValue]);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -144,6 +163,7 @@ export default function SarinPacketEntryPage() {
         jiramCount: 0,
     });
     setFoundLaserLot(false);
+    setInitialPacketCount(0);
     form.setFocus('kapanNumber');
   }
 
@@ -194,7 +214,7 @@ export default function SarinPacketEntryPage() {
 
 
                 <FormField control={control} name="packetCount" render={({ field }) => (
-                  <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Packet Count (Sub-Packets)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="space-y-2">
                   <FormField control={control} name="hasJiram" render={({ field }) => (
@@ -212,8 +232,8 @@ export default function SarinPacketEntryPage() {
               </div>
                {!foundLaserLot && watchKapan && watchLot && !laserLotLoading && (
                  <Alert variant="destructive">
-                    <AlertTitle>Laser Lot Not Found</AlertTitle>
-                    <AlertDescription>No matching Laser Lot found. You cannot create a Sarin entry without a valid parent Laser Lot.</AlertDescription>
+                    <AlertTitle>Returned Laser Lot Not Found</AlertTitle>
+                    <AlertDescription>No matching **returned** Laser Lot found. You cannot create a Sarin entry without a valid parent Laser Lot.</AlertDescription>
                 </Alert>
               )}
               <Button type="submit" disabled={!foundLaserLot}>Create Entry</Button>

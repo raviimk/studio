@@ -40,6 +40,7 @@ export interface LaserLot {
   returnedBy?: string;
   returnDate?: string;
   scannedPackets?: ScannedPacket[];
+  subPacketCount?: number;
 }
 
 export interface SarinOperator {

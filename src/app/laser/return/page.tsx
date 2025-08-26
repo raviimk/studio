@@ -36,6 +36,7 @@ export default function ReturnLaserLotPage() {
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
   const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
+  const [subPacketCount, setSubPacketCount] = useState<number | string>('');
 
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function ReturnLaserLotPage() {
     setScannedInDialog(new Set());
     setScanInput('');
     setLastScanned(null);
+    setSubPacketCount('');
     itemRefs.current.clear();
     setIsDialogOpen(true);
   };
@@ -93,9 +95,15 @@ export default function ReturnLaserLotPage() {
   const handleReturnLot = () => {
     if (!selectedLot || !returningOperator) return;
 
+    const numSubPackets = typeof subPacketCount === 'string' ? parseInt(subPacketCount, 10) : subPacketCount;
+    if (isNaN(numSubPackets) || numSubPackets < 0) {
+        toast({ variant: 'destructive', title: 'Invalid Sub Packet Count', description: 'Please enter a valid number for sub packets.'});
+        return;
+    }
+
     const updatedLots = laserLots.map(lot =>
       lot.id === selectedLot.id
-        ? { ...lot, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() }
+        ? { ...lot, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString(), subPacketCount: numSubPackets }
         : lot
     );
     setLaserLots(updatedLots);
@@ -105,6 +113,7 @@ export default function ReturnLaserLotPage() {
     setIsDialogOpen(false);
     setSelectedLot(null);
     setScannedInDialog(new Set());
+    setSubPacketCount('');
   };
   
    const handleLegacyReturn = (lotId: string) => {
@@ -269,6 +278,18 @@ export default function ReturnLaserLotPage() {
                            Verified: {scannedInDialog.size} / {selectedLot?.packetCount}
                        </p>
                    </div>
+                   {allPacketsScanned && (
+                     <div className="mt-4 space-y-2 animate-in fade-in-50">
+                        <label htmlFor="sub-packets" className="font-medium">Total Sub Packets</label>
+                        <Input
+                          id="sub-packets"
+                          type="number"
+                          placeholder="Enter count of sub-packets..."
+                          value={subPacketCount}
+                          onChange={(e) => setSubPacketCount(e.target.value)}
+                        />
+                     </div>
+                   )}
                 </div>
                 <div className="border rounded-md max-h-64 overflow-y-auto">
                    <Table>
