@@ -26,11 +26,15 @@ export default function LaserPerformance() {
   const filteredLots = useMemo(() => {
     if (!laserLots) return [];
     return laserLots.filter(lot => {
-      const lotDate = new Date(lot.entryDate);
+      // Use returnDate for filtering if the lot is returned, otherwise use entryDate.
+      const relevantDate = lot.isReturned && lot.returnDate ? new Date(lot.returnDate) : new Date(lot.entryDate);
+
       const isOperatorMatch = selectedOperator === 'all' || lot.returnedBy === selectedOperator;
+      
       const isDateMatch = dateRange?.from
-        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
+        ? relevantDate >= startOfDay(dateRange.from) && relevantDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
+        
       return isOperatorMatch && isDateMatch;
     });
   }, [laserLots, selectedOperator, dateRange]);
