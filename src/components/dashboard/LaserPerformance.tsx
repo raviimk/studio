@@ -91,7 +91,7 @@ export default function LaserPerformance() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle>Total Lots Made</CardTitle>
+            <CardTitle>Total Lots </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{totalLots}</p>
@@ -99,7 +99,7 @@ export default function LaserPerformance() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Total Main Packets</CardTitle>
+            <CardTitle>Total Main Packets / Dai</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{totalMainPackets}</p>
@@ -107,7 +107,7 @@ export default function LaserPerformance() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Total Sub Packets</CardTitle>
+            <CardTitle>Total Mkbl Psc</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{totalPackets}</p>
