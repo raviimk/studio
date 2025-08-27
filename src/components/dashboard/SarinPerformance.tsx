@@ -72,6 +72,7 @@ export default function SarinPerformance() {
       .slice(0, 10); // Get top 10
   }, [filteredPackets]);
   
+  const totalMainPackets = filteredPackets.reduce((sum, p) => sum + (p.mainPacketNumber || 0), 0);
   const totalPackets = filteredPackets.reduce((sum, p) => sum + (p.packetCount || 0), 0);
   const totalJiram = filteredPackets.reduce((sum, p) => sum + (p.jiramCount || 0), 0);
   const returnedLots = filteredPackets.filter(p => p.isReturned).length;
@@ -106,10 +107,18 @@ export default function SarinPerformance() {
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle>Total Packets</CardTitle>
+            <CardTitle>Total Main Packets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold">{totalMainPackets}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Sub Packets</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{totalPackets}</p>
