@@ -31,8 +31,8 @@ export default function FourPWorkReport() {
       if (!lot.isReturnedToFourP || !lot.returnDate) return false;
       const lotDate = new Date(lot.returnDate);
       const isOperatorMatch = selectedOperator === 'all' || lot.fourPOperator === selectedOperator;
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to)
+      const isDateMatch = dateRange?.from
+        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
       
       const searchLower = searchTerm.toLowerCase();

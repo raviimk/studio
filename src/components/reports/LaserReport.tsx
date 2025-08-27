@@ -32,8 +32,8 @@ export default function LaserReport() {
       const lotDate = new Date(lot.entryDate);
       const isOperatorMatch = selectedOperator === 'all' || lot.returnedBy === selectedOperator;
        const isStatusMatch = returnStatus === 'all' || (returnStatus === 'returned' && lot.isReturned) || (returnStatus === 'not-returned' && !lot.isReturned);
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to)
+      const isDateMatch = dateRange?.from
+        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
       
       const searchLower = searchTerm.toLowerCase();
@@ -42,7 +42,7 @@ export default function LaserReport() {
         lot.kapanNumber.toLowerCase().includes(searchLower);
 
       return isOperatorMatch && isStatusMatch && isDateMatch && isSearchMatch;
-    }).sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+    }).sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.date).getTime());
   }, [laserLots, selectedOperator, returnStatus, dateRange, searchTerm]);
   
   const handlePrint = () => window.print();

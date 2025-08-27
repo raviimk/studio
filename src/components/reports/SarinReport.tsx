@@ -32,8 +32,8 @@ export default function SarinReport() {
       const packetDate = new Date(p.date);
       const isOperatorMatch = selectedOperator === 'all' || p.operator === selectedOperator;
       const isStatusMatch = returnStatus === 'all' || (returnStatus === 'returned' && p.isReturned) || (returnStatus === 'not-returned' && !p.isReturned);
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? packetDate >= startOfDay(dateRange.from) && packetDate <= endOfDay(dateRange.to)
+      const isDateMatch = dateRange?.from
+        ? packetDate >= startOfDay(dateRange.from) && packetDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
         
       const searchLower = searchTerm.toLowerCase();

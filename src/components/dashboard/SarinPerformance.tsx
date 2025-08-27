@@ -9,7 +9,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePickerWithPresets } from '../ui/date-picker-presets';
 import type { DateRange } from 'react-day-picker';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const COLORS = [
@@ -34,8 +34,8 @@ export default function SarinPerformance() {
     return sarinPackets.filter(packet => {
       const packetDate = new Date(packet.date);
       const isOperatorMatch = selectedOperator === 'all' || packet.operator === selectedOperator;
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? packetDate >= dateRange.from && packetDate <= dateRange.to
+       const isDateMatch = dateRange?.from
+        ? packetDate >= startOfDay(dateRange.from) && packetDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
       return isOperatorMatch && isDateMatch;
     });

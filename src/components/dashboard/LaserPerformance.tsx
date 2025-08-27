@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '../ui/button';
 import { DatePickerWithPresets } from '../ui/date-picker-presets';
 import type { DateRange } from 'react-day-picker';
-import { startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"];
 
@@ -28,8 +28,8 @@ export default function LaserPerformance() {
     return laserLots.filter(lot => {
       const lotDate = new Date(lot.entryDate);
       const isOperatorMatch = selectedOperator === 'all' || lot.returnedBy === selectedOperator;
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? lotDate >= dateRange.from && lotDate <= dateRange.to
+      const isDateMatch = dateRange?.from
+        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
       return isOperatorMatch && isDateMatch;
     });

@@ -31,8 +31,8 @@ export default function FourPTechingReport() {
     return fourPTechingLots.filter(lot => {
       const lotDate = new Date(lot.entryDate);
       const isOperatorMatch = selectedOperator === 'all' || lot.techingOperator === selectedOperator;
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to)
+      const isDateMatch = dateRange?.from
+        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
       
       const searchLower = searchTerm.toLowerCase();

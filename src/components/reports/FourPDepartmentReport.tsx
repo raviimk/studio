@@ -33,8 +33,8 @@ export default function FourPDepartmentReport() {
       if (!lot.department) return false;
 
       const lotDate = new Date(lot.entryDate);
-      const isDateMatch = dateRange?.from && dateRange?.to
-        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to)
+      const isDateMatch = dateRange?.from
+        ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
       
       const searchLower = searchTerm.toLowerCase();
