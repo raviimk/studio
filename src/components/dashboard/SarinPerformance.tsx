@@ -53,6 +53,24 @@ export default function SarinPerformance() {
     });
     return Object.values(dataByOperator);
   }, [filteredPackets]);
+
+  const jiramByKapanData = useMemo(() => {
+    const dataByKapan: { [key: string]: { kapanNumber: string; jiramCount: number } } = {};
+    if (!filteredPackets) return [];
+
+    filteredPackets.forEach(packet => {
+      if (packet.jiramCount && packet.jiramCount > 0) {
+        if (!dataByKapan[packet.kapanNumber]) {
+          dataByKapan[packet.kapanNumber] = { kapanNumber: packet.kapanNumber, jiramCount: 0 };
+        }
+        dataByKapan[packet.kapanNumber].jiramCount += packet.jiramCount;
+      }
+    });
+
+    return Object.values(dataByKapan)
+      .sort((a, b) => b.jiramCount - a.jiramCount)
+      .slice(0, 10); // Get top 10
+  }, [filteredPackets]);
   
   const totalPackets = filteredPackets.reduce((sum, p) => sum + (p.packetCount || 0), 0);
   const totalJiram = filteredPackets.reduce((sum, p) => sum + (p.jiramCount || 0), 0);
@@ -115,7 +133,7 @@ export default function SarinPerformance() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <div className="glass-card p-4">
           <h3 className="font-headline text-lg font-semibold text-foreground/90 p-2">Packets by Operator</h3>
           <div className="h-[300px]">
@@ -194,6 +212,34 @@ export default function SarinPerformance() {
                     />
                     <Legend />
                 </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+       <div className="grid gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Top 10 Kapans by Jiram Count</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[350px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={jiramByKapanData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" />
+                <YAxis dataKey="kapanNumber" type="category" width={60} />
+                <Tooltip 
+                   cursor={{fill: 'hsla(var(--card) / 0.5)'}}
+                   contentStyle={{
+                       background: 'hsla(var(--background) / 0.8)',
+                       backdropFilter: 'blur(4px)',
+                       border: '1px solid hsla(var(--border) / 0.5)',
+                       borderRadius: 'var(--radius)'
+                   }}
+                />
+                <Legend />
+                <Bar dataKey="jiramCount" name="Jiram Count" fill="hsl(var(--chart-2))" barSize={20} />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
