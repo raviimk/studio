@@ -54,7 +54,7 @@ export default function LaserPerformance() {
   }, [filteredLots]);
   
   const totalLots = filteredLots.length;
-  const totalPackets = filteredLots.reduce((sum, lot) => sum + (lot.packetCount || 0), 0);
+  const totalPackets = filteredLots.reduce((sum, lot) => sum + (lot.subPacketCount ?? lot.packetCount), 0);
   const returnedLots = filteredLots.filter(lot => lot.isReturned).length;
 
   const topPerformers = [...performanceData].sort((a, b) => b.packets - a.packets).slice(0, 5);
