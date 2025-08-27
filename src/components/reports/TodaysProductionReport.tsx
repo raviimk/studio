@@ -45,20 +45,25 @@ export default function TodaysProductionReport() {
     const [sarinPackets] = useLocalStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
     const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
     const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-    const [chaluProgress, setChaluProgress] = useLocalStorage<ChaluProgress>(CHALU_SARIN_PROGRESS_KEY, {});
     const [productionHistory, setProductionHistory] = useLocalStorage<T.ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
 
     const [todaysConfirmedChalu, setTodaysConfirmedChalu] = useState<Record<string, T.ProductionEntry>>({});
+    const [chaluInputValues, setChaluInputValues] = useState<Record<string, string>>({});
 
     const todayString = format(new Date(), 'yyyy-MM-dd');
 
     useEffect(() => {
         const todaysHistory = productionHistory[todayString] || [];
         const confirmedEntries: Record<string, T.ProductionEntry> = {};
+        const initialInputValues: Record<string, string> = {};
+        
         todaysHistory.forEach(entry => {
             confirmedEntries[entry.packetId] = entry;
+            initialInputValues[entry.packetId] = String(entry.pcs);
         });
+
         setTodaysConfirmedChalu(confirmedEntries);
+        setChaluInputValues(initialInputValues);
     }, [productionHistory, todayString]);
 
 
@@ -76,25 +81,18 @@ export default function TodaysProductionReport() {
         return { todaysReturnedSarin: returned, todaysChaluSarin: chalu };
     }, [sarinPackets]);
 
-    const handleChaluProgressChange = useCallback((packetId: string, packet: T.SarinPacket, value: string) => {
-        const count = parseInt(value, 10);
-        
-        setChaluProgress(prev => {
-             if (isNaN(count)) {
-                const newProgress = {...prev};
-                delete newProgress[packetId];
-                return newProgress;
-            }
-            const validatedCount = count < 0 ? 0 : Math.min(count, packet.packetCount);
-            return {
-                ...prev,
-                [packetId]: validatedCount
-            };
-        });
-    }, [setChaluProgress]);
+    const handleChaluInputChange = (packetId: string, value: string, max: number) => {
+        const numValue = parseInt(value, 10);
+        if (value === '') {
+            setChaluInputValues(prev => ({...prev, [packetId]: ''}));
+        } else if (!isNaN(numValue) && numValue >= 0) {
+             const validatedValue = Math.min(numValue, max);
+             setChaluInputValues(prev => ({...prev, [packetId]: String(validatedValue)}));
+        }
+    }
     
     const handleConfirmChalu = (packet: T.SarinPacket) => {
-        const packetsToConfirm = chaluProgress[packet.id] || 0;
+        const packetsToConfirm = parseInt(chaluInputValues[packet.id] || '0', 10);
         if (packetsToConfirm > 0) {
              const newEntry: T.ProductionEntry = {
                 operator: packet.operator,
@@ -255,7 +253,7 @@ export default function TodaysProductionReport() {
                                 <TableBody>
                                     {todaysChaluSarin.map(p => {
                                         const isConfirmed = !!todaysConfirmedChalu[p.id];
-                                        const todaysPcs = chaluProgress[p.id] || 0;
+                                        const todaysPcs = parseInt(chaluInputValues[p.id] || '0', 10);
                                         return (
                                         <TableRow key={p.id}>
                                             <TableCell>
@@ -268,9 +266,8 @@ export default function TodaysProductionReport() {
                                                     type="number" 
                                                     placeholder="0"
                                                     className="h-8"
-                                                    value={isConfirmed ? todaysConfirmedChalu[p.id].pcs : (chaluProgress[p.id] || '')}
-                                                    onChange={(e) => handleChaluProgressChange(p.id, p, e.target.value)}
-                                                    max={p.packetCount}
+                                                    value={chaluInputValues[p.id] || ''}
+                                                    onChange={(e) => handleChaluInputChange(p.id, e.target.value, p.packetCount)}
                                                     disabled={isConfirmed}
                                                 />
                                             </TableCell>
@@ -334,5 +331,3 @@ export default function TodaysProductionReport() {
         </div>
     );
 }
-
-    
