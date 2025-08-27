@@ -54,6 +54,7 @@ export default function LaserPerformance() {
   }, [filteredLots]);
   
   const totalLots = filteredLots.length;
+  const totalMainPackets = filteredLots.reduce((sum, lot) => sum + lot.packetCount, 0);
   const totalPackets = filteredLots.reduce((sum, lot) => sum + (lot.subPacketCount ?? lot.packetCount), 0);
   const returnedLots = filteredLots.filter(lot => lot.isReturned).length;
 
@@ -87,7 +88,7 @@ export default function LaserPerformance() {
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Total Lots Made</CardTitle>
@@ -98,7 +99,15 @@ export default function LaserPerformance() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Total Packets Handled</CardTitle>
+            <CardTitle>Total Main Packets</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold">{totalMainPackets}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Sub Packets</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{totalPackets}</p>
