@@ -7,7 +7,7 @@ import { FOURP_TECHING_LOTS_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/con
 import { FourPLot, FourPDepartmentSettings } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DatePickerWithRange } from '@/components/ui/date-picker-range';
+import { DatePickerWithPresets } from '@/components/ui/date-picker-presets';
 import type { DateRange } from 'react-day-picker';
 import { startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
@@ -94,7 +94,7 @@ export default function FourPDepartmentReport() {
             </div>
             <div className="">
               <label className="text-sm font-medium">Date Range</label>
-              <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+              <DatePickerWithPresets date={dateRange} setDate={setDateRange} />
             </div>
           </div>
           <Button onClick={handlePrint} className="mt-4">Print Report</Button>

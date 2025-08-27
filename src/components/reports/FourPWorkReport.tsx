@@ -8,7 +8,7 @@ import { FourPLot, FourPOperator } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/date-picker-range';
+import { DatePickerWithPresets } from '@/components/ui/date-picker-presets';
 import type { DateRange } from 'react-day-picker';
 import { startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
@@ -64,7 +64,7 @@ export default function FourPWorkReport() {
           <CardDescription>Analyze all completed 4P work entries.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium">4P Operator</label>
               <Select value={selectedOperator} onValueChange={setSelectedOperator}>
@@ -75,9 +75,9 @@ export default function FourPWorkReport() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="md:col-span-2">
+            <div className="">
               <label className="text-sm font-medium">Date Range</label>
-              <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+              <DatePickerWithPresets date={dateRange} setDate={setDateRange} />
             </div>
           </div>
            <div className="pt-2">

@@ -7,7 +7,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SarinPacket, SarinOperator } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithRange } from '../ui/date-picker-range';
+import { DatePickerWithPresets } from '../ui/date-picker-presets';
 import type { DateRange } from 'react-day-picker';
 import { startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -66,7 +66,7 @@ export default function SarinPerformance() {
         <CardHeader>
           <CardTitle>Filters</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col md:flex-row gap-4">
+        <CardContent className="grid md:grid-cols-2 gap-4">
            <div className="flex-1">
              <label className="text-sm font-medium">Operator</label>
             <Select value={selectedOperator} onValueChange={setSelectedOperator}>
@@ -83,7 +83,7 @@ export default function SarinPerformance() {
           </div>
           <div className="flex-1">
             <label className="text-sm font-medium">Date Range</label>
-            <DatePickerWithRange date={dateRange} setDate={setDateRange} />
+            <DatePickerWithPresets date={dateRange} setDate={setDateRange} />
           </div>
         </CardContent>
       </Card>
