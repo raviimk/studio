@@ -40,6 +40,20 @@ const formSchema = z.object({
   path: ["jiramCount"],
 });
 
+const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <polygon points="50,5 95,40 50,95 5,40" stroke="hsl(var(--primary) / 0.8)" strokeWidth="2" fill="hsl(var(--primary) / 0.1)"/>
+        <line x1="50" y1="5" x2="50" y2="95" stroke="hsl(var(--primary) / 0.4)" strokeWidth="1"/>
+        <line x1="5" y1="40" x2="95" y2="40" stroke="hsl(var(--primary) / 0.4)" strokeWidth="1"/>
+        <polygon points="50,5 25,40 50,60 75,40" fill="hsl(var(--primary) / 0.2)"/>
+        <line x1="25" y1="40" x2="50" y2="95" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
+        <line x1="75" y1="40" x2="50" y2="95" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
+        <line x1="5" y1="40" x2="50" y2="60" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
+        <line x1="95" y1="40" x2="50" y2="60" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
+    </svg>
+);
+
+
 export default function SarinPacketEntryPage() {
   const { toast } = useToast();
   const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
@@ -172,12 +186,12 @@ export default function SarinPacketEntryPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Sarin Packet Entry" description="Create a new entry for Sarin packets." />
-      <Card className="max-w-2xl mx-auto glass-card">
+      <Card className="max-w-2xl mx-auto">
         <CardHeader>
             <CardTitle>
                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-primary" />
-                     <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                     <span>
                         Packet Details
                     </span>
                  </div>
@@ -226,7 +240,7 @@ export default function SarinPacketEntryPage() {
                 )} />
                 <div className="space-y-2">
                 <FormField control={control} name="hasJiram" render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border bg-card/50 p-4">
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                     <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     <div className="space-y-1 leading-none"><FormLabel>Jiram Check</FormLabel></div>
                     </FormItem>
@@ -239,10 +253,9 @@ export default function SarinPacketEntryPage() {
                 </div>
               </div>
                 {watchKapan && watchLot && !laserLotLoading && (
-                    <div className="animate-simple-fade-in mt-4">
+                    <div className="mt-4">
                         {foundLaserLot ? (
                             <Alert className="border-green-500 text-green-700 dark:text-green-300 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-green-500 animate-[scan-light_2s_ease-in-out_infinite]" />
                                 <CheckCircle className="h-4 w-4" />
                                 <AlertTitle>Laser Lot Found & Verified!</AlertTitle>
                                 <AlertDescription>Packet counts have been automatically populated. You may now proceed.</AlertDescription>
@@ -263,6 +276,10 @@ export default function SarinPacketEntryPage() {
           </Form>
         </CardContent>
       </Card>
+
+       <div className="flex justify-center items-center mt-8">
+            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-slow" />
+       </div>
     </div>
   );
 }
