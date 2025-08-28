@@ -48,7 +48,7 @@ export default function SarinPacketEntryPage() {
   const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
 
   const [laserLotLoading, setLaserLotLoading] = useState(false);
-  const [foundLaserLot, setFoundLaserLot] = useState<boolean>(false);
+  const [foundLaserLot, setFoundLaserLot] = useState(false);
   const [initialPacketCount, setInitialPacketCount] = useState(0);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -169,12 +169,6 @@ export default function SarinPacketEntryPage() {
     form.setFocus('kapanNumber');
   }
 
-  const FormFieldAnimated = ({ delay, children }: {delay: number, children: React.ReactNode}) => (
-    <div className="animate-simple-fade-in" style={{animationDelay: `${delay}ms`}}>
-        {children}
-    </div>
-  )
-
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
       <PageHeader title="Sarin Packet Entry" description="Create a new entry for Sarin packets." />
@@ -193,74 +187,56 @@ export default function SarinPacketEntryPage() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
-                <FormFieldAnimated delay={100}>
-                    <FormField control={control} name="senderName" render={({ field }) => (
-                    <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </FormFieldAnimated>
-                 <FormFieldAnimated delay={150}>
-                    <FormField control={control} name="operator" render={({ field }) => (
+                <FormField control={control} name="senderName" render={({ field }) => (
+                <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={control} name="operator" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Operator Name</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select an operator" /></SelectTrigger></FormControl>
+                    <SelectContent>{sarinOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} />
+                <FormField control={control} name="machine" render={({ field }) => (
+                <FormItem><FormLabel>Machine Number</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={control} name="kapanNumber" render={({ field }) => (
+                <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={control} name="lotNumber" render={({ field }) => (
+                <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={control} name="mainPacketNumber" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Operator Name</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select an operator" /></SelectTrigger></FormControl>
-                        <SelectContent>{sarinOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <FormMessage />
+                    <FormLabel>Main Packets from Laser</FormLabel>
+                        <FormControl>
+                        <div className="relative">
+                            <Input type="number" {...field} readOnly disabled />
+                            {laserLotLoading && <Loader2 className="animate-spin h-4 w-4 absolute right-2 top-2.5 text-muted-foreground" />}
+                        </div>
+                        </FormControl>
+                    <FormMessage />
                     </FormItem>
+                )} />
+                <FormField control={control} name="packetCount" render={({ field }) => (
+                <FormItem><FormLabel>Packet Count (Sub-Packets)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+                <div className="space-y-2">
+                <FormField control={control} name="hasJiram" render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border bg-card/50 p-4">
+                    <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                    <div className="space-y-1 leading-none"><FormLabel>Jiram Check</FormLabel></div>
+                    </FormItem>
+                )} />
+                {hasJiram && (
+                    <FormField control={control} name="jiramCount" render={({ field }) => (
+                    <FormItem><FormLabel>Jiram Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
-                </FormFieldAnimated>
-                <FormFieldAnimated delay={200}>
-                    <FormField control={control} name="machine" render={({ field }) => (
-                    <FormItem><FormLabel>Machine Number</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </FormFieldAnimated>
-                <FormFieldAnimated delay={250}>
-                    <FormField control={control} name="kapanNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </FormFieldAnimated>
-                <FormFieldAnimated delay={300}>
-                    <FormField control={control} name="lotNumber" render={({ field }) => (
-                    <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </FormFieldAnimated>
-
-                 <FormFieldAnimated delay={350}>
-                    <FormField control={control} name="mainPacketNumber" render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Main Packets from Laser</FormLabel>
-                            <FormControl>
-                            <div className="relative">
-                                <Input type="number" {...field} readOnly disabled />
-                                {laserLotLoading && <Loader2 className="animate-spin h-4 w-4 absolute right-2 top-2.5 text-muted-foreground" />}
-                            </div>
-                            </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )} />
-                 </FormFieldAnimated>
-
-                <FormFieldAnimated delay={400}>
-                    <FormField control={control} name="packetCount" render={({ field }) => (
-                    <FormItem><FormLabel>Packet Count (Sub-Packets)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
-                </FormFieldAnimated>
-                 <FormFieldAnimated delay={450}>
-                    <div className="space-y-2">
-                    <FormField control={control} name="hasJiram" render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border bg-card/50 p-4">
-                        <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                        <div className="space-y-1 leading-none"><FormLabel>Jiram Check</FormLabel></div>
-                        </FormItem>
-                    )} />
-                    {hasJiram && (
-                        <FormField control={control} name="jiramCount" render={({ field }) => (
-                        <FormItem><FormLabel>Jiram Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                        )} />
-                    )}
-                    </div>
-                 </FormFieldAnimated>
+                )}
+                </div>
               </div>
                 {watchKapan && watchLot && !laserLotLoading && (
                     <div className="animate-simple-fade-in mt-4">
