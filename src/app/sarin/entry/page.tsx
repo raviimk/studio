@@ -42,14 +42,18 @@ const formSchema = z.object({
 
 const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <polygon points="50,5 95,40 50,95 5,40" stroke="hsl(var(--primary) / 0.8)" strokeWidth="2" fill="hsl(var(--primary) / 0.1)"/>
-        <line x1="50" y1="5" x2="50" y2="95" stroke="hsl(var(--primary) / 0.4)" strokeWidth="1"/>
-        <line x1="5" y1="40" x2="95" y2="40" stroke="hsl(var(--primary) / 0.4)" strokeWidth="1"/>
-        <polygon points="50,5 25,40 50,60 75,40" fill="hsl(var(--primary) / 0.2)"/>
-        <line x1="25" y1="40" x2="50" y2="95" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
-        <line x1="75" y1="40" x2="50" y2="95" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
-        <line x1="5" y1="40" x2="50" y2="60" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
-        <line x1="95" y1="40" x2="50" y2="60" stroke="hsl(var(--primary) / 0.3)" strokeWidth="1"/>
+        <g stroke="hsl(var(--primary) / 0.5)" strokeWidth="1">
+            <circle cx="50" cy="50" r="45" fill="hsl(var(--primary) / 0.05)" />
+            <polygon points="50,5 20,20 50,35 80,20" fill="hsl(var(--primary) / 0.1)" />
+            <polygon points="5,50 20,80 35,50 20,20" fill="hsl(var(--primary) / 0.1)" />
+            <polygon points="95,50 80,80 65,50 80,20" fill="hsl(var(--primary) / 0.1)" />
+            <polygon points="50,95 20,80 50,65 80,80" fill="hsl(var(--primary) / 0.1)" />
+            <line x1="50" y1="5" x2="50" y2="95" />
+            <line x1="5" y1="50" x2="95" y2="50" />
+            <line x1="20" y1="20" x2="80" y2="80" />
+            <line x1="80" y1="20" x2="20" y2="80" />
+            <polygon points="50,35 35,50 50,65 65,50" strokeWidth="1.5" stroke="hsl(var(--primary) / 0.7)" fill="hsl(var(--primary) / 0.2)" />
+        </g>
     </svg>
 );
 
