@@ -124,15 +124,12 @@ const menuItems = [
 ];
 
 const PremiumDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 253 207" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <polygon className="facet" points="94,80 82,0 60,50" />
-    <polygon className="facet" points="118,87 112,20 61,61" />
-    <polygon className="facet" points="126,95 51,80 162,80" />
-    <polygon className="facet" points="126,107 119,207 51,126" />
-    <polygon className="facet" points="127,82 158,220 162,127" />
-    <polygon className="facet" points="127,127 134,207 162,127" />
-    <polygon className="facet" points="159,0 171,0 253,62 203,62" />
-    <polygon className="facet" points="135,127 141,227 163,141" />
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path className="facet" d="M12 2L6 8H18L12 2Z" fillOpacity="0.7"/>
+    <path className="facet" d="M6 8L12 22L18 8H6Z" fillOpacity="0.8"/>
+    <path className="facet" d="M6 8L2 9L12 22L6 8Z" fillOpacity="0.7"/>
+    <path className="facet" d="M18 8L22 9L12 22L18 8Z" fillOpacity="0.7"/>
+    <path className="facet" d="M2 9L6 8H18L22 9L12 11L2 9Z" fillOpacity="0.9"/>
   </svg>
 );
 
