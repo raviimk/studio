@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, AlertTriangle, Trash2 } from 'lucide-react';
+import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus } from 'lucide-react';
 import { isSameMonth, startOfMonth } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -252,9 +252,14 @@ export default function NewLaserLotPage() {
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="New Laser Lot" description="Create a new entry for a laser lot." />
         <div className="space-y-6">
-          <Card className="max-w-4xl mx-auto">
+          <Card className="max-w-4xl mx-auto glass-card">
               <CardHeader>
-              <CardTitle>Step 1: Lot Details</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-primary" />
+                    <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        Step 1: Lot Details
+                    </span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
               <Form {...form}>
@@ -287,8 +292,15 @@ export default function NewLaserLotPage() {
               </CardContent>
           </Card>
 
-          <Card className="max-w-4xl mx-auto">
-              <CardHeader><CardTitle>Laser Lot Series</CardTitle></CardHeader>
+          <Card className="max-w-4xl mx-auto glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-6 h-6 text-primary" />
+                    <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                        Laser Lot Series
+                    </span>
+                </CardTitle>
+              </CardHeader>
               <CardContent>
                   <LotSeriesViewer 
                       series={lotSeries}
@@ -302,8 +314,15 @@ export default function NewLaserLotPage() {
           </Card>
 
           {formSubmitted && currentLotDetails && (
-              <Card className="max-w-4xl mx-auto">
-                  <CardHeader><CardTitle>Step 2: Scan Packets</CardTitle></CardHeader>
+              <Card className="max-w-4xl mx-auto glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="w-6 h-6 text-primary" />
+                        <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                           Step 2: Scan Packets
+                        </span>
+                    </CardTitle>
+                  </CardHeader>
                   <CardContent>
                       <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
                           <Input 
@@ -359,6 +378,7 @@ export default function NewLaserLotPage() {
                               Scanned: {scannedPackets.length} / {packetCount}
                           </p>
                           <Button onClick={createFinalLot} disabled={scannedPackets.length !== packetCount}>
+                             <PackagePlus className="mr-2 h-4 w-4"/>
                               Create Laser Lot
                           </Button>
                       </div>
