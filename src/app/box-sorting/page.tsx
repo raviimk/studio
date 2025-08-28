@@ -138,25 +138,30 @@ export default function BoxSortingPage() {
     if (sortingMode === 'cent') {
         if (centRanges.length === 0) {
           toast({ variant: 'destructive', title: 'Setup Required', description: 'Please define cent-based box sorting ranges in the Control Panel.' });
+          setBarcode('');
           return false;
         }
         matchedRange = centRanges.find(r => polishWeight >= r.from && polishWeight <= r.to);
         if (!matchedRange) {
             toast({ variant: 'destructive', title: 'No Matching Box', description: `No box range configured for polish weight ${polishWeight}.` });
+            setBarcode('');
             return false;
         }
     } else { // diameter
         if (diameterRanges.length === 0) {
           toast({ variant: 'destructive', title: 'Setup Required', description: 'Please define diameter-based box sorting ranges in the Control Panel.' });
+          setBarcode('');
           return false;
         }
         if (diameter === undefined) {
              toast({ variant: 'destructive', title: 'Missing Diameter', description: `Diameter value not found in the input.` });
+             setBarcode('');
             return false;
         }
         matchedRange = diameterRanges.find(r => diameter >= r.from && diameter <= r.to);
         if (!matchedRange) {
             toast({ variant: 'destructive', title: 'No Matching Box', description: `No box range configured for diameter ${diameter}.` });
+            setBarcode('');
             return false;
         }
     }
@@ -191,6 +196,7 @@ export default function BoxSortingPage() {
     const values = barcode.split(',');
     if (values.length < 15) {
       toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
+      setBarcode('');
       return;
     }
 
@@ -202,6 +208,7 @@ export default function BoxSortingPage() {
 
     if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber || isNaN(diameter)) {
         toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not extract required fields (diameter, weights, shape, packet number) from barcode.' });
+        setBarcode('');
         return;
     }
 
