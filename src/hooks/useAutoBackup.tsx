@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useLocalStorage } from './useLocalStorage';
+import { useSyncedStorage } from './useSyncedStorage';
 import { AUTO_BACKUP_SETTINGS_KEY } from '@/lib/constants';
 import { AutoBackupSettings } from '@/lib/types';
 import { useToast } from './use-toast';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import React from 'react';
 
 export function useAutoBackup() {
-  const [settings, setSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, {
+  const [settings, setSettings] = useSyncedStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, {
     intervalHours: 0,
     officeEndTime: '18:30',
   });

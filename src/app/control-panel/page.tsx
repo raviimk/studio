@@ -10,7 +10,7 @@ import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { 
   ALL_APP_KEYS,
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
@@ -97,19 +97,19 @@ const PASSKEY = "raviix07";
 
 export default function ControlPanelPage() {
   const { toast } = useToast();
-  const [sarinOperators, setSarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [sarinMappings, setSarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
-  const [laserOperators, setLaserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
-  const [laserMappings, setLaserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
-  const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
-  const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
-  const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
-  const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
-  const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
-  const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
-  const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
-  const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [sarinOperators, setSarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinMappings, setSarinMappings] = useSyncedStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [laserOperators, setLaserOperators] = useSyncedStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
+  const [laserMappings, setLaserMappings] = useSyncedStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [fourPOperators, setFourPOperators] = useSyncedStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [fourPTechingOperators, setFourPTechingOperators] = useSyncedStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
+  const [priceMaster, setPriceMaster] = useSyncedStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [udhdhaSettings, setUdhdhaSettings] = useSyncedStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
+  const [fourPDeptSettings, setFourPDeptSettings] = useSyncedStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [boxSortingRanges, setBoxSortingRanges] = useSyncedStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [diameterSortingRanges, setDiameterSortingRanges] = useSyncedStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
+  const [autoBackupSettings, setAutoBackupSettings] = useSyncedStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
+  const [returnScanSettings, setReturnScanSettings] = useSyncedStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 

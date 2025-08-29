@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { isToday, format, parseISO } from 'date-fns';
@@ -42,10 +42,10 @@ type SarinReturnSummary = {
 }
 
 export default function TodaysProductionReport() {
-    const [sarinPackets] = useLocalStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
-    const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
-    const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-    const [productionHistory, setProductionHistory] = useLocalStorage<T.ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
+    const [sarinPackets] = useSyncedStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
+    const [laserLots] = useSyncedStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
+    const [fourPTechingLots] = useSyncedStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+    const [productionHistory, setProductionHistory] = useSyncedStorage<T.ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
 
     const [todaysConfirmedChalu, setTodaysConfirmedChalu] = useState<Record<string, T.ProductionEntry>>({});
     const [chaluInputValues, setChaluInputValues] = useState<Record<string, string>>({});

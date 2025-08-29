@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo, useRef, Fragment, useEffect } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { BOX_SORTING_RANGES_KEY, BOX_SORTING_PACKETS_KEY, DIAMETER_SORTING_RANGES_KEY, BOX_DIAMETER_PACKETS_KEY } from '@/lib/constants';
 import { BoxSortingRange, BoxSortingPacket, BoxDiameterRange } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -98,11 +98,11 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
 
 export default function BoxSortingPage() {
   const { toast } = useToast();
-  const [centRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
-  const [diameterRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
+  const [centRanges] = useSyncedStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
+  const [diameterRanges] = useSyncedStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   
-  const [centPackets, setCentPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
-  const [diameterPackets, setDiameterPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_DIAMETER_PACKETS_KEY, []);
+  const [centPackets, setCentPackets] = useSyncedStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  const [diameterPackets, setDiameterPackets] = useSyncedStorage<BoxSortingPacket[]>(BOX_DIAMETER_PACKETS_KEY, []);
   
   const [sortingMode, setSortingMode] = useState<SortingMode>('cent');
   const [barcode, setBarcode] = useState('');
