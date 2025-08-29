@@ -20,7 +20,11 @@ let db: Database;
 const isConfigValid = firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.databaseURL;
 
 if (typeof window !== 'undefined' && isConfigValid) {
-  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApp();
+  }
   db = getDatabase(app);
 }
 

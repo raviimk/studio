@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY } from '@/lib/constants';
 import { LaserLot, LaserMapping } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -19,8 +19,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 
 export default function RecentLaserEntriesPage() {
-  const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-  const [laserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [laserLots, setLaserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [laserMappings] = useSyncedStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
   const { toast } = useToast();
 
   const [editingId, setEditingId] = useState<string | null>(null);
