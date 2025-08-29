@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { 
     SARIN_PACKETS_KEY, 
     LASER_LOTS_KEY, 
@@ -32,10 +32,10 @@ type HistoryEvent = {
 };
 
 export default function PacketHistoryPage() {
-    const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-    const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-    const [fourPLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-    const [udhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+    const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+    const [laserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+    const [fourPLots] = useSyncedStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+    const [udhdhaPackets] = useSyncedStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [searchedPacket, setSearchedPacket] = useState<string | null>(null);

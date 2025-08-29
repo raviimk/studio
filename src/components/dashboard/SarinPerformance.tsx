@@ -3,7 +3,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SarinPacket, SarinOperator } from '@/lib/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LabelList } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,8 +21,8 @@ const COLORS = [
 ];
 
 export default function SarinPerformance() {
-  const [sarinPackets] = useLocalStorage<SarinPacket[]>('sarinPackets', []);
-  const [sarinOperators] = useLocalStorage<SarinOperator[]>('sarinOperators', []);
+  const [sarinPackets] = useSyncedStorage<SarinPacket[]>('sarinPackets', []);
+  const [sarinOperators] = useSyncedStorage<SarinOperator[]>('sarinOperators', []);
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),

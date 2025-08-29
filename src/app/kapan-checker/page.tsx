@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SARIN_PACKETS_KEY, LASER_LOTS_KEY, UHDHA_PACKETS_KEY } from '@/lib/constants';
 import { SarinPacket, LaserLot, UdhdaPacket } from '@/lib/types';
 import PageHeader from '@/components/PageHeader';
@@ -36,9 +36,9 @@ const normalizeBarcode = (barcode: string): string => {
 
 
 export default function KapanCheckerPage() {
-  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
-  const [udhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [laserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [udhdhaPackets] = useSyncedStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [searchedTerm, setSearchedTerm] = useState<string | null>(null);

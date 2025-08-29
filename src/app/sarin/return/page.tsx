@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator, ScannedPacket, ReturnScanSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -31,9 +31,9 @@ const normalizeBarcodeForSarin = (barcode: string): string => {
 
 
 export default function ReturnSarinLotPage() {
-  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [scanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [scanSettings] = useSyncedStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   const { toast } = useToast();
 
   const [returningOperator, setReturningOperator] = useState<string>('');

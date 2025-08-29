@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY } from '@/lib/constants';
 import { JiramReportPacket, SarinPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -36,8 +36,8 @@ type KapanSummary = {
 
 export default function JiramReportPage() {
   const { toast } = useToast();
-  const [jiramPackets, setJiramPackets] = useLocalStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
-  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [jiramPackets, setJiramPackets] = useSyncedStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
+  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);

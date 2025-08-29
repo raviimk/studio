@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, SARIN_MAPPINGS_KEY, LASER_LOTS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator, SarinMapping, LaserLot, ScannedPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -60,10 +60,10 @@ const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function SarinPacketEntryPage() {
   const { toast } = useToast();
-  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
-  const [sarinMappings] = useLocalStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
-  const [laserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinOperators] = useSyncedStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
+  const [sarinMappings] = useSyncedStorage<SarinMapping[]>(SARIN_MAPPINGS_KEY, []);
+  const [laserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
 
   const [laserLotLoading, setLaserLotLoading] = useState(false);
   const [foundLaserLot, setFoundLaserLot] = useState(false);

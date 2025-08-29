@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SARIN_PACKETS_KEY, REASSIGN_LOGS_KEY } from '@/lib/constants';
 import { SarinPacket, ReassignLog } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowRight } from 'lucide-react';
 
 export default function LotAnalysisPage() {
-  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [reassignLogs] = useLocalStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
+  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [reassignLogs] = useSyncedStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
   const [searchTerm, setSearchTerm] = useState('');
 
   const lotData = useMemo(() => {

@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { SARIN_PACKETS_KEY } from '@/lib/constants';
 import { SarinPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 
 export default function RecentSarinEntriesPage() {
-  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   const { toast } = useToast();
   
   const [editingId, setEditingId] = useState<string | null>(null);
