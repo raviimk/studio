@@ -6,6 +6,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { Trash2 } from 'lucide-react';
+import { ref, set } from 'firebase/database';
+
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -32,7 +34,7 @@ import { handleBackup } from '@/lib/backup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { firebaseConfig } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useSystemState } from '@/hooks/useSystemState';
 
 
@@ -246,7 +248,7 @@ export default function ControlPanelPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const text = e.target?.result;
         if (typeof text !== 'string') {
@@ -254,15 +256,20 @@ export default function ControlPanelPage() {
         }
         const data = JSON.parse(text);
         
+        const restorePromises: Promise<void>[] = [];
         let restoredCount = 0;
+
         for (const key of ALL_APP_KEYS) {
           if (data[key]) {
-            localStorage.setItem(key, JSON.stringify(data[key]));
+            const dbRef = ref(db, `data/${key}`);
+            restorePromises.push(set(dbRef, data[key]));
             restoredCount++;
           }
         }
         
-        toast({ title: 'Restore Successful', description: `Restored data for ${restoredCount} keys. The page will now reload.` });
+        await Promise.all(restorePromises);
+
+        toast({ title: 'Restore Successful', description: `Restored data for ${restoredCount} keys to Firebase. The page will now reload.` });
         
         setTimeout(() => {
           window.location.reload();
@@ -270,7 +277,7 @@ export default function ControlPanelPage() {
 
       } catch (error) {
         console.error('Restore failed:', error);
-        toast({ variant: 'destructive', title: 'Restore Failed', description: 'The selected file is not a valid backup file.' });
+        toast({ variant: 'destructive', title: 'Restore Failed', description: 'The selected file is not a valid backup file or could not connect to Firebase.' });
       } finally {
         // Reset file input
         if (fileInputRef.current) {
@@ -310,14 +317,26 @@ export default function ControlPanelPage() {
     setPasskeyInput('');
   };
 
-  const handlePasskeyCheck = () => {
+  const handlePasskeyCheck = async () => {
     if (passkeyInput === PASSKEY) {
       toast({ title: 'Passkey Correct!', description: 'Deleting all data now...' });
       setPasskeyDialogOpen(false);
-      // Perform deletion
-      ALL_APP_KEYS.forEach(key => localStorage.removeItem(key));
-      toast({ title: 'All data deleted.', description: 'The page will now reload.' });
-      setTimeout(() => window.location.reload(), 1500);
+      
+      const deletePromises: Promise<void>[] = [];
+      ALL_APP_KEYS.forEach(key => {
+        const dbRef = ref(db, `data/${key}`);
+        deletePromises.push(set(dbRef, null));
+      });
+      
+      try {
+        await Promise.all(deletePromises);
+        toast({ title: 'All data deleted from Firebase.', description: 'The page will now reload.' });
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (error) {
+          console.error("Firebase deletion failed:", error);
+          toast({ variant: 'destructive', title: 'Deletion Failed', description: 'Could not delete data from Firebase.' });
+      }
+
     } else {
       const newAttempts = passkeyAttempts - 1;
       setPasskeyAttempts(newAttempts);
