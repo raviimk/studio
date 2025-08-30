@@ -8,6 +8,7 @@ import {
   AreaChart,
   BarChart2,
   ChevronRight,
+  Database,
   Diamond,
   FileClock,
   Gem,
@@ -100,6 +101,7 @@ const menuItems = [
       { label: 'Packet Reassignment', href: '/reassignment', icon: Replace, },
       { label: 'Packet History', href: '/packet-history', icon: History, },
       { label: 'Kapan Checker', href: '/kapan-checker', icon: ClipboardCheck, },
+      { label: 'Real-time DB', href: '/realtimedb', icon: Database },
     ]
   },
    {
