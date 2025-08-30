@@ -2,15 +2,23 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useSyncedStorage } from '@/hooks/useSyncedStorage';
-import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY } from '@/lib/constants';
-import { JiramReportPacket, SarinPacket } from '@/lib/types';
+import { 
+    JIRAM_REPORT_PACKETS_KEY, 
+    SARIN_PACKETS_KEY,
+    LASER_LOTS_KEY,
+    FOURP_TECHING_LOTS_KEY,
+    UHDHA_PACKETS_KEY,
+    BOX_SORTING_PACKETS_KEY,
+    BOX_DIAMETER_PACKETS_KEY
+} from '@/lib/constants';
+import { JiramReportPacket, SarinPacket, LaserLot, FourPLot, UdhdaPacket, BoxSortingPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2 } from 'lucide-react';
+import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -24,6 +32,18 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 type KapanSummary = {
   kapanNumber: string;
@@ -34,11 +54,24 @@ type KapanSummary = {
   missing: number;
 };
 
+// Helper to extract kapan number from various formats
+const getKapanFromIdentifier = (identifier: string): string | null => {
+  const match = identifier.match(/^(?:R)?(\d+)/);
+  return match ? match[1] : null;
+};
+
+
 export default function JiramReportPage() {
   const { toast } = useToast();
   const [jiramPackets, setJiramPackets] = useSyncedStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
-  const [sarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  
+  const [sarinPackets, setSarinPackets] = useSyncedStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [laserLots, setLaserLots] = useSyncedStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [fourPLots, setFourPLots] = useSyncedStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [udhdhaPackets, setUdhdhaPackets] = useSyncedStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
+  const [boxSortingPackets, setBoxSortingPackets] = useSyncedStorage<BoxSortingPacket[]>(BOX_SORTING_PACKETS_KEY, []);
+  const [boxDiameterPackets, setBoxDiameterPackets] = useSyncedStorage<BoxSortingPacket[]>(BOX_DIAMETER_PACKETS_KEY, []);
+
+
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
 
@@ -119,6 +152,51 @@ export default function JiramReportPage() {
     }
   }
 
+  const handleCompleteKapan = (kapanToComplete: string) => {
+    // 1. Gather all data for the kapan
+    const kapanData = {
+        kapanNumber: kapanToComplete,
+        sarinPackets: sarinPackets.filter(p => p.kapanNumber === kapanToComplete),
+        laserLots: laserLots.filter(l => l.kapanNumber === kapanToComplete),
+        jiramReportPackets: jiramPackets.filter(p => p.kapanNumber === kapanToComplete),
+        fourPLots: fourPLots.filter(l => l.kapan === kapanToComplete),
+        udhdhaPackets: udhdhaPackets.filter(p => getKapanFromIdentifier(p.barcode) === kapanToComplete),
+        boxSortingPackets: boxSortingPackets.filter(p => getKapanFromIdentifier(p.packetNumber) === kapanToComplete),
+        boxDiameterPackets: boxDiameterPackets.filter(p => getKapanFromIdentifier(p.packetNumber) === kapanToComplete),
+    };
+
+    // 2. Trigger JSON download
+    try {
+      const jsonString = JSON.stringify(kapanData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `kapan-${kapanToComplete}-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Backup Downloaded', description: `Data for Kapan ${kapanToComplete} has been saved.` });
+    } catch (error) {
+      console.error('Backup failed:', error);
+      toast({ variant: 'destructive', title: 'Backup Failed', description: 'Could not create the backup file.' });
+      return; // Stop if backup fails
+    }
+
+    // 3. Delete the data from the database
+    setSarinPackets(prev => prev.filter(p => p.kapanNumber !== kapanToComplete));
+    setLaserLots(prev => prev.filter(l => l.kapanNumber !== kapanToComplete));
+    setJiramPackets(prev => prev.filter(p => p.kapanNumber !== kapanToComplete));
+    setFourPLots(prev => prev.filter(l => l.kapan !== kapanToComplete));
+    setUdhdhaPackets(prev => prev.filter(p => getKapanFromIdentifier(p.barcode) !== kapanToComplete));
+    setBoxSortingPackets(prev => prev.filter(p => getKapanFromIdentifier(p.packetNumber) !== kapanToComplete));
+    setBoxDiameterPackets(prev => prev.filter(p => getKapanFromIdentifier(p.packetNumber) !== kapanToComplete));
+    
+    toast({ title: 'Kapan Completed', description: `All data for Kapan ${kapanToComplete} has been deleted.` });
+  };
+
+
   const detailedScans = useMemo(() => {
     if (!selectedKapan) return [];
     return jiramPackets.filter(p => p.kapanNumber === selectedKapan).sort((a,b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime());
@@ -161,16 +239,37 @@ export default function JiramReportPage() {
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Status</TableHead><TableHead>Extra</TableHead><TableHead>Missing</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {kapanSummary.map(k => (
-                    <TableRow key={k.kapanNumber} onClick={() => setSelectedKapan(k.kapanNumber)} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell className="font-bold">{k.kapanNumber}</TableCell>
-                      <TableCell>{k.expected}</TableCell>
-                      <TableCell>{k.scanned}</TableCell>
-                      <TableCell className="flex items-center gap-2">{getStatusIcon(k.status)} {k.status.charAt(0).toUpperCase() + k.status.slice(1)}</TableCell>
-                      <TableCell className={cn(k.extra > 0 && 'text-red-600 font-bold')}>{k.extra}</TableCell>
-                      <TableCell className={cn(k.missing > 0 && 'text-yellow-600 font-bold')}>{k.missing}</TableCell>
+                    <TableRow key={k.kapanNumber}>
+                      <TableCell onClick={() => setSelectedKapan(k.kapanNumber)} className="font-bold cursor-pointer hover:underline">{k.kapanNumber}</TableCell>
+                      <TableCell onClick={() => setSelectedKapan(k.kapanNumber)}>{k.expected}</TableCell>
+                      <TableCell onClick={() => setSelectedKapan(k.kapanNumber)}>{k.scanned}</TableCell>
+                      <TableCell onClick={() => setSelectedKapan(k.kapanNumber)} className="flex items-center gap-2">{getStatusIcon(k.status)} {k.status.charAt(0).toUpperCase() + k.status.slice(1)}</TableCell>
+                      <TableCell>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm">Complete</Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Complete Kapan {k.kapanNumber}?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action will first download a JSON backup of all data associated with this Kapan across the entire application (Sarin, Laser, etc.).
+                                        Then, it will permanently delete all of that data. This cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleCompleteKapan(k.kapanNumber)}>
+                                        <Download className="mr-2 h-4 w-4"/>
+                                        Backup & Delete
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                    {kapanSummary.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No Jiram data to display.</TableCell></TableRow>}
