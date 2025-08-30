@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { FOURP_TECHING_LOTS_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
 import { FourPLot, FourPDepartmentSettings } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,8 +20,8 @@ type KapanSummary = {
 }
 
 export default function FourPDepartmentReport() {
-  const [fourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-  const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [fourPTechingLots] = useSyncedStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [deptSettings] = useSyncedStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),

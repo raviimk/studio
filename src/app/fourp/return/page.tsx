@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useState, useMemo, useReducer } from 'react';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSyncedStorage } from '@/hooks/useSyncedStorage';
 import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
 import { FourPLot, FourPOperator, PriceMaster, FourPDepartmentSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -30,10 +30,10 @@ import { Edit, Save, Trash2, X } from 'lucide-react';
 
 export default function FourPReturnPage() {
   const { toast } = useToast();
-  const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
-  const [fourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
-  const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
-  const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+  const [fourPTechingLots, setFourPTechingLots] = useSyncedStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [fourPOperators] = useSyncedStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [priceMaster] = useSyncedStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [deptSettings] = useSyncedStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
 
 
   const [selectedOperator, setSelectedOperator] = useState('');
