@@ -44,10 +44,10 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         const currentLotIndex = currentLot ? series.indexOf(currentLot) : -1;
         if (currentLotIndex !== -1) {
             api.scrollTo(currentLotIndex, true);
-        } else if (nextLot) {
+        } else if (nextLot && series.includes(nextLot)) {
             const nextLotIndex = series.indexOf(nextLot);
             if (nextLotIndex !== -1 && api.selectedScrollSnap() !== nextLotIndex) {
-                api.scrollTo(nextLotIndex, false);
+                 api.scrollTo(nextLotIndex, false);
             }
         }
     }, [api, currentLot, nextLot, series, isAnimating]);
