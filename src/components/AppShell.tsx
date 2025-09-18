@@ -247,6 +247,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+
 function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
