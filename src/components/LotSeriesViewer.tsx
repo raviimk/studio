@@ -31,25 +31,29 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
     const [isAnimating, setIsAnimating] = useState<number | null>(null);
 
     useEffect(() => {
-        if (!api || !nextLot) return; // Wait for api and nextLot to be available
+        const timer = setTimeout(() => {
+            if (!api) return;
 
-        if (isAnimating) {
-            const animatingIndex = series.indexOf(isAnimating);
-            if (animatingIndex !== -1) {
-                api.scrollTo(animatingIndex, true);
+            if (isAnimating) {
+                const animatingIndex = series.indexOf(isAnimating);
+                if (animatingIndex !== -1) {
+                    api.scrollTo(animatingIndex, true);
+                }
                 return;
             }
-        }
 
-        const currentLotIndex = currentLot ? series.indexOf(currentLot) : -1;
-        if (currentLotIndex !== -1) {
-            api.scrollTo(currentLotIndex, true);
-        } else {
-            const nextLotIndex = series.indexOf(nextLot);
-            if (nextLotIndex !== -1 && api.selectedScrollSnap() !== nextLotIndex) {
-                 api.scrollTo(nextLotIndex, false);
+            const currentLotIndex = currentLot ? series.indexOf(currentLot) : -1;
+            if (currentLotIndex !== -1) {
+                api.scrollTo(currentLotIndex, true);
+            } else if (nextLot) {
+                const nextLotIndex = series.indexOf(nextLot);
+                if (nextLotIndex !== -1 && api.selectedScrollSnap() !== nextLotIndex) {
+                    api.scrollTo(nextLotIndex, false);
+                }
             }
-        }
+        }, 2000); // 2-second delay
+
+        return () => clearTimeout(timer);
     }, [api, currentLot, nextLot, series, isAnimating]);
 
     useEffect(() => {
