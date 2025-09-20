@@ -63,13 +63,18 @@ export default function ReturnSarinLotPage() {
     return sarinPackets
       .filter(p => {
         if (p.isReturned) return false;
-        if (!searchTerm) return true;
-        return p.lotNumber.toLowerCase().includes(searchLower) ||
+        
+        const operatorMatch = !returningOperator || p.operator === returningOperator;
+
+        const searchMatch = !searchTerm ||
+               p.lotNumber.toLowerCase().includes(searchLower) ||
                p.kapanNumber.toLowerCase().includes(searchLower) ||
                p.operator.toLowerCase().includes(searchLower);
+
+        return operatorMatch && searchMatch;
       })
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sarinPackets, searchTerm]);
+  }, [sarinPackets, searchTerm, returningOperator]);
 
   const handleOpenDialog = (lot: SarinPacket) => {
     if (!returningOperator) {
