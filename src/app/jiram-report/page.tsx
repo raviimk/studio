@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash } from 'lucide-react';
+import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash, AlertCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { deleteKapanData } from '@/lib/kapan-deleter';
 
 
 type KapanSummary = {
@@ -130,11 +131,16 @@ export default function JiramReportPage() {
   }
   
   const handleCompleteKapan = (kapanNumber: string) => {
-    setJiramPackets(prev => prev.filter(p => p.kapanNumber !== kapanNumber));
+    deleteKapanData(kapanNumber);
+
     if (selectedKapan === kapanNumber) {
         setSelectedKapan(null);
     }
-    toast({ title: 'Kapan Completed', description: `All scanned Jiram data for Kapan ${kapanNumber} has been cleared.`});
+    toast({ title: 'Kapan Completed', description: `All associated data for Kapan ${kapanNumber} has been permanently deleted.`});
+    
+    // Force a reload of data for all components that use these hooks by triggering a re-render.
+    // A simple way is to reload the page, which is acceptable for a destructive action.
+    setTimeout(() => window.location.reload(), 1000);
   };
 
   const detailedScans = useMemo(() => {
@@ -190,21 +196,21 @@ export default function JiramReportPage() {
                       <TableCell>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="destructive" size="sm">
                               <Check className="mr-2 h-4 w-4" /> Complete
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Complete Kapan {k.kapanNumber}?</AlertDialogTitle>
+                              <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Are you absolutely sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This will delete all {k.scanned} scanned Jiram packet entries for this Kapan. This action cannot be undone and is meant to clear old data to save space.
+                                This action will permanently delete all data associated with <strong>Kapan {k.kapanNumber}</strong> from the entire application, including Sarin, Laser, 4P, and Udhda entries. This is to free up storage and cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleCompleteKapan(k.kapanNumber)}>
-                                Yes, Complete & Delete Data
+                              <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleCompleteKapan(k.kapanNumber)}>
+                                Yes, Delete All Data for Kapan {k.kapanNumber}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
