@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2 } from 'lucide-react';
+import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,18 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 type KapanSummary = {
   kapanNumber: string;
@@ -113,11 +125,17 @@ export default function JiramReportPage() {
   };
 
   const handleDeletePacket = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this scanned packet?')) {
-      setJiramPackets(jiramPackets.filter(p => p.id !== id));
-      toast({ title: 'Scan Deleted' });
-    }
+    setJiramPackets(jiramPackets.filter(p => p.id !== id));
+    toast({ title: 'Scan Deleted' });
   }
+  
+  const handleCompleteKapan = (kapanNumber: string) => {
+    setJiramPackets(prev => prev.filter(p => p.kapanNumber !== kapanNumber));
+    if (selectedKapan === kapanNumber) {
+        setSelectedKapan(null);
+    }
+    toast({ title: 'Kapan Completed', description: `All scanned Jiram data for Kapan ${kapanNumber} has been cleared.`});
+  };
 
   const detailedScans = useMemo(() => {
     if (!selectedKapan) return [];
@@ -161,16 +179,37 @@ export default function JiramReportPage() {
           <CardContent>
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Status</TableHead><TableHead>Extra</TableHead><TableHead>Missing</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {kapanSummary.map(k => (
-                    <TableRow key={k.kapanNumber} onClick={() => setSelectedKapan(k.kapanNumber)} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell className="font-bold">{k.kapanNumber}</TableCell>
+                    <TableRow key={k.kapanNumber} className="group">
+                      <TableCell className="font-bold cursor-pointer" onClick={() => setSelectedKapan(k.kapanNumber)}>{k.kapanNumber}</TableCell>
                       <TableCell>{k.expected}</TableCell>
                       <TableCell>{k.scanned}</TableCell>
                       <TableCell className="flex items-center gap-2">{getStatusIcon(k.status)} {k.status.charAt(0).toUpperCase() + k.status.slice(1)}</TableCell>
-                      <TableCell className={cn(k.extra > 0 && 'text-red-600 font-bold')}>{k.extra}</TableCell>
-                      <TableCell className={cn(k.missing > 0 && 'text-yellow-600 font-bold')}>{k.missing}</TableCell>
+                      <TableCell>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <Check className="mr-2 h-4 w-4" /> Complete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Complete Kapan {k.kapanNumber}?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will delete all {k.scanned} scanned Jiram packet entries for this Kapan. This action cannot be undone and is meant to clear old data to save space.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleCompleteKapan(k.kapanNumber)}>
+                                Yes, Complete & Delete Data
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </TableCell>
                     </TableRow>
                   ))}
                    {kapanSummary.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No Jiram data to display.</TableCell></TableRow>}
