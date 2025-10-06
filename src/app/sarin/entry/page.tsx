@@ -43,15 +43,15 @@ const formSchema = z.object({
 const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
         <g stroke="hsl(var(--primary) / 0.5)" strokeWidth="1">
-            <path d="M50 5 L95 50 L50 95 L5 50 Z" fill="hsl(var(--primary) / 0.05)" />
+            <path d="M50 5 L95 40 L50 95 L5 40 Z" fill="hsl(var(--primary) / 0.05)" />
             <path d="M50 5 L50 95" />
-            <path d="M5 50 L95 50" />
-            <path d="M27.5 27.5 L72.5 72.5" />
-            <path d="M27.5 72.5 L72.5 27.5" />
-            <path d="M50 5 L27.5 27.5 L50 50 L72.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M5 50 L27.5 72.5 L50 50 L27.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M50 95 L72.5 72.5 L50 50 L27.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M95 50 L72.5 27.5 L50 50 L72.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M5 40 L95 40" />
+            <path d="M27.5 22.5 L72.5 57.5" />
+            <path d="M27.5 57.5 L72.5 22.5" />
+            <path d="M50 5 L27.5 22.5 L50 40 L72.5 22.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M5 40 L27.5 57.5 L50 40 L27.5 22.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M50 95 L72.5 57.5 L50 40 L27.5 57.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M95 40 L72.5 22.5 L50 40 L72.5 57.5 Z" fill="hsl(var(--primary) / 0.1)" />
         </g>
     </svg>
 );
@@ -271,25 +271,36 @@ export default function SarinPacketEntryPage() {
                         )}
                     </div>
                 )}
-              <button type="submit" disabled={!foundLaserLot} className="animated-create-button mt-6">
-                <div className="svg-wrapper-1">
-                  <div className="svg-wrapper">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      width="24"
-                      height="24"
-                    >
-                      <path fill="none" d="M0 0h24v24H0z"></path>
-                      <path
-                        fill="currentColor"
-                        d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"
-                      ></path>
-                    </svg>
-                  </div>
-                </div>
-                <span>Send</span>
-              </button>
+                <button type="submit" disabled={!foundLaserLot} className="uiverse-button mt-6">
+                    <div className="state state--default">
+                        <span className="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24" width="24">
+                                <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"></path>
+                            </svg>
+                        </span>
+                        <p>
+                            <span style={{ '--i': 0 } as React.CSSProperties}>S</span>
+                            <span style={{ '--i': 1 } as React.CSSProperties}>e</span>
+                            <span style={{ '--i': 2 } as React.CSSProperties}>n</span>
+                            <span style={{ '--i': 3 } as React.CSSProperties}>d</span>
+                        </p>
+                    </div>
+                    <div className="state state--sent">
+                        <span className="icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24" width="24">
+                                <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="1.5" fill="none" stroke="currentColor" d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path>
+                                <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="1.5" fill="none" stroke="currentColor" d="M8 12L11 15L16 10"></path>
+                            </svg>
+                        </span>
+                        <p>
+                            <span style={{ '--i': 0 } as React.CSSProperties}>S</span>
+                            <span style={{ '--i': 1 } as React.CSSProperties}>e</span>
+                            <span style={{ '--i': 2 } as React.CSSProperties}>n</span>
+                            <span style={{ '--i': 3 } as React.CSSProperties}>t</span>
+                        </p>
+                    </div>
+                    <div className="outline"></div>
+                </button>
             </form>
           </Form>
         </CardContent>
