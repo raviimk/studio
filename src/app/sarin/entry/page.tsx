@@ -272,10 +272,14 @@ export default function SarinPacketEntryPage() {
                         )}
                     </div>
                 )}
-              <Button type="submit" disabled={!foundLaserLot} className="mt-6 w-full md:w-auto">
-                <PackagePlus className="mr-2 h-4 w-4"/>
-                Create Entry
-              </Button>
+              <button type="submit" disabled={!foundLaserLot} className="animated-create-button mt-6">
+                <div className="svg-wrapper-1">
+                  <div className="svg-wrapper">
+                    <PackagePlus />
+                  </div>
+                </div>
+                <span>Create Entry</span>
+              </button>
             </form>
           </Form>
         </CardContent>
