@@ -319,12 +319,12 @@ body {
     justify-content: center;
     position: relative;
     transition: all 0.3s ease;
-    min-width: 200px;
-    padding: 20px;
-    height: 68px;
+    min-width: 150px;
+    padding: 10px;
+    height: 48px;
     font-family: inherit;
     font-style: normal;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
   }
   .uiverse-button:hover {
