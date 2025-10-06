@@ -293,10 +293,11 @@ export default function SarinPacketEntryPage() {
                             </svg>
                         </span>
                         <p>
-                            <span style={{ '--i': 0 } as React.CSSProperties}>S</span>
-                            <span style={{ '--i': 1 } as React.CSSProperties}>e</span>
-                            <span style={{ '--i': 2 } as React.CSSProperties}>n</span>
-                            <span style={{ '--i': 3 } as React.CSSProperties}>t</span>
+                            <span style={{ '--i': 0 } as React.CSSProperties}>E</span>
+                            <span style={{ '--i': 1 } as React.CSSProperties}>n</span>
+                            <span style={{ '--i': 2 } as React.CSSProperties}>t</span>
+                            <span style={{ '--i': 3 } as React.CSSProperties}>r</span>
+                            <span style={{ '--i': 4 } as React.CSSProperties}>y</span>
                         </p>
                     </div>
                     <div className="outline"></div>
