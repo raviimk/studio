@@ -41,19 +41,19 @@ const formSchema = z.object({
 });
 
 const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
-    <g stroke="hsl(var(--primary) / 0.5)" strokeWidth="1">
-      <path d="M50 5 L95 50 L50 95 L5 50 Z" fill="hsl(var(--primary) / 0.05)" />
-      <path d="M50 5 L50 95" />
-      <path d="M5 50 L95 50" />
-      <path d="M27.5 27.5 L72.5 72.5" />
-      <path d="M27.5 72.5 L72.5 27.5" />
-      <path d="M50 5 L27.5 27.5 L50 50 L72.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
-      <path d="M5 50 L27.5 72.5 L50 50 L27.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
-      <path d="M50 95 L72.5 72.5 L50 50 L27.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
-      <path d="M95 50 L72.5 27.5 L50 50 L72.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
-    </g>
-  </svg>
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <g stroke="hsl(var(--primary) / 0.5)" strokeWidth="1">
+            <path d="M50 5 L95 50 L50 95 L5 50 Z" fill="hsl(var(--primary) / 0.05)" />
+            <path d="M50 5 L50 95" />
+            <path d="M5 50 L95 50" />
+            <path d="M27.5 27.5 L72.5 72.5" />
+            <path d="M27.5 72.5 L72.5 27.5" />
+            <path d="M50 5 L27.5 27.5 L50 50 L72.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M5 50 L27.5 72.5 L50 50 L27.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M50 95 L72.5 72.5 L50 50 L27.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M95 50 L72.5 27.5 L50 50 L72.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
+        </g>
+    </svg>
 );
 
 
@@ -301,5 +301,3 @@ export default function SarinPacketEntryPage() {
     </div>
   );
 }
-
-    
