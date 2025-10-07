@@ -105,7 +105,6 @@ export default function BoxSortingPage() {
   const [diameterPackets, setDiameterPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_DIAMETER_PACKETS_KEY, []);
   
   const [sortingMode, setSortingMode] = useState<SortingMode>('cent');
-  const [barcodeBuffer, setBarcodeBuffer] = useState('');
   
   const [manualEntry, setManualEntry] = useState<ManualEntry>({
       packetNumber: '',
@@ -130,52 +129,6 @@ export default function BoxSortingPage() {
     }
   }, [highlightedItem]);
   
-  const processBarcode = (barcode: string) => {
-    if (!barcode) return;
-
-    if (packets.some(p => p.barcode === barcode)) {
-        toast({ variant: 'destructive', title: 'Duplicate Packet', description: `Packet barcode has already been scanned in this mode.` });
-        return;
-    }
-    
-    const values = barcode.split(',');
-    if (values.length < 15) {
-      toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
-      return;
-    }
-
-    const diameter = parseFloat(values[0]);
-    const roughWeight = parseFloat(values[7]);
-    const polishWeight = parseFloat(values[8]);
-    const shape = values[11]?.trim().toUpperCase();
-    const packetNumber = values[14]?.trim();
-
-    if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber || isNaN(diameter)) {
-        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not extract required fields (diameter, weights, shape, packet number) from barcode.' });
-        return;
-    }
-
-    sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight, diameter });
-  }
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            processBarcode(barcodeBuffer);
-            setBarcodeBuffer('');
-        } else if (e.key.length === 1) { // Regular character
-            setBarcodeBuffer(prev => prev + e.key);
-        }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [barcodeBuffer, packets, centRanges, diameterRanges, sortingMode]);
-
-
   const sortPacket = (packetData: Omit<BoxSortingPacket, 'id' | 'scanTime' | 'boxLabel'>) => {
     let matchedRange;
     const { polishWeight, diameter } = packetData;
@@ -222,6 +175,54 @@ export default function BoxSortingPage() {
     return true;
   }
   
+  useEffect(() => {
+    let barcodeBuffer = '';
+    
+    const processBarcode = (barcode: string) => {
+      if (!barcode) return;
+
+      if (packets.some(p => p.barcode === barcode)) {
+          toast({ variant: 'destructive', title: 'Duplicate Packet', description: `Packet barcode has already been scanned in this mode.` });
+          return;
+      }
+      
+      const values = barcode.split(',');
+      if (values.length < 15) {
+        toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
+        return;
+      }
+
+      const diameter = parseFloat(values[0]);
+      const roughWeight = parseFloat(values[7]);
+      const polishWeight = parseFloat(values[8]);
+      const shape = values[11]?.trim().toUpperCase();
+      const packetNumber = values[14]?.trim();
+
+      if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber || isNaN(diameter)) {
+          toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not extract required fields (diameter, weights, shape, packet number) from barcode.' });
+          return;
+      }
+
+      sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight, diameter });
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            processBarcode(barcodeBuffer);
+            barcodeBuffer = '';
+        } else if (e.key.length === 1) { // Regular character
+            barcodeBuffer += e.key;
+        }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [packets, centRanges, diameterRanges, sortingMode, toast, setPackets]);
+
+
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const { packetNumber, shape, roughWeight, polishWeight, diameter } = manualEntry;
