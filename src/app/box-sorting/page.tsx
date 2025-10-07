@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil, Gem, Replace } from 'lucide-react';
+import { Barcode, Box, Package, Scale, Trash2, Copy, Printer, Pencil, Gem, Replace, Zap } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -105,8 +105,7 @@ export default function BoxSortingPage() {
   const [diameterPackets, setDiameterPackets] = useLocalStorage<BoxSortingPacket[]>(BOX_DIAMETER_PACKETS_KEY, []);
   
   const [sortingMode, setSortingMode] = useState<SortingMode>('cent');
-  const [barcode, setBarcode] = useState('');
-  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [barcodeBuffer, setBarcodeBuffer] = useState('');
   
   const [manualEntry, setManualEntry] = useState<ManualEntry>({
       packetNumber: '',
@@ -131,6 +130,52 @@ export default function BoxSortingPage() {
     }
   }, [highlightedItem]);
   
+  const processBarcode = (barcode: string) => {
+    if (!barcode) return;
+
+    if (packets.some(p => p.barcode === barcode)) {
+        toast({ variant: 'destructive', title: 'Duplicate Packet', description: `Packet barcode has already been scanned in this mode.` });
+        return;
+    }
+    
+    const values = barcode.split(',');
+    if (values.length < 15) {
+      toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
+      return;
+    }
+
+    const diameter = parseFloat(values[0]);
+    const roughWeight = parseFloat(values[7]);
+    const polishWeight = parseFloat(values[8]);
+    const shape = values[11]?.trim().toUpperCase();
+    const packetNumber = values[14]?.trim();
+
+    if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber || isNaN(diameter)) {
+        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not extract required fields (diameter, weights, shape, packet number) from barcode.' });
+        return;
+    }
+
+    sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight, diameter });
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            processBarcode(barcodeBuffer);
+            setBarcodeBuffer('');
+        } else if (e.key.length === 1) { // Regular character
+            setBarcodeBuffer(prev => prev + e.key);
+        }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [barcodeBuffer, packets, centRanges, diameterRanges, sortingMode]);
+
+
   const sortPacket = (packetData: Omit<BoxSortingPacket, 'id' | 'scanTime' | 'boxLabel'>) => {
     let matchedRange;
     const { polishWeight, diameter } = packetData;
@@ -138,30 +183,25 @@ export default function BoxSortingPage() {
     if (sortingMode === 'cent') {
         if (centRanges.length === 0) {
           toast({ variant: 'destructive', title: 'Setup Required', description: 'Please define cent-based box sorting ranges in the Control Panel.' });
-          setBarcode('');
           return false;
         }
         matchedRange = centRanges.find(r => polishWeight >= r.from && polishWeight <= r.to);
         if (!matchedRange) {
             toast({ variant: 'destructive', title: 'No Matching Box', description: `No box range configured for polish weight ${polishWeight}.` });
-            setBarcode('');
             return false;
         }
     } else { // diameter
         if (diameterRanges.length === 0) {
           toast({ variant: 'destructive', title: 'Setup Required', description: 'Please define diameter-based box sorting ranges in the Control Panel.' });
-          setBarcode('');
           return false;
         }
         if (diameter === undefined) {
              toast({ variant: 'destructive', title: 'Missing Diameter', description: `Diameter value not found in the input.` });
-             setBarcode('');
             return false;
         }
         matchedRange = diameterRanges.find(r => diameter >= r.from && diameter <= r.to);
         if (!matchedRange) {
             toast({ variant: 'destructive', title: 'No Matching Box', description: `No box range configured for diameter ${diameter}.` });
-            setBarcode('');
             return false;
         }
     }
@@ -181,42 +221,6 @@ export default function BoxSortingPage() {
     });
     return true;
   }
-
-  const handleBarcodeScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcode) return;
-
-    if (packets.some(p => p.barcode === barcode)) {
-        toast({ variant: 'destructive', title: 'Duplicate Packet', description: `Packet barcode has already been scanned in this mode.` });
-        setBarcode('');
-        barcodeInputRef.current?.focus();
-        return;
-    }
-    
-    const values = barcode.split(',');
-    if (values.length < 15) {
-      toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
-      setBarcode('');
-      return;
-    }
-
-    const diameter = parseFloat(values[0]);
-    const roughWeight = parseFloat(values[7]);
-    const polishWeight = parseFloat(values[8]);
-    const shape = values[11]?.trim().toUpperCase();
-    const packetNumber = values[14]?.trim();
-
-    if (isNaN(roughWeight) || isNaN(polishWeight) || !shape || !packetNumber || isNaN(diameter)) {
-        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not extract required fields (diameter, weights, shape, packet number) from barcode.' });
-        setBarcode('');
-        return;
-    }
-
-    if (sortPacket({ barcode, packetNumber, shape, roughWeight, polishWeight, diameter })) {
-      setBarcode('');
-      barcodeInputRef.current?.focus();
-    }
-  };
   
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -406,17 +410,11 @@ export default function BoxSortingPage() {
                 <TabsTrigger value="manual"><Pencil className="mr-2 h-4 w-4" />Manual Entry</TabsTrigger>
               </TabsList>
               <TabsContent value="scan" className="mt-4">
-                 <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm">
-                  <Input
-                    ref={barcodeInputRef}
-                    placeholder="Scan barcode..."
-                    value={barcode}
-                    onChange={e => setBarcode(e.target.value)}
-                  />
-                  <Button type="submit" disabled={!barcode}>
-                    <Barcode className="mr-2 h-4 w-4" /> Scan & Sort
-                  </Button>
-                </form>
+                 <Alert variant="default" className="max-w-sm">
+                    <Zap className="h-4 w-4 text-green-500" />
+                    <AlertTitle>Auto-Scan Mode is Active</AlertTitle>
+                    <AlertDescription>The page is listening for your barcode scanner. No need to click or type in a box.</AlertDescription>
+                 </Alert>
               </TabsContent>
               <TabsContent value="manual" className="mt-4">
                  <form onSubmit={handleManualSubmit} className="space-y-4 max-w-lg">
