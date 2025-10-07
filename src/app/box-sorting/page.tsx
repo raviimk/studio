@@ -188,7 +188,7 @@ export default function BoxSortingPage() {
       
       const values = barcode.split(',');
       if (values.length < 15) {
-        toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected 15 comma-separated values, but got ${values.length}.` });
+        toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: `Expected at least 15 comma-separated values, but got ${values.length}.` });
         return;
       }
 
