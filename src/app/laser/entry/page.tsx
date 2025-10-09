@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus } from 'lucide-react';
+import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus, Check } from 'lucide-react';
 import { isSameMonth, startOfMonth } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import LotSeriesViewer from '@/components/LotSeriesViewer';
 import LotDetailPopup from '@/components/LotDetailPopup';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const formSchema = z.object({
   lotNumber: z.string().min(1, 'Lot number is required'),
@@ -264,7 +266,7 @@ export default function NewLaserLotPage() {
 
 
   return (
-    <>
+    <TooltipProvider>
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="New Laser Lot" description="Create a new entry for a laser lot." />
         <div className="space-y-6">
@@ -353,40 +355,32 @@ export default function NewLaserLotPage() {
                           </Button>
                       </form>
 
-                      <div className="border rounded-md">
-                          <Table>
-                              <TableHeader>
-                                  <TableRow>
-                                      <TableHead className="w-[50px]">#</TableHead>
-                                      <TableHead>Scanned Barcode</TableHead>
-                                      <TableHead>Kapan</TableHead>
-                                      <TableHead>Packet #</TableHead>
-                                      <TableHead>Suffix</TableHead>
-                                      <TableHead className="w-[80px] text-right">Actions</TableHead>
-                                  </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                  {Array.from({ length: packetCount }).map((_, index) => {
-                                      const packet = scannedPackets[index];
-                                      return (
-                                          <TableRow key={index} className={packet ? '' : 'bg-muted/50'}>
-                                              <TableCell>{index + 1}</TableCell>
-                                              <TableCell>{packet?.fullBarcode || '...'}</TableCell>
-                                              <TableCell>{packet?.kapanNumber || '...'}</TableCell>
-                                              <TableCell>{packet?.packetNumber || '...'}</TableCell>
-                                              <TableCell>{packet?.suffix || 'Main'}</TableCell>
-                                              <TableCell className="text-right">
-                                                  {packet && (
-                                                      <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(packet.id)}>
-                                                          <Trash2 className="h-4 w-4" />
-                                                      </Button>
-                                                  )}
-                                              </TableCell>
-                                          </TableRow>
-                                      );
-                                  })}
-                              </TableBody>
-                          </Table>
+                      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                         {Array.from({ length: packetCount }).map((_, index) => {
+                              const packet = scannedPackets[index];
+                              return (
+                                  <Tooltip key={index}>
+                                      <TooltipTrigger asChild>
+                                          <div className={cn(
+                                              "h-12 flex items-center justify-center rounded-md border text-sm font-mono",
+                                              packet ? 'bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700' : 'bg-muted/50'
+                                          )}>
+                                              {packet ? <Check className="h-5 w-5" /> : (index + 1)}
+                                          </div>
+                                      </TooltipTrigger>
+                                       {packet && (
+                                        <TooltipContent>
+                                            <div className="flex flex-col gap-2 p-1">
+                                                <p className="font-mono">{packet.fullBarcode}</p>
+                                                <Button variant="destructive" size="sm" onClick={() => handleDeletePacket(packet.id)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Scan
+                                                </Button>
+                                            </div>
+                                        </TooltipContent>
+                                       )}
+                                  </Tooltip>
+                              );
+                          })}
                       </div>
                       
                       <div className="flex justify-between items-center mt-4">
@@ -454,8 +448,10 @@ export default function NewLaserLotPage() {
 
       </div>
       <LotDetailPopup lot={viewingLot} isOpen={!!viewingLot} onOpenChange={(open) => !open && setViewingLot(null)} />
-    </>
+    </TooltipProvider>
   );
 }
+
+    
 
     
