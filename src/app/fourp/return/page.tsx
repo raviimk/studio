@@ -346,24 +346,24 @@ export default function FourPReturnPage() {
                             <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                             <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                             <TableCell>
+                                <div className="flex flex-wrap gap-1">
                                 {lot.fourPData && lot.fourPData.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1">
-                                        {lot.fourPData.map(d => (
-                                            <Badge key={d.operator} variant="secondary">{d.operator} ({d.pcs} pcs)</Badge>
-                                        ))}
-                                    </div>
+                                    lot.fourPData.map(d => (
+                                        <Badge key={d.operator} variant="secondary">{d.operator} ({d.pcs} pcs)</Badge>
+                                    ))
                                 ) : <Badge>{lot.fourPOperator}</Badge>}
+                                </div>
                             </TableCell>
                             <TableCell>
+                                <div className="flex flex-wrap gap-1">
                                 {lot.fourPData && lot.fourPData.length > 1 ? (
-                                    <div className="flex flex-wrap gap-1">
-                                        {lot.fourPData.map(d => (
-                                            <Badge key={d.operator} variant="outline">₹{d.amount.toFixed(2)}</Badge>
-                                        ))}
-                                    </div>
+                                    lot.fourPData.map(d => (
+                                        <Badge key={d.operator} variant="outline">₹{d.amount.toFixed(2)}</Badge>
+                                    ))
                                 ) : (
                                 `₹${(lot.fourPAmount ?? 0).toFixed(2)}`
                                 )}
+                                </div>
                             </TableCell>
                             <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
                              <TableCell className="flex gap-1">
