@@ -45,7 +45,7 @@ export default function KapanVerifierPage() {
             const sr = parseInt(srString, 10);
             
             // Junk detection: check for malformed serials like +, -, or just invalid numbers
-            const isJunk = isNaN(sr) || /^[+-]/.test(srString);
+            const isJunk = isNaN(sr) || /^[+-]/.test(srString) || srString === '00';
 
             if (isJunk) {
                  localJunkPackets.push({
@@ -138,6 +138,10 @@ export default function KapanVerifierPage() {
         }
     }
 
+    const junkPacketIdentifiers = useMemo(() => {
+        return junkPackets.map(p => p.originalLine?.split(/\t|\|/)[0]?.trim() || 'N/A').join(', ');
+    }, [junkPackets]);
+
 
     return (
         <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
@@ -187,7 +191,7 @@ export default function KapanVerifierPage() {
                                 <Trash2 className="h-4 w-4" />
                                 <AlertTitle>Junk Entries Found! ({junkPackets.length})</AlertTitle>
                                 <AlertDescription>
-                                    Found {junkPackets.length} rows with malformed data that could not be parsed. They are highlighted below.
+                                    Found malformed serials: <strong>{junkPacketIdentifiers}</strong>. They are highlighted below.
                                 </AlertDescription>
                             </Alert>
                          )}
@@ -227,3 +231,4 @@ export default function KapanVerifierPage() {
         </div>
     );
 }
+
