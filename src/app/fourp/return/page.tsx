@@ -347,9 +347,9 @@ export default function FourPReturnPage() {
                             <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                             <TableCell>
                                 {lot.fourPData && lot.fourPData.length > 0 ? (
-                                    <div className="flex flex-col gap-1">
+                                    <div className="flex flex-wrap gap-1">
                                         {lot.fourPData.map(d => (
-                                            <Badge key={d.operator}>{d.operator} ({d.pcs} pcs)</Badge>
+                                            <Badge key={d.operator} variant="secondary">{d.operator} ({d.pcs} pcs)</Badge>
                                         ))}
                                     </div>
                                 ) : <Badge>{lot.fourPOperator}</Badge>}
@@ -447,3 +447,5 @@ export default function FourPReturnPage() {
     </>
   );
 }
+
+    
