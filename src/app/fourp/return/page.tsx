@@ -354,7 +354,17 @@ export default function FourPReturnPage() {
                                     </div>
                                 ) : <Badge>{lot.fourPOperator}</Badge>}
                             </TableCell>
-                            <TableCell>₹{(lot.fourPAmount ?? 0).toFixed(2)}</TableCell>
+                            <TableCell>
+                                {lot.fourPData && lot.fourPData.length > 1 ? (
+                                    <div className="flex flex-wrap gap-1">
+                                        {lot.fourPData.map(d => (
+                                            <Badge key={d.operator} variant="outline">₹{d.amount.toFixed(2)}</Badge>
+                                        ))}
+                                    </div>
+                                ) : (
+                                `₹${(lot.fourPAmount ?? 0).toFixed(2)}`
+                                )}
+                            </TableCell>
                             <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
                              <TableCell className="flex gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleEditClick(lot)}><Edit className="h-4 w-4" /></Button>
@@ -447,5 +457,3 @@ export default function FourPReturnPage() {
     </>
   );
 }
-
-    
