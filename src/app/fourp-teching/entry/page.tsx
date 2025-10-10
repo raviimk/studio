@@ -47,6 +47,7 @@ export default function FourPTechingEntryPage() {
 
   const hireInputRef = useRef<HTMLInputElement>(null);
   const pcsInputRef = useRef<HTMLInputElement>(null);
+  const blockingInputRef = useRef<HTMLInputElement>(null);
 
   // State for editing
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
@@ -162,6 +163,20 @@ export default function FourPTechingEntryPage() {
     const defaultOperator = fourPTechingOperators.find(op => op.isDefault);
     if (!defaultOperator) {
         setTechingOperator('');
+    }
+  };
+
+  const handlePcsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      blockingInputRef.current?.focus();
+    }
+  };
+
+  const handleBlockingKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveLot();
     }
   };
 
@@ -305,11 +320,11 @@ export default function FourPTechingEntryPage() {
                                 </div>
                                 <div>
                                     <Label htmlFor="pcs-entry">Step 4: Enter Total PCS</Label>
-                                    <Input id="pcs-entry" ref={pcsInputRef} value={pcs} onChange={e => setPcs(e.target.value)} type="number" placeholder="e.g., 25" className="mt-1"/>
+                                    <Input id="pcs-entry" ref={pcsInputRef} value={pcs} onChange={e => setPcs(e.target.value)} onKeyDown={handlePcsKeyDown} type="number" placeholder="e.g., 25" className="mt-1"/>
                                 </div>
                                 <div>
                                     <Label htmlFor="blocking-pcs-entry">Step 5: Blocking PCS</Label>
-                                    <Input id="blocking-pcs-entry" value={blocking} onChange={e => setBlocking(e.target.value)} type="number" placeholder="e.g., 2" className="mt-1"/>
+                                    <Input id="blocking-pcs-entry" ref={blockingInputRef} value={blocking} onChange={e => setBlocking(e.target.value)} onKeyDown={handleBlockingKeyDown} type="number" placeholder="e.g., 2" className="mt-1"/>
                                 </div>
                             </div>
 
