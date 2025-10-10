@@ -105,7 +105,7 @@ export default function FourPTechingEntryPage() {
     const department = caratWeight > deptSettings.caratThreshold ? deptSettings.aboveThresholdDeptName : deptSettings.belowThresholdDeptName;
     setHireDetails({ carat: caratWeight, department });
     toast({ title: 'Hire Scanned', description: `Carat: ${caratWeight}. Assigned to ${department}`});
-
+    setPcs('25'); // Set default PCS value
     setTimeout(() => pcsInputRef.current?.focus(), 100);
   };
   
