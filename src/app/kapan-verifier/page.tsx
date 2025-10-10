@@ -9,16 +9,19 @@ import { Textarea } from '@/components/ui/textarea';
 import PageHeader from '@/components/PageHeader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle2, AlertTriangle, XCircle, FileDown, Activity } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, FileDown, Activity, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
 const HEADERS = ['SR', 'RO WT', 'MK PCS', 'MK WT', 'EP WT', 'R TO P %', 'EXP %'];
 
+type PacketStatus = 'valid' | 'missing' | 'junk';
+
 type PacketData = {
-    sr: number;
+    sr: number | string; // Can be a string for junk packets
     data: string[];
-    status: 'valid' | 'missing';
+    status: PacketStatus;
+    originalLine?: string;
 }
 
 export default function KapanVerifierPage() {
@@ -26,20 +29,32 @@ export default function KapanVerifierPage() {
     const [pastedData, setPastedData] = useState('');
     const [verifiedData, setVerifiedData] = useState<PacketData[]>([]);
     const [missingSerials, setMissingSerials] = useState<number[]>([]);
+    const [junkPackets, setJunkPackets] = useState<PacketData[]>([]);
 
     const handleVerify = () => {
         const lines = pastedData.trim().split('\n');
         const parsedData: PacketData[] = [];
         const foundSerials = new Set<number>();
+        const localJunkPackets: PacketData[] = [];
 
         let maxSerial = 0;
 
-        lines.forEach(line => {
+        lines.forEach((line, index) => {
             const columns = line.split(/\t|\|/); // Split by tab or pipe
             const srString = columns[0]?.trim();
             const sr = parseInt(srString, 10);
             
-            if (!isNaN(sr)) {
+            // Junk detection: check for malformed serials like +, -, or just invalid numbers
+            const isJunk = isNaN(sr) || /^[+-]/.test(srString);
+
+            if (isJunk) {
+                 localJunkPackets.push({
+                    sr: `Junk ${localJunkPackets.length + 1}`,
+                    data: columns.slice(0, HEADERS.length),
+                    status: 'junk',
+                    originalLine: line,
+                 });
+            } else {
                 foundSerials.add(sr);
                 if (sr > maxSerial) maxSerial = sr;
 
@@ -51,8 +66,8 @@ export default function KapanVerifierPage() {
             }
         });
 
-        if (maxSerial === 0) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not find any valid serial numbers.' });
+        if (maxSerial === 0 && localJunkPackets.length === 0) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find any valid serial numbers or data.' });
             return;
         }
 
@@ -73,9 +88,15 @@ export default function KapanVerifierPage() {
             }
         }
         
-        setVerifiedData(allData);
+        const finalData = [...allData, ...localJunkPackets].sort((a,b) => {
+            if (typeof a.sr === 'number' && typeof b.sr === 'number') return a.sr - b.sr;
+            return 0; // Keep junk at the end as sorted
+        })
+
+        setVerifiedData(finalData);
         setMissingSerials(missing);
-        toast({ title: 'Verification Complete', description: `Found ${missing.length} missing serial(s).` });
+        setJunkPackets(localJunkPackets);
+        toast({ title: 'Verification Complete', description: `Found ${missing.length} missing and ${localJunkPackets.length} junk entries.` });
     };
 
     const handleExportCSV = () => {
@@ -83,7 +104,11 @@ export default function KapanVerifierPage() {
         csvContent += [...HEADERS, 'Status'].join(',') + '\r\n';
 
         verifiedData.forEach(row => {
-            const rowData = [row.sr, ...row.data, row.status].join(',');
+             const rowData = [
+                row.status === 'junk' ? `"${row.originalLine}"` : row.sr,
+                ...row.data,
+                row.status
+            ].join(',');
             csvContent += rowData + '\r\n';
         });
         
@@ -100,18 +125,28 @@ export default function KapanVerifierPage() {
         switch (status) {
             case 'valid': return <CheckCircle2 className="h-5 w-5 text-green-600" />;
             case 'missing': return <XCircle className="h-5 w-5 text-red-600" />;
+            case 'junk': return <Trash2 className="h-5 w-5 text-orange-500" />;
             default: return null;
         }
     };
+    
+    const getRowClass = (status: PacketStatus) => {
+        switch (status) {
+            case 'missing': return 'bg-destructive/10';
+            case 'junk': return 'bg-orange-400/10';
+            default: return '';
+        }
+    }
+
 
     return (
         <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-            <PageHeader title="Kapan Verifier" description="Paste tab-separated data to find missing serial numbers." />
+            <PageHeader title="Kapan Verifier" description="Paste tab-separated data to find missing serial numbers and junk entries." />
 
             <Card>
                 <CardHeader>
                     <CardTitle>Step 1: Paste Data</CardTitle>
-                    <CardDescription>Paste your raw data from the source file. The tool will parse it and look for missing SR numbers.</CardDescription>
+                    <CardDescription>Paste your raw data from the source file. The tool will parse it and look for missing or invalid rows.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Textarea
@@ -141,18 +176,27 @@ export default function KapanVerifierPage() {
                          {missingSerials.length > 0 && (
                             <Alert variant="destructive" className="mb-6">
                                 <AlertTriangle className="h-4 w-4" />
-                                <AlertTitle>Missing Rows Detected!</AlertTitle>
+                                <AlertTitle>Missing Rows Detected! ({missingSerials.length})</AlertTitle>
                                 <AlertDescription>
                                     The following serial numbers are missing: <strong>{missingSerials.join(', ')}</strong>
                                 </AlertDescription>
                             </Alert>
                         )}
-                         {missingSerials.length === 0 && (
+                         {junkPackets.length > 0 && (
+                            <Alert className="mb-6 border-orange-500 text-orange-700">
+                                <Trash2 className="h-4 w-4" />
+                                <AlertTitle>Junk Entries Found! ({junkPackets.length})</AlertTitle>
+                                <AlertDescription>
+                                    Found {junkPackets.length} rows with malformed data that could not be parsed. They are highlighted below.
+                                </AlertDescription>
+                            </Alert>
+                         )}
+                         {missingSerials.length === 0 && junkPackets.length === 0 && (
                              <Alert className="mb-6 border-green-500 text-green-700">
                                 <CheckCircle2 className="h-4 w-4" />
                                 <AlertTitle>All Good!</AlertTitle>
                                 <AlertDescription>
-                                    No missing serial numbers were detected in the provided data.
+                                    No missing or junk entries were detected in the provided data.
                                 </AlertDescription>
                             </Alert>
                          )}
@@ -165,8 +209,8 @@ export default function KapanVerifierPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {verifiedData.map(row => (
-                                        <TableRow key={row.sr} className={cn(row.status === 'missing' && 'bg-destructive/10')}>
+                                    {verifiedData.map((row, i) => (
+                                        <TableRow key={`${row.sr}-${i}`} className={cn(getRowClass(row.status))}>
                                             <TableCell className="font-bold">{row.sr}</TableCell>
                                             {row.data.map((cell, index) => <TableCell key={index}>{cell || '–'}</TableCell>)}
                                             <TableCell className="flex items-center gap-2">
