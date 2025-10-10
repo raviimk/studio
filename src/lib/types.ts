@@ -96,6 +96,12 @@ export interface FourPDepartmentSettings {
   belowThresholdDeptName: string;
 }
 
+export interface FourPData {
+    operator: string;
+    pcs: number;
+    amount: number;
+}
+
 export interface FourPLot {
   id: string;
   kapan: string;
@@ -110,9 +116,10 @@ export interface FourPLot {
   carat?: number;
   department?: string;
   // Fields below are added on return
-  fourPOperator?: string;
+  fourPOperator?: string; // Kept for backwards compatibility
   returnDate?: string;
-  fourPAmount?: number;
+  fourPAmount?: number; // Kept for backwards compatibility
+  fourPData?: FourPData[]; // New field for split returns
 }
 
 
