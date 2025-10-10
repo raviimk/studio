@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Star } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useSystemState } from '@/hooks/useSystemState';
+import { cn } from '@/lib/utils';
 
 
 // Schemas
@@ -185,6 +186,16 @@ export default function ControlPanelPage() {
   function handleDeleteFourPTechingOperator(id: string) {
     setFourPTechingOperators((fourPTechingOperators || []).filter(op => op.id !== id));
     toast({ title: 'Success', description: '4P Teching operator deleted.' });
+  }
+
+  function handleToggleDefaultTechingOperator(id: string) {
+    setFourPTechingOperators(prev => 
+      prev.map(op => ({
+        ...op,
+        isDefault: op.id === id ? !op.isDefault : false
+      }))
+    );
+    toast({ title: 'Success', description: 'Default 4P Teching operator updated.' });
   }
 
   function handleUpdatePriceMaster(values: z.infer<typeof priceMasterSchema>) {
@@ -557,7 +568,12 @@ export default function ControlPanelPage() {
                                       {(fourPTechingOperators || []).map(op => (
                                           <TableRow key={op.id}>
                                               <TableCell>{op.name}</TableCell>
-                                              <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                              <TableCell className="flex gap-1">
+                                                  <Button variant="ghost" size="icon" onClick={() => handleToggleDefaultTechingOperator(op.id)}>
+                                                      <Star className={cn("h-4 w-4", op.isDefault ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
+                                                  </Button>
+                                                  <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                              </TableCell>
                                           </TableRow>
                                       ))}
                                   </TableBody>

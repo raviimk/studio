@@ -83,6 +83,7 @@ export interface FourPOperator {
 export interface FourPTechingOperator {
   id: string;
   name: string;
+  isDefault?: boolean;
 }
 
 export interface PriceMaster {

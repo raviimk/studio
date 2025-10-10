@@ -57,8 +57,11 @@ export default function FourPTechingEntryPage() {
 
 
   useEffect(() => {
-      // Auto-select operator if only one exists
-      if(fourPTechingOperators.length === 1) {
+      // Auto-select default operator if one exists
+      const defaultOperator = fourPTechingOperators.find(op => op.isDefault);
+      if (defaultOperator) {
+          setTechingOperator(defaultOperator.name);
+      } else if (fourPTechingOperators.length === 1) {
           setTechingOperator(fourPTechingOperators[0].name);
       }
   }, [fourPTechingOperators]);
@@ -156,7 +159,8 @@ export default function FourPTechingEntryPage() {
     setHireDetails(null);
     setPcs('');
     setBlocking('');
-    if(fourPTechingOperators.length > 1) {
+    const defaultOperator = fourPTechingOperators.find(op => op.isDefault);
+    if (!defaultOperator) {
         setTechingOperator('');
     }
   };
