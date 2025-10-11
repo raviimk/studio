@@ -303,6 +303,45 @@ body {
       animation: spin-slow 20s linear infinite;
   }
 
+  /* Packet Slot Animations */
+  @keyframes move-to-bottom-left {
+    from {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1.5);
+      opacity: 0.5;
+    }
+    to {
+      bottom: 2px;
+      left: 4px;
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes move-to-top-right {
+      from {
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) scale(1.5);
+          opacity: 0.5;
+      }
+      to {
+          top: 2px;
+          right: 4px;
+          transform: translate(0, 0) scale(1);
+          opacity: 1;
+      }
+  }
+
+  .animate-move-br {
+    animation: move-to-bottom-left 0.5s ease-out forwards;
+  }
+  .animate-move-tr {
+    animation: move-to-top-right 0.5s ease-out forwards;
+  }
+
+
   /* New Uiverse Button CSS */
   .uiverse-button {
     --primary: hsl(var(--primary));

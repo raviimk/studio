@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -87,7 +87,8 @@ export default function NewLaserLotPage() {
     },
   });
 
-  const currentLotNumberStr = form.watch('lotNumber');
+  const { watch } = form;
+  const currentLotNumberStr = watch('lotNumber');
   
   const handleTensionChange = (value: string) => {
     form.setValue('tensionType', value);
@@ -114,7 +115,7 @@ export default function NewLaserLotPage() {
     setTimeout(() => barcodeInputRef.current?.focus(), 100);
   };
   
-  const packetCount = currentLotDetails?.packetCount || 0;
+  const packetCount = useMemo(() => currentLotDetails?.packetCount ?? 0, [currentLotDetails]);
 
   const handleAddPacket = (packet: ScannedPacket) => {
     if(scannedPackets.length >= packetCount) {
@@ -208,8 +209,8 @@ export default function NewLaserLotPage() {
   }
 
   function createFinalLot() {
-     if (!currentLotDetails || scannedPackets.length !== currentLotDetails.packetCount) {
-        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${currentLotDetails?.packetCount} packets, but found ${scannedPackets.length}.` });
+     if (!currentLotDetails || scannedPackets.length !== packetCount) {
+        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${packetCount} packets, but found ${scannedPackets.length}.` });
         return;
     }
 
@@ -362,10 +363,18 @@ export default function NewLaserLotPage() {
                                   <Tooltip key={index}>
                                       <TooltipTrigger asChild>
                                           <div className={cn(
-                                              "h-12 flex items-center justify-center rounded-md border text-sm font-mono",
+                                              "relative h-12 flex items-center justify-center rounded-md border text-sm font-mono overflow-hidden",
                                               packet ? 'bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700' : 'bg-muted/50'
                                           )}>
-                                              {packet ? <Check className="h-5 w-5" /> : (index + 1)}
+                                              {!packet && (index + 1)}
+                                              {packet && (
+                                                <>
+                                                  <span className="absolute bottom-0.5 left-1 text-xs font-bold text-green-700/70 animate-move-br">{index + 1}</span>
+                                                  <span className="absolute top-0.5 right-1 text-xs font-semibold text-green-800/80 animate-move-tr">
+                                                      {`${packet.packetNumber}${packet.suffix ? `-${packet.suffix}` : ''}`}
+                                                  </span>
+                                                </>
+                                              )}
                                           </div>
                                       </TooltipTrigger>
                                        {packet && (
