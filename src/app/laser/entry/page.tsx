@@ -419,7 +419,7 @@ export default function NewLaserLotPage() {
         </div>
         
         <div className="flex justify-center items-center mt-8">
-            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow" />
+            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow drop-shadow-2xl" />
        </div>
 
         <AlertDialog>
