@@ -74,18 +74,8 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
     };
 
     if (shapeUpper.includes('ROUND')) {
-        return <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...iconProps}>
-            <g stroke="currentColor" strokeWidth="4">
-                <path d="M50 10 L90 40 L75 90 L25 90 L10 40 Z" fill="currentColor" fillOpacity="0.1" />
-                <path d="M50 10 L50 90" />
-                <path d="M10 40 L90 40" />
-                <path d="M50 10 L25 90" />
-                <path d="M50 10 L75 90" />
-                <path d="M10 40 L50 90" />
-                <path d="M90 40 L50 90" />
-                <path d="M25 90 L10 40 L32.5 40 L50 10 L67.5 40 L90 40 L75 90 L50 90 Z" fill="currentColor" fillOpacity="0.1" />
-                <path d="M50 10 L32.5 40 L50 90 L67.5 40 Z" fill="currentColor" fillOpacity="0.2" />
-            </g>
+        return <svg fill="currentColor" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" {...iconProps}>
+            <path d="M2.103 12.052l13.398 16.629-5.373-16.629h-8.025zM11.584 12.052l4.745 16.663 4.083-16.663h-8.828zM17.051 28.681l12.898-16.629h-7.963l-4.935 16.629zM29.979 10.964l-3.867-6.612-3.869 6.612h7.736zM24.896 3.973h-7.736l3.867 6.839 3.869-6.839zM19.838 10.964l-3.867-6.612-3.868 6.612h7.735zM14.839 3.973h-7.735l3.868 6.839 3.867-6.839zM5.889 4.352l-3.867 6.612h7.735l-3.868-6.612z"></path>
         </svg>;
     }
     if (shapeUpper.includes('PRINCESS') || shapeUpper.includes('CHOKI') || shapeUpper.includes('SQUARE')) {
