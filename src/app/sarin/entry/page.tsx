@@ -41,18 +41,9 @@ const formSchema = z.object({
 });
 
 const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <g stroke="hsl(var(--primary) / 0.5)" strokeWidth="1">
-            <path d="M50 5 L95 40 L50 95 L5 40 Z" fill="hsl(var(--primary) / 0.05)" />
-            <path d="M50 5 L50 95" />
-            <path d="M5 40 L95 40" />
-            <path d="M27.5 22.5 L72.5 57.5" />
-            <path d="M27.5 57.5 L72.5 22.5" />
-            <path d="M50 5 L27.5 22.5 L50 40 L72.5 22.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M5 40 L27.5 57.5 L50 40 L27.5 22.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M50 95 L72.5 57.5 L50 40 L27.5 57.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M95 40 L72.5 22.5 L50 40 L72.5 57.5 Z" fill="hsl(var(--primary) / 0.1)" />
-        </g>
+    <svg fill="currentColor" width="800px" height="800px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <title>diamond</title>
+        <path d="M2.103 12.052l13.398 16.629-5.373-16.629h-8.025zM11.584 12.052l4.745 16.663 4.083-16.663h-8.828zM17.051 28.681l12.898-16.629h-7.963l-4.935 16.629zM29.979 10.964l-3.867-6.612-3.869 6.612h7.736zM24.896 3.973h-7.736l3.867 6.839 3.869-6.839zM19.838 10.964l-3.867-6.612-3.868 6.612h7.735zM14.839 3.973h-7.735l3.868 6.839 3.867-6.839zM5.889 4.352l-3.867 6.612h7.735l-3.868-6.612z"></path>
     </svg>
 );
 
@@ -308,7 +299,7 @@ export default function SarinPacketEntryPage() {
       </Card>
 
        <div className="flex justify-center items-center mt-8">
-            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-slow" />
+            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow drop-shadow-2xl" />
        </div>
     </div>
   );
