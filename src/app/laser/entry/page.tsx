@@ -120,8 +120,7 @@ export default function NewLaserLotPage() {
   }
   
   const handleAddPacket = (packet: ScannedPacket) => {
-    const count = getValues().packetCount;
-    if(scannedPackets.length >= count) {
+    if(scannedPackets.length >= currentPacketCount) {
         toast({ variant: 'destructive', title: 'Limit Reached', description: 'You have already scanned all packets for this lot.' });
         setBarcode('');
         return;
@@ -213,18 +212,16 @@ export default function NewLaserLotPage() {
 
   function createFinalLot() {
      if (!currentLotDetails) return;
-     
-    const finalPacketCount = getValues().packetCount;
 
-    if (scannedPackets.length !== finalPacketCount) {
-        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${finalPacketCount} packets, but found ${scannedPackets.length}.` });
+    if (scannedPackets.length !== currentPacketCount) {
+        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${currentPacketCount} packets, but found ${scannedPackets.length}.` });
         return;
     }
 
     const newLot: LaserLot = {
       id: uuidv4(),
       ...currentLotDetails,
-      packetCount: finalPacketCount,
+      packetCount: currentPacketCount,
       scannedPackets,
       entryDate: new Date().toISOString(),
       isReturned: false,
@@ -422,7 +419,7 @@ export default function NewLaserLotPage() {
         </div>
         
         <div className="flex justify-center items-center mt-8">
-            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-slow" />
+            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow" />
        </div>
 
         <AlertDialog>

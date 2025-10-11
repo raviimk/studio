@@ -303,6 +303,18 @@ body {
       animation: spin-slow 20s linear infinite;
   }
 
+  @keyframes spin-y-slow {
+    from {
+      transform: rotateY(0deg);
+    }
+    to {
+      transform: rotateY(360deg);
+    }
+  }
+  .animate-spin-y-slow {
+    animation: spin-y-slow 15s linear infinite;
+  }
+
   /* Packet Slot Animations */
   @keyframes move-to-bottom-left {
     from {
