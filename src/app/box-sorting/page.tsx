@@ -71,25 +71,34 @@ const ShapeIcon = ({ shape, className }: { shape: string, className?: string }) 
     const shapeUpper = shape.toUpperCase();
     const iconProps = {
         className: cn("w-6 h-6 animate-spin-slow text-green-600", className),
-        fill: "currentColor",
-        viewBox: "0 0 24 24",
-        xmlns: "http://www.w3.org/2000/svg"
     };
 
     if (shapeUpper.includes('ROUND')) {
-        return <svg {...iconProps}><path d="M12 2L6.25 6.5H17.75L12 2ZM5.5 7.5L3 12L12 22L21 12L18.5 7.5H5.5ZM7.5 7.5L12 11L16.5 7.5H7.5Z"/></svg>;
+        return <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...iconProps}>
+            <g stroke="currentColor" strokeWidth="4">
+                <path d="M50 10 L90 40 L75 90 L25 90 L10 40 Z" fill="currentColor" fillOpacity="0.1" />
+                <path d="M50 10 L50 90" />
+                <path d="M10 40 L90 40" />
+                <path d="M50 10 L25 90" />
+                <path d="M50 10 L75 90" />
+                <path d="M10 40 L50 90" />
+                <path d="M90 40 L50 90" />
+                <path d="M25 90 L10 40 L32.5 40 L50 10 L67.5 40 L90 40 L75 90 L50 90 Z" fill="currentColor" fillOpacity="0.1" />
+                <path d="M50 10 L32.5 40 L50 90 L67.5 40 Z" fill="currentColor" fillOpacity="0.2" />
+            </g>
+        </svg>;
     }
     if (shapeUpper.includes('PRINCESS') || shapeUpper.includes('CHOKI') || shapeUpper.includes('SQUARE')) {
-         return <svg {...iconProps}><path d="M5 3H19L21 5V19L19 21H5L3 19V5L5 3ZM5 5V19H19V5H5ZM7 7H17V17H7V7Z"/></svg>;
+         return <svg {...iconProps}  fill="currentColor" viewBox="0 0 24 24"><path d="M5 3H19L21 5V19L19 21H5L3 19V5L5 3ZM5 5V19H19V5H5ZM7 7H17V17H7V7Z"/></svg>;
     }
     if (shapeUpper.includes('EMERALD')) {
-        return <svg {...iconProps}><path d="M6 4H18L20 6V18L18 20H6L4 18V6L6 4ZM6 6V18H18V6H6Z"/></svg>;
+        return <svg {...iconProps} fill="currentColor" viewBox="0 0 24 24"><path d="M6 4H18L20 6V18L18 20H6L4 18V6L6 4ZM6 6V18H18V6H6Z"/></svg>;
     }
     if (shapeUpper.includes('PEAR')) {
-        return <svg {...iconProps}><path d="M12 2C7.5 2 4 8 4 12C4 16.5 7.5 22 12 22C16.5 22 20 16.5 20 12C20 8 16.5 2 12 2ZM12 4.15L17.15 12H6.85L12 4.15Z"/></svg>;
+        return <svg {...iconProps} fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C7.5 2 4 8 4 12C4 16.5 7.5 22 12 22C16.5 22 20 16.5 20 12C20 8 16.5 2 12 2ZM12 4.15L17.15 12H6.85L12 4.15Z"/></svg>;
     }
     if (shapeUpper.includes('MARQUISE')) {
-        return <svg {...iconProps}><path d="M12 2L2 12L12 22L22 12L12 2ZM4.5 12L12 5.5L19.5 12L12 18.5L4.5 12Z"/></svg>;
+        return <svg {...iconProps} fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 12L12 22L22 12L12 2ZM4.5 12L12 5.5L19.5 12L12 18.5L4.5 12Z"/></svg>;
     }
     
     return <Gem className={cn("w-6 h-6 text-green-600", className)} />;

@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus, Check } from 'lucide-react';
+import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus, Check, Pencil } from 'lucide-react';
 import { isSameMonth, startOfMonth } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
@@ -39,15 +39,15 @@ type FormValues = z.infer<typeof formSchema>;
 const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" {...props}>
         <g stroke="hsl(var(--primary) / 0.5)" strokeWidth="1">
-            <path d="M50 5 L95 50 L50 95 L5 50 Z" fill="hsl(var(--primary) / 0.05)" />
+            <path d="M50 5 L95 35 L80 95 L20 95 L5 35 Z" fill="hsl(var(--primary) / 0.05)" />
             <path d="M50 5 L50 95" />
-            <path d="M5 50 L95 50" />
-            <path d="M27.5 27.5 L72.5 72.5" />
-            <path d="M27.5 72.5 L72.5 27.5" />
-            <path d="M50 5 L27.5 27.5 L50 50 L72.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M5 50 L27.5 72.5 L50 50 L27.5 27.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M50 95 L72.5 72.5 L50 50 L27.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
-            <path d="M95 50 L72.5 27.5 L50 50 L72.5 72.5 Z" fill="hsl(var(--primary) / 0.1)" />
+            <path d="M5 35 L95 35" />
+            <path d="M50 5 L20 95" />
+            <path d="M50 5 L80 95" />
+            <path d="M5 35 L50 95" />
+            <path d="M95 35 L50 95" />
+            <path d="M20 95 L5 35 L27.5 35 L50 5 L72.5 35 L95 35 L80 95 L50 95 Z" fill="hsl(var(--primary) / 0.05)" />
+            <path d="M50 5 L27.5 35 L50 95 L72.5 35 Z" fill="hsl(var(--primary) / 0.1)" />
         </g>
     </svg>
 );
@@ -70,7 +70,6 @@ export default function NewLaserLotPage() {
 
   const [lastCompletedLot, setLastCompletedLot] = useState<number | null>(null);
   
-  // State for Lot Quick View Popup
   const [viewingLot, setViewingLot] = useState<LaserLot | null>(null);
 
 
@@ -87,7 +86,7 @@ export default function NewLaserLotPage() {
     },
   });
 
-  const { watch } = form;
+  const { watch, getValues } = form;
   const currentLotNumberStr = watch('lotNumber');
   
   const handleTensionChange = (value: string) => {
@@ -95,6 +94,9 @@ export default function NewLaserLotPage() {
     const mapping = laserMappings.find(m => m.tensionType === value);
     form.setValue('machine', mapping ? mapping.machine : 'N/A');
   };
+  
+  const currentPacketCount = watch('packetCount') || 0;
+  const allPacketsScanned = currentPacketCount > 0 && scannedPackets.length === currentPacketCount;
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
@@ -114,6 +116,15 @@ export default function NewLaserLotPage() {
     setFormSubmitted(true);
     setTimeout(() => barcodeInputRef.current?.focus(), 100);
   };
+  
+  const handleUpdateDetails = () => {
+    setFormSubmitted(false);
+    setScannedPackets([]); // Clear scanned packets as details are being changed
+    toast({
+        title: "Details Unlocked",
+        description: "You can now edit the lot details. You will need to rescan all packets."
+    })
+  }
   
   const packetCount = useMemo(() => currentLotDetails?.packetCount ?? 0, [currentLotDetails]);
 
@@ -209,14 +220,19 @@ export default function NewLaserLotPage() {
   }
 
   function createFinalLot() {
-     if (!currentLotDetails || scannedPackets.length !== packetCount) {
-        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${packetCount} packets, but found ${scannedPackets.length}.` });
+     if (!currentLotDetails) return;
+     
+    const finalPacketCount = getValues().packetCount;
+
+    if (scannedPackets.length !== finalPacketCount) {
+        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${finalPacketCount} packets, but found ${scannedPackets.length}.` });
         return;
     }
 
     const newLot: LaserLot = {
       id: uuidv4(),
       ...currentLotDetails,
+      packetCount: finalPacketCount,
       scannedPackets,
       entryDate: new Date().toISOString(),
       isReturned: false,
@@ -305,7 +321,14 @@ export default function NewLaserLotPage() {
                           <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
                       )} />
                   </div>
-                  {!formSubmitted && <Button type="submit">Next: Scan Packets</Button>}
+                   {formSubmitted ? (
+                        <Button type="button" variant="outline" onClick={handleUpdateDetails}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Update Details & Rescan
+                        </Button>
+                    ) : (
+                        <Button type="submit">Next: Scan Packets</Button>
+                    )}
                   </form>
               </Form>
               </CardContent>
@@ -349,15 +372,15 @@ export default function NewLaserLotPage() {
                               placeholder="Scan barcode..."
                               value={barcode}
                               onChange={e => setBarcode(e.target.value)}
-                              disabled={scannedPackets.length >= packetCount}
+                              disabled={allPacketsScanned}
                           />
-                          <Button type="submit" disabled={scannedPackets.length >= packetCount || !barcode}>
+                          <Button type="submit" disabled={allPacketsScanned || !barcode}>
                               <Barcode className="mr-2 h-4 w-4" /> Add
                           </Button>
                       </form>
 
                       <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
-                         {Array.from({ length: packetCount }).map((_, index) => {
+                         {Array.from({ length: currentPacketCount }).map((_, index) => {
                               const packet = scannedPackets[index];
                               return (
                                   <Tooltip key={index}>
@@ -394,9 +417,9 @@ export default function NewLaserLotPage() {
                       
                       <div className="flex justify-between items-center mt-4">
                           <p className="text-sm text-muted-foreground font-semibold">
-                              Scanned: {scannedPackets.length} / {packetCount}
+                              Scanned: {scannedPackets.length} / {currentPacketCount}
                           </p>
-                          <Button onClick={createFinalLot} disabled={scannedPackets.length !== packetCount}>
+                          <Button onClick={createFinalLot} disabled={!allPacketsScanned}>
                              <PackagePlus className="mr-2 h-4 w-4"/>
                               Create Laser Lot
                           </Button>
@@ -460,7 +483,3 @@ export default function NewLaserLotPage() {
     </TooltipProvider>
   );
 }
-
-    
-
-    
