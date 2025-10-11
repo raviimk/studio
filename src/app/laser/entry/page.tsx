@@ -78,7 +78,7 @@ export default function NewLaserLotPage() {
     },
   });
 
-  const { watch, getValues } = form;
+  const { watch } = form;
   const currentLotNumberStr = watch('lotNumber');
   
   const handleTensionChange = (value: string) => {
@@ -88,8 +88,6 @@ export default function NewLaserLotPage() {
   };
   
   const currentPacketCount = watch('packetCount') || 0;
-  
-  const allPacketsScanned = currentPacketCount > 0 && scannedPackets.length === currentPacketCount;
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
@@ -361,9 +359,9 @@ export default function NewLaserLotPage() {
                               placeholder="Scan barcode..."
                               value={barcode}
                               onChange={e => setBarcode(e.target.value)}
-                              disabled={allPacketsScanned}
+                              disabled={scannedPackets.length >= currentPacketCount && currentPacketCount > 0}
                           />
-                          <Button type="submit" disabled={allPacketsScanned || !barcode}>
+                          <Button type="submit" disabled={!barcode || (scannedPackets.length >= currentPacketCount && currentPacketCount > 0)}>
                               <Barcode className="mr-2 h-4 w-4" /> Add
                           </Button>
                       </form>
@@ -408,7 +406,7 @@ export default function NewLaserLotPage() {
                           <p className="text-sm text-muted-foreground font-semibold">
                               Scanned: {scannedPackets.length} / {currentPacketCount}
                           </p>
-                          <Button onClick={createFinalLot} disabled={!allPacketsScanned}>
+                          <Button onClick={createFinalLot} disabled={currentPacketCount === 0 || scannedPackets.length !== currentPacketCount}>
                              <PackagePlus className="mr-2 h-4 w-4"/>
                               Create Laser Lot
                           </Button>
