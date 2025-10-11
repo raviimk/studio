@@ -37,17 +37,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const LargeDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg fill="currentColor" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 293.538 293.538" xmlSpace="preserve" {...props}>
-        <g>
-            <g>
-                <polygon points="210.084,88.631 146.622,284.844 81.491,88.631 		"/>
-                <polygon points="103.7,64.035 146.658,21.08 188.515,64.035 		"/>
-                <polygon points="55.581,88.631 107.681,245.608 0,88.631 		"/>
-                <polygon points="235.929,88.631 293.538,88.631 184.521,247.548 		"/>
-                <polygon points="283.648,64.035 222.851,64.035 168.938,8.695 219.079,8.695 		"/>
-                <polygon points="67.563,8.695 124.263,8.695 68.923,64.035 7.969,64.035 		"/>
-            </g>
-        </g>
+    <svg fill="currentColor" width="800px" height="800px" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <title>diamond</title>
+        <path d="M2.103 12.052l13.398 16.629-5.373-16.629h-8.025zM11.584 12.052l4.745 16.663 4.083-16.663h-8.828zM17.051 28.681l12.898-16.629h-7.963l-4.935 16.629zM29.979 10.964l-3.867-6.612-3.869 6.612h7.736zM24.896 3.973h-7.736l3.867 6.839 3.869-6.839zM19.838 10.964l-3.867-6.612-3.868 6.612h7.735zM14.839 3.973h-7.735l3.868 6.839 3.867-6.839zM5.889 4.352l-3.867 6.612h7.735l-3.868-6.612z"></path>
     </svg>
 );
 
@@ -86,7 +78,7 @@ export default function NewLaserLotPage() {
     },
   });
 
-  const { watch } = form;
+  const { watch, getValues } = form;
   const currentLotNumberStr = watch('lotNumber');
   
   const handleTensionChange = (value: string) => {
@@ -97,10 +89,7 @@ export default function NewLaserLotPage() {
   
   const currentPacketCount = watch('packetCount') || 0;
   
-  const allPacketsScanned = useMemo(() => {
-    const count = form.getValues().packetCount;
-    return count > 0 && scannedPackets.length === count;
-  }, [scannedPackets, form]);
+  const allPacketsScanned = currentPacketCount > 0 && scannedPackets.length === currentPacketCount;
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
@@ -130,10 +119,8 @@ export default function NewLaserLotPage() {
     })
   }
   
-  const packetCount = useMemo(() => currentLotDetails?.packetCount ?? 0, [currentLotDetails]);
-
   const handleAddPacket = (packet: ScannedPacket) => {
-    const count = form.getValues().packetCount;
+    const count = getValues().packetCount;
     if(scannedPackets.length >= count) {
         toast({ variant: 'destructive', title: 'Limit Reached', description: 'You have already scanned all packets for this lot.' });
         setBarcode('');
@@ -225,9 +212,9 @@ export default function NewLaserLotPage() {
   }
 
   function createFinalLot() {
-     if (!currentLotDetails || !allPacketsScanned) return;
+     if (!currentLotDetails) return;
      
-    const finalPacketCount = form.getValues().packetCount;
+    const finalPacketCount = getValues().packetCount;
 
     if (scannedPackets.length !== finalPacketCount) {
         toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${finalPacketCount} packets, but found ${scannedPackets.length}.` });
