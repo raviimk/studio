@@ -305,14 +305,15 @@ body {
 
   @keyframes spin-y-slow {
     from {
-      transform: rotateY(0deg);
+      transform: perspective(1000px) rotateY(0deg);
     }
     to {
-      transform: rotateY(360deg);
+      transform: perspective(1000px) rotateY(360deg);
     }
   }
   .animate-spin-y-slow {
     animation: spin-y-slow 15s linear infinite;
+    transform-style: preserve-3d;
   }
 
   /* Packet Slot Animations */
@@ -639,3 +640,5 @@ body {
     }
   }
 }
+
+    
