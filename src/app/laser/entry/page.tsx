@@ -108,14 +108,6 @@ export default function NewLaserLotPage() {
     setTimeout(() => barcodeInputRef.current?.focus(), 100);
   };
   
-  const handleUpdateDetails = () => {
-    setFormSubmitted(false);
-    setScannedPackets([]); // Clear scanned packets as details are being changed
-    toast({
-        title: "Details Unlocked",
-        description: "You can now edit the lot details. You will need to rescan all packets."
-    })
-  }
   
   const handleAddPacket = (packet: ScannedPacket) => {
     if(scannedPackets.length >= currentPacketCount) {
@@ -272,7 +264,7 @@ export default function NewLaserLotPage() {
   return (
     <TooltipProvider>
       <div className="container mx-auto py-8 px-4 md:px-6">
-        <PageHeader title="New Laser Lot" description="Create a new entry for a laser lot." />
+        <PageHeader title="New Laser Lot" description="sl star" />
         <div className="space-y-6">
           <Card className="max-w-4xl mx-auto glass-card">
               <CardHeader>
@@ -308,12 +300,7 @@ export default function NewLaserLotPage() {
                           <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
                       )} />
                   </div>
-                   {formSubmitted ? (
-                        <Button type="button" variant="outline" onClick={handleUpdateDetails}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Update Details & Rescan
-                        </Button>
-                    ) : (
+                   {!formSubmitted && (
                         <Button type="submit">Next: Scan Packets</Button>
                     )}
                   </form>
