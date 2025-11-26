@@ -16,9 +16,9 @@ import {
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
   FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY,
-  DIAMETER_SORTING_RANGES_KEY
+  DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -60,8 +60,16 @@ const fourPTechingOperatorSchema = z.object({
 });
 
 const priceMasterSchema = z.object({
-  fourP: z.coerce.number().min(0, 'Rate must be positive'),
   fourPTeching: z.coerce.number().min(0, 'Rate must be positive'),
+});
+
+const fourPRateSchema = z.object({
+    from: z.coerce.number(),
+    to: z.coerce.number(),
+    rate: z.coerce.number().min(0, 'Rate must be positive'),
+}).refine(data => data.to > data.from, {
+    message: 'To must be greater than From.',
+    path: ['to'],
 });
 
 const fourPDepartmentSettingsSchema = z.object({
@@ -103,7 +111,8 @@ export default function ControlPanelPage() {
   const [laserMappings, setLaserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
   const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
   const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourPTeching: 0 });
+  const [fourPRates, setFourPRates] = useLocalStorage<FourPRate[]>(FOURP_RATES_KEY, []);
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
   const [boxSortingRanges, setBoxSortingRanges] = useLocalStorage<BoxSortingRange[]>(BOX_SORTING_RANGES_KEY, []);
@@ -124,7 +133,8 @@ export default function ControlPanelPage() {
   const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({ resolver: zodResolver(laserMappingSchema), defaultValues: { tensionType: '', machine: '' } });
   const fourPForm = useForm<z.infer<typeof fourPOperatorSchema>>({ resolver: zodResolver(fourPOperatorSchema), defaultValues: { name: '' } });
   const fourPTechingForm = useForm<z.infer<typeof fourPTechingOperatorSchema>>({ resolver: zodResolver(fourPTechingOperatorSchema), defaultValues: { name: '' } });
-  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster || { fourP: 0, fourPTeching: 0 } });
+  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster || { fourPTeching: 0 } });
+  const fourPRateForm = useForm<z.infer<typeof fourPRateSchema>>({ resolver: zodResolver(fourPRateSchema), defaultValues: { from: 0, to: 0, rate: 0 }});
   const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings || { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' } });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings || { returnTimeLimitMinutes: 60 } });
   const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
@@ -199,8 +209,19 @@ export default function ControlPanelPage() {
   }
 
   function handleUpdatePriceMaster(values: z.infer<typeof priceMasterSchema>) {
-    setPriceMaster(values);
+    setPriceMaster(prev => ({...prev, ...values}));
     toast({ title: 'Success', description: 'Price master updated.' });
+  }
+
+  function handleAddFourPRate(values: z.infer<typeof fourPRateSchema>) {
+    setFourPRates([...(fourPRates || []), {id: uuidv4(), ...values}]);
+    toast({ title: 'Success', description: '4P rate added.' });
+    fourPRateForm.reset();
+  }
+
+  function handleDeleteFourPRate(id: string) {
+    setFourPRates((fourPRates || []).filter(r => r.id !== id));
+    toast({ title: 'Success', description: '4P rate deleted.'});
   }
   
   function handleUpdateFourPDeptSettings(values: z.infer<typeof fourPDepartmentSettingsSchema>) {
@@ -493,95 +514,129 @@ export default function ControlPanelPage() {
                   </CardContent>
               </Card>
 
-              <Card>
-                  <CardHeader>
-                      <CardTitle>Price Master</CardTitle>
-                      <CardDescription>Set the per-piece rates for 4P and 4P Teching work.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                      <Form {...priceMasterForm}>
-                          <form onSubmit={priceMasterForm.handleSubmit(handleUpdatePriceMaster)} className="space-y-4 max-w-sm">
-                              <FormField control={priceMasterForm.control} name="fourP" render={({ field }) => (
-                                  <FormItem><FormLabel>4P Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                              )} />
-                              <FormField control={priceMasterForm.control} name="fourPTeching" render={({ field }) => (
-                                  <FormItem><FormLabel>4P Teching Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                              )} />
-                              <Button type="submit">Update Rates</Button>
-                          </form>
-                      </Form>
-                  </CardContent>
-              </Card>
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>4P Rate Management (Cent-wise)</CardTitle>
+                            <CardDescription>Set the per-piece rates for 4P work based on carat weight.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <Form {...fourPRateForm}>
+                                <form onSubmit={fourPRateForm.handleSubmit(handleAddFourPRate)} className="space-y-4">
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <FormField control={fourPRateForm.control} name="from" render={({ field }) => (
+                                            <FormItem><FormLabel>From (ct)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={fourPRateForm.control} name="to" render={({ field }) => (
+                                            <FormItem><FormLabel>To (ct)</FormLabel><FormControl><Input type="number" step="0.001" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                        <FormField control={fourPRateForm.control} name="rate" render={({ field }) => (
+                                            <FormItem><FormLabel>Rate (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )} />
+                                    </div>
+                                    <Button type="submit">Add 4P Rate</Button>
+                                </form>
+                            </Form>
+                            <Table className="mt-4">
+                                <TableHeader><TableRow><TableHead>From (ct)</TableHead><TableHead>To (ct)</TableHead><TableHead>Rate (₹)</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {(fourPRates || []).sort((a,b) => a.from - b.from).map(r => (
+                                        <TableRow key={r.id}>
+                                            <TableCell>{r.from.toFixed(3)}</TableCell>
+                                            <TableCell>{r.to.toFixed(3)}</TableCell>
+                                            <TableCell>{r.rate.toFixed(2)}</TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPRate(r.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
 
-              <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-6">
-                      <Card>
-                          <CardHeader><CardTitle>Add 4P Operator</CardTitle></CardHeader>
-                          <CardContent>
-                              <Form {...fourPForm}>
-                                  <form onSubmit={fourPForm.handleSubmit(handleAddFourPOperator)} className="space-y-4">
-                                      <FormField control={fourPForm.control} name="name" render={({ field }) => (
-                                          <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                      )} />
-                                      <Button type="submit">Add 4P Operator</Button>
-                                  </form>
-                              </Form>
-                          </CardContent>
-                      </Card>
-                      <Card>
-                          <CardHeader><CardTitle>Manage 4P Operators</CardTitle></CardHeader>
-                          <CardContent>
-                              <Table>
-                                  <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                                  <TableBody>
-                                      {(fourPOperators || []).map(op => (
-                                          <TableRow key={op.id}>
-                                              <TableCell>{op.name}</TableCell>
-                                              <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
-                                          </TableRow>
-                                      ))}
-                                  </TableBody>
-                              </Table>
-                          </CardContent>
-                      </Card>
-                  </div>
-                  <div className="space-y-6">
-                      <Card>
-                          <CardHeader><CardTitle>Add 4P Teching Operator</CardTitle></CardHeader>
-                          <CardContent>
-                              <Form {...fourPTechingForm}>
-                                  <form onSubmit={fourPTechingForm.handleSubmit(handleAddFourPTechingOperator)} className="space-y-4">
-                                      <FormField control={fourPTechingForm.control} name="name" render={({ field }) => (
-                                          <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                      )} />
-                                      <Button type="submit">Add 4P Teching Operator</Button>
-                                  </form>
-                              </Form>
-                          </CardContent>
-                      </Card>
-                      <Card>
-                          <CardHeader><CardTitle>Manage 4P Teching Operators</CardTitle></CardHeader>
-                          <CardContent>
-                              <Table>
-                                  <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                                  <TableBody>
-                                      {(fourPTechingOperators || []).map(op => (
-                                          <TableRow key={op.id}>
-                                              <TableCell>{op.name}</TableCell>
-                                              <TableCell className="flex gap-1">
-                                                  <Button variant="ghost" size="icon" onClick={() => handleToggleDefaultTechingOperator(op.id)}>
-                                                      <Star className={cn("h-4 w-4", op.isDefault ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
-                                                  </Button>
-                                                  <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
-                                              </TableCell>
-                                          </TableRow>
-                                      ))}
-                                  </TableBody>
-                              </Table>
-                          </CardContent>
-                      </Card>
-                  </div>
-              </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>4P Teching Rate</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Form {...priceMasterForm}>
+                                <form onSubmit={priceMasterForm.handleSubmit(handleUpdatePriceMaster)} className="space-y-4 max-w-sm">
+                                    <FormField control={priceMasterForm.control} name="fourPTeching" render={({ field }) => (
+                                        <FormItem><FormLabel>4P Teching Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <Button type="submit">Update Teching Rate</Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>Add 4P Operator</CardTitle></CardHeader>
+                        <CardContent>
+                            <Form {...fourPForm}>
+                                <form onSubmit={fourPForm.handleSubmit(handleAddFourPOperator)} className="space-y-4">
+                                    <FormField control={fourPForm.control} name="name" render={({ field }) => (
+                                        <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <Button type="submit">Add 4P Operator</Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader><CardTitle>Manage 4P Operators</CardTitle></CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {(fourPOperators || []).map(op => (
+                                        <TableRow key={op.id}>
+                                            <TableCell>{op.name}</TableCell>
+                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader><CardTitle>Add 4P Teching Operator</CardTitle></CardHeader>
+                        <CardContent>
+                            <Form {...fourPTechingForm}>
+                                <form onSubmit={fourPTechingForm.handleSubmit(handleAddFourPTechingOperator)} className="space-y-4">
+                                    <FormField control={fourPTechingForm.control} name="name" render={({ field }) => (
+                                        <FormItem><FormLabel>Operator Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
+                                    <Button type="submit">Add 4P Teching Operator</Button>
+                                </form>
+                            </Form>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader><CardTitle>Manage 4P Teching Operators</CardTitle></CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {(fourPTechingOperators || []).map(op => (
+                                        <TableRow key={op.id}>
+                                            <TableCell>{op.name}</TableCell>
+                                            <TableCell className="flex gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => handleToggleDefaultTechingOperator(op.id)}>
+                                                    <Star className={cn("h-4 w-4", op.isDefault ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
           </TabsContent>
           <TabsContent value="udhdha" className="space-y-6 mt-6">
               <Card>

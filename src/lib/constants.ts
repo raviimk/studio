@@ -11,6 +11,7 @@ export const LASER_MAPPINGS_KEY = 'laserMappings';
 export const FOURP_OPERATORS_KEY = 'fourPOperators';
 export const FOURP_TECHING_OPERATORS_KEY = 'fourPTechingOperators';
 export const PRICE_MASTER_KEY = 'priceMaster';
+export const FOURP_RATES_KEY = 'fourPRates';
 export const FOURP_LOTS_KEY = 'fourPLots';
 export const FOURP_TECHING_LOTS_KEY = 'fourPTechingLots';
 export const FOURP_DEPARTMENT_SETTINGS_KEY = 'fourPDepartmentSettings';
@@ -53,6 +54,7 @@ export const ALL_APP_KEYS = [
     FOURP_OPERATORS_KEY,
     FOURP_TECHING_OPERATORS_KEY,
     PRICE_MASTER_KEY,
+    FOURP_RATES_KEY,
     FOURP_LOTS_KEY,
     FOURP_TECHING_LOTS_KEY,
     FOURP_DEPARTMENT_SETTINGS_KEY,

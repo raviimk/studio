@@ -12,35 +12,193 @@ export interface SarinPacket {
   packetCount: number;
   hasJiram: boolean;
   jiramCount?: number;
-GEO_PAYLOAD:
-```json
-{
-  "description": "I need to replace the single 4P rate with a cent-wise (carat-based) pricing structure. This involves changing the data model for pricing, updating the control panel to manage these new rates, and then modifying all the pages where 4P calculations are performed to use the new tiered system.",
-  "files": [
-    {
-      "path": "src/lib/types.ts",
-      "reason": "The `PriceMaster` type needs to be updated. I'll remove the single `fourP` rate and add a new `FourPRate` interface to support carat-based ranges (from, to, rate). I will also add the `carat` to the `FourPData` to make calculations possible during the return process."
-    },
-    {
-      "path": "src/lib/constants.ts",
-      "reason": "I need a new local storage key for the new `FourPRate` structure. I will add `FOURP_RATES_KEY` and update the `ALL_APP_KEYS` array to include it for backups."
-    },
-    {
-      "path": "src/app/control-panel/page.tsx",
-      "reason": "This is a major part of the change. I need to remove the old 'Price Master' form for the single 4P rate. I will replace it with a new card for managing 4P rates, including a form to add new rate ranges (from carat, to carat, rate) and a table to display and delete existing rates. This will be similar to how 'Box Sorting Ranges' are handled."
-    },
-    {
-      "path": "src/app/fourp/return/page.tsx",
-      "reason": "This is where the new calculation logic will be implemented. When a lot is returned, instead of using a single rate, the code will need to find the correct rate from the new `fourPRates` based on the lot's carat weight (`finalPcs`). The logic for both full and split returns needs to be updated to use this new lookup mechanism. The `handleConfirmReturn` function will be the primary focus."
-    },
-    {
-      "path": "src/app/fourp-teching/entry/page.tsx",
-      "reason": "When a 4P Teching lot is created or edited, its `fourPAmount` is pre-calculated. This needs to be updated to use the new rate-finding logic based on the lot's carat weight. The `handleSaveLot` and `handleSaveEdit` functions will be modified."
-    },
-    {
-      "path": "src/components/reports/FourPWorkReport.tsx",
-      "reason": "This report displays the `fourPAmount` for completed work. The data it uses is already calculated on the return page, so this component likely won't need major logic changes, but I will review it to ensure it correctly displays the amounts derived from the new tiered system and that the summary totals are correct."
-    }
-  ]
+  date: string;
+  time: string;
+  isReturned: boolean;
+  returnedBy?: string;
+  returnDate?: string;
+  scannedReturnPackets?: ScannedPacket[];
 }
-```
+
+export interface SarinOperator {
+    id: string;
+    name: string;
+}
+
+export interface SarinMapping {
+    id: string;
+    operatorId: string;
+    operatorName: string;
+    machine: string;
+}
+
+export interface LaserLot {
+  id: string;
+  lotNumber: string;
+  kapanNumber: string;
+  tensionType: string;
+  machine: string;
+  packetCount: number;
+  subPacketCount?: number;
+  scannedPackets?: ScannedPacket[];
+  entryDate: string;
+  isReturned: boolean;
+  returnedBy?: string;
+  returnDate?: string;
+}
+
+export interface ScannedPacket {
+    id: string;
+    fullBarcode: string;
+    kapanNumber: string;
+    packetNumber: string;
+    suffix: string;
+}
+
+
+export interface LaserOperator {
+    id: string;
+    name: string;
+}
+
+export interface LaserMapping {
+    id: string;
+    tensionType: string;
+    machine: string;
+}
+
+export interface ReassignLog {
+    id: string;
+    date: string;
+    fromOperator: string;
+    toOperator: string;
+    packets: {
+        mainPacketNumber: number;
+        lotNumber: string;
+        quantityTransferred: number;
+    }[];
+}
+
+export interface FourPOperator {
+    id: string;
+    name: string;
+}
+
+export interface FourPTechingOperator {
+    id: string;
+    name: string;
+    isDefault?: boolean;
+}
+
+export interface PriceMaster {
+    fourPTeching: number;
+}
+
+export interface FourPRate {
+    id: string;
+    from: number;
+    to: number;
+    rate: number;
+}
+
+export interface FourPData {
+    operator: string;
+    pcs: number;
+    amount: number;
+}
+
+export interface FourPLot {
+    id: string;
+    kapan: string;
+    lot: string;
+    carat: number;
+    department: string;
+    pcs: number;
+    blocking: number;
+    finalPcs: number;
+    techingOperator: string;
+    techingAmount: number;
+    entryDate: string;
+    isReturnedToFourP: boolean;
+    fourPOperator?: string; // Legacy support, use fourPData instead
+    fourPAmount?: number;   // Legacy support, use fourPData instead
+    fourPData?: FourPData[];
+    returnDate?: string;
+}
+
+export interface UdhdaPacket {
+    id: string;
+    barcode: string;
+    type: 'sarin' | 'laser';
+    operator: string;
+    assignmentTime: string;
+    isReturned: boolean;
+    returnTime?: string;
+}
+
+export interface UdhdaSettings {
+    returnTimeLimitMinutes: number;
+}
+
+export interface FourPDepartmentSettings {
+    caratThreshold: number;
+    aboveThresholdDeptName: string;
+    belowThresholdDeptName: string;
+}
+
+export interface JiramReportPacket {
+    id: string;
+    barcode: string;
+    kapanNumber: string;
+    scanTime: string;
+}
+
+export interface BoxSortingRange {
+    id: string;
+    from: number;
+    to: number;
+    label: string;
+}
+
+export interface BoxDiameterRange {
+    id: string;
+    from: number;
+    to: number;
+    label: string;
+}
+
+export interface BoxSortingPacket {
+    id: string;
+    barcode: string;
+    packetNumber: string;
+    shape: string;
+    roughWeight: number;
+    polishWeight: number;
+    diameter?: number;
+    boxLabel: string;
+    scanTime: string;
+}
+
+export interface AutoBackupSettings {
+    intervalHours: number;
+    officeEndTime: string;
+    lastBackupTimestamp?: number;
+    lastMasterBackupDate?: string;
+}
+
+export interface ReturnScanSettings {
+    sarin: boolean;
+    laser: boolean;
+}
+
+export interface ProductionEntry {
+    operator: string;
+    lotNumber: string;
+    kapanNumber: string;
+    pcs: number;
+    packetId: string;
+}
+
+export interface ProductionHistory {
+    [date: string]: ProductionEntry[];
+}

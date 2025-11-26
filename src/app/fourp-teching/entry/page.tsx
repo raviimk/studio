@@ -2,8 +2,8 @@
 'use client';
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FOURP_TECHING_LOTS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
-import { FourPLot, FourPTechingOperator, PriceMaster, FourPDepartmentSettings } from '@/lib/types';
+import { FOURP_TECHING_LOTS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY, FOURP_RATES_KEY } from '@/lib/constants';
+import { FourPLot, FourPTechingOperator, PriceMaster, FourPDepartmentSettings, FourPRate } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,11 +28,19 @@ type HireDetails = {
     department: string;
 }
 
+// Function to find the correct rate
+const findRate = (carat: number, rates: FourPRate[]): number => {
+    const matchedRate = rates.find(r => carat >= r.from && carat <= r.to);
+    return matchedRate ? matchedRate.rate : 0;
+};
+
+
 export default function FourPTechingEntryPage() {
   const { toast } = useToast();
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
   const [fourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourPTeching: 0 });
+  const [fourPRates] = useLocalStorage<FourPRate[]>(FOURP_RATES_KEY, []);
   const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
 
 
@@ -137,6 +145,7 @@ export default function FourPTechingEntryPage() {
     
     const finalPcs = numPcs - numBlocking;
     const techingAmount = finalPcs * priceMaster.fourPTeching;
+    const fourPAmount = finalPcs * findRate(hireDetails.carat, fourPRates);
 
     const newLot: FourPLot = {
       id: uuidv4(),
@@ -147,6 +156,7 @@ export default function FourPTechingEntryPage() {
       finalPcs: finalPcs,
       techingOperator: techingOperator,
       techingAmount: techingAmount,
+      fourPAmount: fourPAmount, // Pre-calculate 4P amount
       entryDate: new Date().toISOString(),
       isReturnedToFourP: false,
     };
@@ -203,6 +213,9 @@ export default function FourPTechingEntryPage() {
   };
 
   const handleSaveEdit = (lotId: string) => {
+    const originalLot = fourPTechingLots.find(lot => lot.id === lotId);
+    if (!originalLot) return;
+
     const updatedLotData = { ...editFormData };
     const newPcs = updatedLotData.pcs || 0;
     const newBlocking = updatedLotData.blocking || 0;
@@ -215,7 +228,7 @@ export default function FourPTechingEntryPage() {
     const newFinalPcs = newPcs - newBlocking;
     updatedLotData.finalPcs = newFinalPcs;
     updatedLotData.techingAmount = newFinalPcs * priceMaster.fourPTeching;
-    updatedLotData.fourPAmount = newFinalPcs * priceMaster.fourP;
+    updatedLotData.fourPAmount = newFinalPcs * findRate(originalLot.carat, fourPRates);
 
 
     setFourPTechingLots(prev =>
@@ -407,7 +420,7 @@ export default function FourPTechingEntryPage() {
                             <TableCell>{lot.kapan}</TableCell>
                             <TableCell>{lot.lot}</TableCell>
                             <TableCell><Badge>{lot.department}</Badge></TableCell>
-                            <TableCell>{lot.carat}</TableCell>
+                            <TableCell>{lot.carat.toFixed(3)}</TableCell>
                             <TableCell>{lot.pcs}</TableCell>
                             <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                             <TableCell className="font-bold">{lot.finalPcs}</TableCell>

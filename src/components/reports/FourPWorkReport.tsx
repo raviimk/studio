@@ -30,7 +30,10 @@ export default function FourPWorkReport() {
     return (fourPTechingLots || []).filter(lot => {
       if (!lot.isReturnedToFourP || !lot.returnDate) return false;
       const lotDate = new Date(lot.returnDate);
-      const isOperatorMatch = selectedOperator === 'all' || lot.fourPOperator === selectedOperator;
+      
+      const operatorMatch = selectedOperator === 'all' || 
+        (lot.fourPData ? lot.fourPData.some(d => d.operator === selectedOperator) : lot.fourPOperator === selectedOperator);
+
       const isDateMatch = dateRange?.from
         ? lotDate >= startOfDay(dateRange.from) && lotDate <= endOfDay(dateRange.to || dateRange.from)
         : true;
@@ -40,7 +43,7 @@ export default function FourPWorkReport() {
         lot.lot.toLowerCase().includes(searchLower) ||
         lot.kapan.toLowerCase().includes(searchLower);
 
-      return isOperatorMatch && isDateMatch && isSearchMatch;
+      return operatorMatch && isDateMatch && isSearchMatch;
     }).sort((a, b) => new Date(b.returnDate!).getTime() - new Date(a.returnDate!).getTime());
   }, [fourPTechingLots, selectedOperator, dateRange, searchTerm]);
 
@@ -122,9 +125,7 @@ export default function FourPWorkReport() {
                   <TableHead>Return Date</TableHead>
                   <TableHead>Kapan</TableHead>
                   <TableHead>Lot</TableHead>
-                  <TableHead>4P Operator</TableHead>
-                  <TableHead>Total PCS</TableHead>
-                  <TableHead>Blocking</TableHead>
+                  <TableHead>4P Operator(s)</TableHead>
                   <TableHead>Final PCS</TableHead>
                   <TableHead>Amount (₹)</TableHead>
                 </TableRow>
@@ -135,14 +136,20 @@ export default function FourPWorkReport() {
                     <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PP') : 'N/A'}</TableCell>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
-                    <TableCell><Badge>{lot.fourPOperator}</Badge></TableCell>
-                    <TableCell>{lot.pcs}</TableCell>
-                    <TableCell className="text-destructive">{lot.blocking || 0}</TableCell>
+                    <TableCell>
+                      {lot.fourPData && lot.fourPData.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {lot.fourPData.map(d => (
+                            <Badge key={d.operator} variant="secondary">{d.operator} ({d.pcs} pcs)</Badge>
+                          ))}
+                        </div>
+                      ) : <Badge>{lot.fourPOperator}</Badge>}
+                    </TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
                     <TableCell>₹{(lot.fourPAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {filteredData.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
+                {filteredData.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>

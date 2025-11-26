@@ -2,8 +2,8 @@
 'use client';
 import React, { useState, useMemo, useReducer } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY, PRICE_MASTER_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
-import { FourPLot, FourPOperator, PriceMaster, FourPDepartmentSettings, FourPData } from '@/lib/types';
+import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY, FOURP_DEPARTMENT_SETTINGS_KEY, FOURP_RATES_KEY } from '@/lib/constants';
+import { FourPLot, FourPOperator, FourPDepartmentSettings, FourPData, FourPRate } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,18 @@ import { Edit, Save, Trash2, X, Users, User, GitMerge } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 
+// Function to find the correct rate
+const findRate = (carat: number, rates: FourPRate[]): number => {
+    const matchedRate = rates.find(r => carat >= r.from && carat <= r.to);
+    return matchedRate ? matchedRate.rate : 0;
+};
+
 
 export default function FourPReturnPage() {
   const { toast } = useToast();
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
   const [fourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
-  const [priceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
+  const [fourPRates] = useLocalStorage<FourPRate[]>(FOURP_RATES_KEY, []);
   const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
 
 
@@ -60,7 +66,14 @@ export default function FourPReturnPage() {
     }
 
     const totalFinalPcs = lotToReturn.finalPcs || 0;
-    const rate = priceMaster?.fourP ?? 0;
+    const lotCarat = lotToReturn.carat || 0;
+    const rate = findRate(lotCarat, fourPRates);
+
+    if (rate === 0) {
+        toast({ variant: 'destructive', title: 'Rate Not Found', description: `No 4P rate configured for carat weight ${lotCarat}. Please set one in the Control Panel.`});
+        return;
+    }
+
     let fourPData: FourPData[] = [];
 
     if (returnType === 'full') {
@@ -97,7 +110,7 @@ export default function FourPReturnPage() {
             isReturnedToFourP: true,
             returnDate: new Date().toISOString(),
             fourPData: fourPData,
-            // For backward compatibility, store primary operator here too
+            // For backward compatibility, store primary operator and total amount here too
             fourPOperator: selectedOperator,
             fourPAmount: fourPData.reduce((sum, d) => sum + d.amount, 0),
           }
@@ -171,10 +184,13 @@ export default function FourPReturnPage() {
   };
 
   const handleSaveEdit = (lotId: string) => {
+    const originalLot = (fourPTechingLots || []).find(l => l.id === lotId);
+    if (!originalLot) return;
+
     const updatedLotData = { ...editFormData };
 
-    const totalPcs = updatedLotData.pcs || 0;
-    const blockingPcs = updatedLotData.blocking || 0;
+    const totalPcs = updatedLotData.pcs || originalLot.pcs || 0;
+    const blockingPcs = updatedLotData.blocking || originalLot.blocking || 0;
 
     if (blockingPcs > totalPcs) {
         toast({ variant: 'destructive', title: 'Invalid Input', description: 'Blocking PCS cannot be greater than Total PCS.' });
@@ -184,25 +200,26 @@ export default function FourPReturnPage() {
     const newFinalPcs = totalPcs - blockingPcs;
     updatedLotData.finalPcs = newFinalPcs;
 
+    const rate = findRate(originalLot.carat, fourPRates);
+
+    if (rate === 0) {
+        toast({ variant: 'destructive', title: 'Rate Not Found', description: `No 4P rate configured for carat weight ${originalLot.carat}.`});
+        return;
+    }
+
     // Recalculate amounts for split data if it exists
     if (updatedLotData.fourPData && updatedLotData.fourPData.length > 0) {
         let remainingPcs = newFinalPcs;
-        updatedLotData.fourPData = updatedLotData.fourPData.map((d, index) => {
-            // Assume the last operator's PCS is the one to adjust if total changes
-            if (index === updatedLotData.fourPData!.length - 1) {
-                const pcs = remainingPcs;
-                return { ...d, pcs, amount: pcs * (priceMaster?.fourP ?? 0) };
-            }
-            remainingPcs -= d.pcs;
-            return d;
+        updatedLotData.fourPData = updatedLotData.fourPData.map((d, index, arr) => {
+            const pcsForThisOp = index === arr.length - 1 ? remainingPcs : d.pcs;
+            remainingPcs -= pcsForThisOp;
+            return { ...d, pcs: pcsForThisOp, amount: pcsForThisOp * rate };
         });
         updatedLotData.fourPAmount = updatedLotData.fourPData.reduce((sum, d) => sum + d.amount, 0);
 
-    } else { // Handle legacy single operator
-       updatedLotData.fourPAmount = newFinalPcs * (priceMaster?.fourP ?? 0);
+    } else { // Handle legacy single operator or non-split edit
+       updatedLotData.fourPAmount = newFinalPcs * rate;
     }
-
-    updatedLotData.techingAmount = newFinalPcs * (priceMaster?.fourPTeching ?? 0);
 
     setFourPTechingLots(prev =>
         (prev || []).map(lot => (lot.id === lotId ? { ...lot, ...updatedLotData } : lot))
@@ -256,14 +273,16 @@ export default function FourPReturnPage() {
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Teching Operator</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Lot</TableHead><TableHead>Carat</TableHead><TableHead>Dept</TableHead><TableHead>Blocking</TableHead><TableHead>Final PCS</TableHead><TableHead>4P Amount (₹)</TableHead><TableHead>Teching Operator</TableHead><TableHead>Entry Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
               <TableBody>
                 {unreturnedLots.map(lot => {
-                  const fourPAmount = (lot.finalPcs || 0) * (priceMaster?.fourP ?? 0);
+                  const rate = findRate(lot.carat, fourPRates);
+                  const fourPAmount = (lot.finalPcs || 0) * rate;
                   return (
                   <TableRow key={lot.id}>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
+                    <TableCell>{lot.carat.toFixed(3)}</TableCell>
                     <TableCell><Badge>{lot.department}</Badge></TableCell>
                     <TableCell className="text-destructive font-medium">{lot.blocking}</TableCell>
                     <TableCell className="font-bold">{lot.finalPcs}</TableCell>
@@ -275,7 +294,7 @@ export default function FourPReturnPage() {
                     </TableCell>
                   </TableRow>
                 )})}
-                {unreturnedLots.length === 0 && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground">No lots are pending return.</TableCell></TableRow>}
+                {unreturnedLots.length === 0 && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">No lots are pending return.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -330,7 +349,7 @@ export default function FourPReturnPage() {
                                     <SelectContent>{(fourPOperators || []).map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
                                 </Select>
                            </TableCell>
-                           <TableCell>₹{(((editFormData.pcs || 0) - (editFormData.blocking || 0)) * (priceMaster?.fourP ?? 0)).toFixed(2)}</TableCell>
+                           <TableCell>₹{(((editFormData.pcs || 0) - (editFormData.blocking || 0)) * findRate(lot.carat, fourPRates)).toFixed(2)}</TableCell>
                            <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PPp') : 'N/A'}</TableCell>
                            <TableCell className="flex gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(lot.id)}><Save className="h-4 w-4 text-green-600" /></Button>
