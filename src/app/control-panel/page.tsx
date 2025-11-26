@@ -1,11 +1,10 @@
-
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Trash2, Star } from 'lucide-react';
+import { Trash2, Star, Edit } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -16,9 +15,9 @@ import {
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
   FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY,
-  DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY
+  DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY, FOURP_TECHING_LOTS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate, FourPLot } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -119,8 +118,14 @@ export default function ControlPanelPage() {
   const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State for editing operator
+  const [isEditOpDialogOpen, setEditOpDialogOpen] = useState(false);
+  const [editingOperator, setEditingOperator] = useState<FourPOperator | null>(null);
+  const [newOperatorName, setNewOperatorName] = useState('');
 
   // Passkey state
   const { isDeleteDisabled, setDeleteDisabled } = useSystemState();
@@ -186,6 +191,59 @@ export default function ControlPanelPage() {
     setFourPOperators((fourPOperators || []).filter(op => op.id !== id));
     toast({ title: 'Success', description: '4P operator deleted.' });
   }
+
+  const handleOpenEditOperator = (operator: FourPOperator) => {
+    setEditingOperator(operator);
+    setNewOperatorName(operator.name);
+    setEditOpDialogOpen(true);
+  };
+  
+  const handleSaveOperatorName = () => {
+    if (!editingOperator || !newOperatorName.trim()) {
+        toast({variant: 'destructive', title: 'Error', description: 'New name cannot be empty.'});
+        return;
+    }
+    const oldName = editingOperator.name;
+    const newName = newOperatorName.trim();
+
+    if (oldName === newName) {
+        setEditOpDialogOpen(false);
+        return;
+    }
+
+    // 1. Update the operator list
+    setFourPOperators(prev => prev.map(op => op.id === editingOperator.id ? {...op, name: newName} : op));
+
+    // 2. Update all lots associated with this operator
+    setFourPTechingLots(prev => prev.map(lot => {
+        let wasUpdated = false;
+        
+        // Handle legacy single-operator field
+        if (lot.fourPOperator === oldName) {
+            lot.fourPOperator = newName;
+            wasUpdated = true;
+        }
+        
+        // Handle new multi-operator field
+        if (lot.fourPData) {
+            lot.fourPData = lot.fourPData.map(data => {
+                if (data.operator === oldName) {
+                    wasUpdated = true;
+                    return { ...data, operator: newName };
+                }
+                return data;
+            });
+        }
+        
+        return lot;
+    }));
+
+    toast({title: 'Success', description: `Operator "${oldName}" renamed to "${newName}" and all records updated.`});
+    setEditOpDialogOpen(false);
+    setEditingOperator(null);
+    setNewOperatorName('');
+  };
+
 
   function handleAddFourPTechingOperator(values: z.infer<typeof fourPTechingOperatorSchema>) {
     setFourPTechingOperators([...(fourPTechingOperators || []), { id: uuidv4(), ...values }]);
@@ -593,7 +651,10 @@ export default function ControlPanelPage() {
                                     {(fourPOperators || []).map(op => (
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                            <TableCell className="flex gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditOperator(op)}><Edit className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -853,6 +914,31 @@ export default function ControlPanelPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Operator Dialog */}
+      <Dialog open={isEditOpDialogOpen} onOpenChange={setEditOpDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Edit Operator Name</DialogTitle>
+                <DialogDescription>
+                    Update the name for <span className="font-bold">{editingOperator?.name}</span>. This will update all associated records.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+                <Label htmlFor="newOpName">New Name</Label>
+                <Input
+                    id="newOpName"
+                    value={newOperatorName}
+                    onChange={(e) => setNewOperatorName(e.target.value)}
+                />
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setEditOpDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveOperatorName}>Save Name</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
       <Dialog open={isPasskeyDialogOpen} onOpenChange={setPasskeyDialogOpen}>
         <DialogContent>
             <DialogHeader>
