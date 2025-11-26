@@ -72,10 +72,10 @@ export interface ReassignLog {
     date: string;
     fromOperator: string;
     toOperator: string;
-    packets: {
+    packets: { 
         mainPacketNumber: number;
         lotNumber: string;
-        quantityTransferred: number;
+        quantityTransferred: number; 
     }[];
 }
 

@@ -15,9 +15,10 @@ import {
   LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY, SARIN_MAPPINGS_KEY, SARIN_OPERATORS_KEY,
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
   FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY,
-  DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY, FOURP_TECHING_LOTS_KEY
+  DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY, FOURP_TECHING_LOTS_KEY, SARIN_PACKETS_KEY,
+  LASER_LOTS_KEY, REASSIGN_LOGS_KEY, UHDHA_PACKETS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate, FourPLot } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate, FourPLot, SarinPacket, LaserLot, ReassignLog, UdhdaPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -102,6 +103,15 @@ const diameterSortingRangeSchema = z.object({
 
 const PASSKEY = "raviix07";
 
+type OperatorType = 'sarin' | 'laser' | '4p' | '4p-teching';
+type EditingOperator = {
+    type: OperatorType;
+    id: string;
+    name: string;
+    // Sarin specific
+    operatorId?: string;
+};
+
 export default function ControlPanelPage() {
   const { toast } = useToast();
   const [sarinOperators, setSarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
@@ -118,13 +128,19 @@ export default function ControlPanelPage() {
   const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  
+  // Data for cascading edits
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
+  const [reassignLogs, setReassignLogs] = useLocalStorage<ReassignLog[]>(REASSIGN_LOGS_KEY, []);
+  const [udhdhaPackets, setUdhdhaPackets] = useLocalStorage<UdhdaPacket[]>(UHDHA_PACKETS_KEY, []);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State for editing operator
   const [isEditOpDialogOpen, setEditOpDialogOpen] = useState(false);
-  const [editingOperator, setEditingOperator] = useState<FourPOperator | null>(null);
+  const [editingOperator, setEditingOperator] = useState<EditingOperator | null>(null);
   const [newOperatorName, setNewOperatorName] = useState('');
 
   // Passkey state
@@ -191,59 +207,6 @@ export default function ControlPanelPage() {
     setFourPOperators((fourPOperators || []).filter(op => op.id !== id));
     toast({ title: 'Success', description: '4P operator deleted.' });
   }
-
-  const handleOpenEditOperator = (operator: FourPOperator) => {
-    setEditingOperator(operator);
-    setNewOperatorName(operator.name);
-    setEditOpDialogOpen(true);
-  };
-  
-  const handleSaveOperatorName = () => {
-    if (!editingOperator || !newOperatorName.trim()) {
-        toast({variant: 'destructive', title: 'Error', description: 'New name cannot be empty.'});
-        return;
-    }
-    const oldName = editingOperator.name;
-    const newName = newOperatorName.trim();
-
-    if (oldName === newName) {
-        setEditOpDialogOpen(false);
-        return;
-    }
-
-    // 1. Update the operator list
-    setFourPOperators(prev => prev.map(op => op.id === editingOperator.id ? {...op, name: newName} : op));
-
-    // 2. Update all lots associated with this operator
-    setFourPTechingLots(prev => prev.map(lot => {
-        let wasUpdated = false;
-        
-        // Handle legacy single-operator field
-        if (lot.fourPOperator === oldName) {
-            lot.fourPOperator = newName;
-            wasUpdated = true;
-        }
-        
-        // Handle new multi-operator field
-        if (lot.fourPData) {
-            lot.fourPData = lot.fourPData.map(data => {
-                if (data.operator === oldName) {
-                    wasUpdated = true;
-                    return { ...data, operator: newName };
-                }
-                return data;
-            });
-        }
-        
-        return lot;
-    }));
-
-    toast({title: 'Success', description: `Operator "${oldName}" renamed to "${newName}" and all records updated.`});
-    setEditOpDialogOpen(false);
-    setEditingOperator(null);
-    setNewOperatorName('');
-  };
-
 
   function handleAddFourPTechingOperator(values: z.infer<typeof fourPTechingOperatorSchema>) {
     setFourPTechingOperators([...(fourPTechingOperators || []), { id: uuidv4(), ...values }]);
@@ -313,6 +276,83 @@ export default function ControlPanelPage() {
     setDiameterSortingRanges((diameterSortingRanges || []).filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Diameter sorting range deleted.' });
   }
+
+  const openEditDialog = (type: OperatorType, op: { id: string; name: string, operatorId?: string }) => {
+    setEditingOperator({ type, id: op.id, name: op.name, operatorId: op.operatorId });
+    setNewOperatorName(op.name);
+    setEditOpDialogOpen(true);
+  };
+  
+  const handleSaveOperatorName = () => {
+    if (!editingOperator || !newOperatorName.trim()) {
+      toast({ variant: 'destructive', title: 'Error', description: 'New name cannot be empty.' });
+      return;
+    }
+    const oldName = editingOperator.name;
+    const newName = newOperatorName.trim();
+
+    if (oldName === newName) {
+      setEditOpDialogOpen(false);
+      return;
+    }
+
+    const cascadeUpdates = (oldName: string, newName: string) => {
+        // Sarin Packets
+        setSarinPackets(prev => prev.map(p => {
+            if (p.operator === oldName) p.operator = newName;
+            if (p.returnedBy === oldName) p.returnedBy = newName;
+            return p;
+        }));
+        // Laser Lots
+        setLaserLots(prev => prev.map(l => {
+            if (l.returnedBy === oldName) l.returnedBy = newName;
+            return l;
+        }));
+        // 4P Teching Lots
+        setFourPTechingLots(prev => prev.map(lot => {
+            if (lot.techingOperator === oldName) lot.techingOperator = newName;
+            if (lot.fourPOperator === oldName) lot.fourPOperator = newName;
+            if (lot.fourPData) {
+                lot.fourPData = lot.fourPData.map(d => d.operator === oldName ? {...d, operator: newName} : d);
+            }
+            return lot;
+        }));
+        // Reassignment Logs
+        setReassignLogs(prev => prev.map(log => {
+            if (log.fromOperator === oldName) log.fromOperator = newName;
+            if (log.toOperator === oldName) log.toOperator = newName;
+            return log;
+        }));
+        // Udhda Packets
+        setUdhdhaPackets(prev => prev.map(p => {
+            if (p.operator === oldName) p.operator = newName;
+            return p;
+        }));
+    };
+
+    switch (editingOperator.type) {
+      case 'sarin':
+        setSarinOperators(prev => prev.map(op => op.id === editingOperator.operatorId ? { ...op, name: newName } : op));
+        setSarinMappings(prev => prev.map(m => m.id === editingOperator.id ? { ...m, operatorName: newName } : m));
+        break;
+      case 'laser':
+        setLaserOperators(prev => prev.map(op => op.id === editingOperator.id ? { ...op, name: newName } : op));
+        break;
+      case '4p':
+        setFourPOperators(prev => prev.map(op => op.id === editingOperator.id ? { ...op, name: newName } : op));
+        break;
+      case '4p-teching':
+        setFourPTechingOperators(prev => prev.map(op => op.id === editingOperator.id ? { ...op, name: newName } : op));
+        break;
+    }
+    
+    cascadeUpdates(oldName, newName);
+
+    toast({ title: 'Success', description: `Operator "${oldName}" renamed to "${newName}" and all associated records updated.` });
+    setEditOpDialogOpen(false);
+    setEditingOperator(null);
+    setNewOperatorName('');
+  };
 
   const doBackup = () => {
     const success = handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
@@ -462,7 +502,8 @@ export default function ControlPanelPage() {
                               <TableRow key={map.id}>
                                   <TableCell>{map.operatorName}</TableCell>
                                   <TableCell>{map.machine}</TableCell>
-                                  <TableCell>
+                                  <TableCell className="flex gap-1">
+                                      <Button variant="ghost" size="icon" onClick={() => openEditDialog('sarin', map)}><Edit className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" onClick={() => handleDeleteSarinOperator(map.operatorId)}><Trash2 className="h-4 w-4" /></Button>
                                   </TableCell>
                               </TableRow>
@@ -497,7 +538,8 @@ export default function ControlPanelPage() {
                                   {(laserOperators || []).map(op => (
                                       <TableRow key={op.id}>
                                           <TableCell>{op.name}</TableCell>
-                                          <TableCell>
+                                          <TableCell className="flex gap-1">
+                                              <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', op)}><Edit className="h-4 w-4" /></Button>
                                               <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
                                           </TableCell>
                                       </TableRow>
@@ -652,7 +694,7 @@ export default function ControlPanelPage() {
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell className="flex gap-1">
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditOperator(op)}><Edit className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('4p', op)}><Edit className="h-4 w-4" /></Button>
                                                 <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
                                             </TableCell>
                                         </TableRow>
@@ -685,6 +727,7 @@ export default function ControlPanelPage() {
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell className="flex gap-1">
+                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('4p-teching', op)}><Edit className="h-4 w-4" /></Button>
                                                 <Button variant="ghost" size="icon" onClick={() => handleToggleDefaultTechingOperator(op.id)}>
                                                     <Star className={cn("h-4 w-4", op.isDefault ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
                                                 </Button>
