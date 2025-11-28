@@ -140,23 +140,27 @@ const PremiumDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const YouTubePlayer = () => {
     const [systemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg' });
     const [embedUrl, setEmbedUrl] = React.useState('');
+    const [videoId, setVideoId] = React.useState('');
 
     React.useEffect(() => {
         try {
             const url = new URL(systemSettings.youtubeLink);
-            let videoId;
+            let currentVideoId;
             if (url.hostname === 'youtu.be') {
-                videoId = url.pathname.slice(1);
+                currentVideoId = url.pathname.slice(1);
             } else {
-                videoId = url.searchParams.get('v');
+                currentVideoId = url.searchParams.get('v');
             }
-            if (videoId) {
-                setEmbedUrl(`https://www.youtube.com/embed/${videoId}`);
+            if (currentVideoId) {
+                setVideoId(currentVideoId);
+                setEmbedUrl(`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&mute=1&loop=1&playlist=${currentVideoId}&controls=0`);
             } else {
+                setVideoId('');
                 setEmbedUrl('');
             }
         } catch (error) {
             console.error("Invalid YouTube URL:", error);
+            setVideoId('');
             setEmbedUrl('');
         }
     }, [systemSettings.youtubeLink]);
