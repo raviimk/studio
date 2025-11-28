@@ -186,24 +186,8 @@ const YouTubePlayer = () => {
         }
     }, [videoId, canPlay]);
 
-    if (!videoId) {
-        return (
-            <div className="p-2">
-                <div className="aspect-video w-full flex items-center justify-center bg-muted text-muted-foreground text-xs rounded-lg">
-                    <p>Invalid YouTube URL in settings.</p>
-                </div>
-            </div>
-        );
-    }
-    
-    if (!canPlay) {
-         return (
-            <div className="p-2">
-                <div className="aspect-video w-full flex items-center justify-center bg-black text-white/50 text-xs rounded-lg">
-                    <p>Player is offline.</p>
-                </div>
-            </div>
-        );
+    if (!videoId || !canPlay) {
+        return null;
     }
 
     return (
@@ -360,5 +344,3 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-
-    
