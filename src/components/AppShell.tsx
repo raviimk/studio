@@ -179,7 +179,7 @@ const YouTubePlayer = () => {
         <div className="p-2">
             <div className="aspect-video">
               <iframe
-                className="w-full h-full rounded-lg"
+                className="w-full h-full rounded-lg pointer-events-none"
                 src={embedUrl}
                 title="YouTube video player"
                 frameBorder="0"
