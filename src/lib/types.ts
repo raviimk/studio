@@ -205,6 +205,10 @@ export interface ProductionHistory {
 
 export interface SystemSettings {
   youtubeLink: string;
+  videoStartTime?: string;
+  videoEndTime?: string;
 }
+
+    
 
     

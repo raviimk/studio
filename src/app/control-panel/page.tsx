@@ -103,6 +103,8 @@ const diameterSortingRangeSchema = z.object({
 
 const systemSettingsSchema = z.object({
   youtubeLink: z.string().url('Please enter a valid YouTube URL.'),
+  videoStartTime: z.string().optional(),
+  videoEndTime: z.string().optional(),
 });
 
 
@@ -133,7 +135,7 @@ export default function ControlPanelPage() {
   const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
-  const [systemSettings, setSystemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg' });
+  const [systemSettings, setSystemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg', videoStartTime: '09:00', videoEndTime: '18:30' });
   
   // Data for cascading edits
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
@@ -873,7 +875,7 @@ export default function ControlPanelPage() {
                 <CardHeader>
                     <CardTitle>YouTube Player Settings</CardTitle>
                     <CardDescription>
-                        Update the video played in the sidebar.
+                        Update the video played in the sidebar and set its active time.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -882,7 +884,15 @@ export default function ControlPanelPage() {
                             <FormField control={systemSettingsForm.control} name="youtubeLink" render={({ field }) => (
                                 <FormItem><FormLabel>YouTube Video Link</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                             )} />
-                            <Button type="submit">Update Video</Button>
+                            <div className="grid grid-cols-2 gap-4">
+                              <FormField control={systemSettingsForm.control} name="videoStartTime" render={({ field }) => (
+                                  <FormItem><FormLabel>Video Start Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                              <FormField control={systemSettingsForm.control} name="videoEndTime" render={({ field }) => (
+                                  <FormItem><FormLabel>Video End Time</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
+                              )} />
+                            </div>
+                            <Button type="submit">Update Video Settings</Button>
                         </form>
                     </Form>
                 </CardContent>
@@ -1038,5 +1048,7 @@ export default function ControlPanelPage() {
     </>
   );
 }
+
+    
 
     

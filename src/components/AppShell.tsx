@@ -140,22 +140,25 @@ const PremiumDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const YouTubePlayer = () => {
-    const [systemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg' });
-    const [autoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
+    const [systemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg', videoStartTime: '09:00', videoEndTime: '18:30' });
     const [embedUrl, setEmbedUrl] = React.useState('');
     const [videoId, setVideoId] = React.useState('');
     const [canPlay, setCanPlay] = React.useState(false);
 
     React.useEffect(() => {
-        // Determine if video should be playing based on office hours
-        const now = new Date();
-        const officeStartTime = set(now, { hours: 9, minutes: 0, seconds: 0 }); // Assuming 9 AM start
-        const [endHours, endMinutes] = autoBackupSettings.officeEndTime.split(':').map(Number);
-        const officeEndTime = set(now, { hours: endHours, minutes: endMinutes, seconds: 0 });
-        
-        setCanPlay(isWithinInterval(now, { start: officeStartTime, end: officeEndTime }));
+        const checkTime = () => {
+          const now = new Date();
+          const startTime = systemSettings.videoStartTime ? parse(systemSettings.videoStartTime, 'HH:mm', now) : set(now, { hours: 0, minutes: 0, seconds: 0 });
+          const endTime = systemSettings.videoEndTime ? parse(systemSettings.videoEndTime, 'HH:mm', now) : set(now, { hours: 23, minutes: 59, seconds: 59 });
+          setCanPlay(isWithinInterval(now, { start: startTime, end: endTime }));
+        };
+        checkTime();
+        const interval = setInterval(checkTime, 60000); // Check every minute
+        return () => clearInterval(interval);
+    }, [systemSettings.videoStartTime, systemSettings.videoEndTime]);
 
-        // Update video ID and URL from settings
+
+    React.useEffect(() => {
         try {
             const url = new URL(systemSettings.youtubeLink);
             let currentVideoId;
@@ -173,13 +176,13 @@ const YouTubePlayer = () => {
             console.error("Invalid YouTube URL:", error);
             setVideoId('');
         }
-    }, [systemSettings.youtubeLink, autoBackupSettings.officeEndTime]);
+    }, [systemSettings.youtubeLink]);
 
     React.useEffect(() => {
         if (videoId && canPlay) {
             setEmbedUrl(`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0`);
         } else {
-            setEmbedUrl(''); // Don't play if outside office hours or no video ID
+            setEmbedUrl('');
         }
     }, [videoId, canPlay]);
 
@@ -193,10 +196,19 @@ const YouTubePlayer = () => {
         );
     }
     
+    if (!canPlay) {
+         return (
+            <div className="p-2">
+                <div className="aspect-video w-full flex items-center justify-center bg-black text-white/50 text-xs rounded-lg">
+                    <p>Player is offline.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="p-2">
             <div className="aspect-video bg-black rounded-lg">
-              {embedUrl ? (
                 <iframe
                     className="w-full h-full rounded-lg pointer-events-none"
                     src={embedUrl}
@@ -205,11 +217,6 @@ const YouTubePlayer = () => {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                 ></iframe>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white/50 text-xs">
-                    Player is offline.
-                </div>
-              )}
             </div>
         </div>
     )
@@ -354,3 +361,4 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
+    
