@@ -202,3 +202,9 @@ export interface ProductionEntry {
 export interface ProductionHistory {
     [date: string]: ProductionEntry[];
 }
+
+export interface SystemSettings {
+  youtubeLink: string;
+}
+
+    

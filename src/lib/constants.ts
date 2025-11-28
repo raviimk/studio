@@ -40,6 +40,7 @@ export const PRODUCTION_HISTORY_KEY = 'productionHistory';
 // Settings
 export const AUTO_BACKUP_SETTINGS_KEY = 'autoBackupSettings';
 export const RETURN_SCAN_SETTINGS_KEY = 'returnScanSettings';
+export const SYSTEM_SETTINGS_KEY = 'systemSettings';
 
 
 // All keys for backup/restore
@@ -69,4 +70,7 @@ export const ALL_APP_KEYS = [
     PRODUCTION_HISTORY_KEY,
     AUTO_BACKUP_SETTINGS_KEY,
     RETURN_SCAN_SETTINGS_KEY,
+    SYSTEM_SETTINGS_KEY,
 ];
+
+    

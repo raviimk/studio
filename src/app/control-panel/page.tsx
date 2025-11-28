@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,9 +17,9 @@ import {
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
   FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY,
   DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY, FOURP_TECHING_LOTS_KEY, SARIN_PACKETS_KEY,
-  LASER_LOTS_KEY, REASSIGN_LOGS_KEY, UHDHA_PACKETS_KEY
+  LASER_LOTS_KEY, REASSIGN_LOGS_KEY, UHDHA_PACKETS_KEY, SYSTEM_SETTINGS_KEY
 } from '@/lib/constants';
-import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate, FourPLot, SarinPacket, LaserLot, ReassignLog, UdhdaPacket } from '@/lib/types';
+import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate, FourPLot, SarinPacket, LaserLot, ReassignLog, UdhdaPacket, SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -100,6 +101,10 @@ const diameterSortingRangeSchema = z.object({
     path: ['to'],
 });
 
+const systemSettingsSchema = z.object({
+  youtubeLink: z.string().url('Please enter a valid YouTube URL.'),
+});
+
 
 const PASSKEY = "raviix07";
 
@@ -128,6 +133,7 @@ export default function ControlPanelPage() {
   const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [systemSettings, setSystemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg' });
   
   // Data for cascading edits
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
@@ -160,6 +166,7 @@ export default function ControlPanelPage() {
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings || { returnTimeLimitMinutes: 60 } });
   const boxSortingForm = useForm<z.infer<typeof boxSortingRangeSchema>>({ resolver: zodResolver(boxSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
   const diameterSortingForm = useForm<z.infer<typeof diameterSortingRangeSchema>>({ resolver: zodResolver(diameterSortingRangeSchema), defaultValues: { from: 0, to: 0, label: '' } });
+  const systemSettingsForm = useForm<z.infer<typeof systemSettingsSchema>>({ resolver: zodResolver(systemSettingsSchema), values: systemSettings });
 
   function handleAddSarinOperator(values: z.infer<typeof sarinOperatorSchema>) {
     const operatorId = uuidv4();
@@ -275,6 +282,11 @@ export default function ControlPanelPage() {
   function handleDeleteDiameterSortingRange(id: string) {
     setDiameterSortingRanges((diameterSortingRanges || []).filter(range => range.id !== id));
     toast({ title: 'Success', description: 'Diameter sorting range deleted.' });
+  }
+
+  function handleUpdateSystemSettings(values: z.infer<typeof systemSettingsSchema>) {
+    setSystemSettings(prev => ({ ...prev, ...values }));
+    toast({ title: 'Success', description: 'System settings updated.' });
   }
 
   const openEditDialog = (type: OperatorType, op: { id: string; name: string, operatorId?: string }) => {
@@ -858,6 +870,24 @@ export default function ControlPanelPage() {
           </TabsContent>
           <TabsContent value="system" className="space-y-6 mt-6">
             <Card>
+                <CardHeader>
+                    <CardTitle>YouTube Player Settings</CardTitle>
+                    <CardDescription>
+                        Update the video played in the sidebar.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...systemSettingsForm}>
+                        <form onSubmit={systemSettingsForm.handleSubmit(handleUpdateSystemSettings)} className="space-y-4 max-w-lg">
+                            <FormField control={systemSettingsForm.control} name="youtubeLink" render={({ field }) => (
+                                <FormItem><FormLabel>YouTube Video Link</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                            )} />
+                            <Button type="submit">Update Video</Button>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+            <Card>
               <CardHeader>
                   <CardTitle>Backup & Restore</CardTitle>
                   <CardDescription>
@@ -1008,3 +1038,5 @@ export default function ControlPanelPage() {
     </>
   );
 }
+
+    

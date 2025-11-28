@@ -47,6 +47,9 @@ import { Toaster } from './ui/toaster';
 import { useAutoBackup } from '@/hooks/useAutoBackup';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useSystemState } from '@/hooks/useSystemState';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { SYSTEM_SETTINGS_KEY } from '@/lib/constants';
+import { SystemSettings } from '@/lib/types';
 
 const menuItems = [
   {
@@ -133,6 +136,56 @@ const PremiumDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path className="facet" d="M2 9L6 8H18L22 9L12 11L2 9Z" fillOpacity="0.9"/>
   </svg>
 );
+
+const YouTubePlayer = () => {
+    const [systemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg' });
+    const [embedUrl, setEmbedUrl] = React.useState('');
+
+    React.useEffect(() => {
+        try {
+            const url = new URL(systemSettings.youtubeLink);
+            let videoId;
+            if (url.hostname === 'youtu.be') {
+                videoId = url.pathname.slice(1);
+            } else {
+                videoId = url.searchParams.get('v');
+            }
+            if (videoId) {
+                setEmbedUrl(`https://www.youtube.com/embed/${videoId}`);
+            } else {
+                setEmbedUrl('');
+            }
+        } catch (error) {
+            console.error("Invalid YouTube URL:", error);
+            setEmbedUrl('');
+        }
+    }, [systemSettings.youtubeLink]);
+
+    if (!embedUrl) {
+        return (
+            <div className="p-2">
+                <div className="aspect-video w-full flex items-center justify-center bg-muted text-muted-foreground text-xs rounded-lg">
+                    <p>Invalid YouTube URL in settings.</p>
+                </div>
+            </div>
+        );
+    }
+    
+    return (
+        <div className="p-2">
+            <div className="aspect-video">
+              <iframe
+                className="w-full h-full rounded-lg"
+                src={embedUrl}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+        </div>
+    )
+}
 
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -230,18 +283,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Accordion>
         </SidebarContent>
          <SidebarFooter>
-          <div className="p-2">
-            <div className="aspect-video">
-              <iframe
-                className="w-full h-full rounded-lg"
-                src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1&controls=0&loop=1&playlist=jfKfPfyJRdk"
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </div>
-          </div>
+          <YouTubePlayer />
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
@@ -283,3 +325,5 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+    
