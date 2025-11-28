@@ -48,8 +48,10 @@ import { useAutoBackup } from '@/hooks/useAutoBackup';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { useSystemState } from '@/hooks/useSystemState';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { SYSTEM_SETTINGS_KEY } from '@/lib/constants';
-import { SystemSettings } from '@/lib/types';
+import { AUTO_BACKUP_SETTINGS_KEY, SYSTEM_SETTINGS_KEY } from '@/lib/constants';
+import { AutoBackupSettings, SystemSettings } from '@/lib/types';
+import { isWithinInterval, set, parse } from 'date-fns';
+
 
 const menuItems = [
   {
@@ -139,10 +141,21 @@ const PremiumDiamondIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 const YouTubePlayer = () => {
     const [systemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg' });
+    const [autoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
     const [embedUrl, setEmbedUrl] = React.useState('');
     const [videoId, setVideoId] = React.useState('');
+    const [canPlay, setCanPlay] = React.useState(false);
 
     React.useEffect(() => {
+        // Determine if video should be playing based on office hours
+        const now = new Date();
+        const officeStartTime = set(now, { hours: 9, minutes: 0, seconds: 0 }); // Assuming 9 AM start
+        const [endHours, endMinutes] = autoBackupSettings.officeEndTime.split(':').map(Number);
+        const officeEndTime = set(now, { hours: endHours, minutes: endMinutes, seconds: 0 });
+        
+        setCanPlay(isWithinInterval(now, { start: officeStartTime, end: officeEndTime }));
+
+        // Update video ID and URL from settings
         try {
             const url = new URL(systemSettings.youtubeLink);
             let currentVideoId;
@@ -153,19 +166,24 @@ const YouTubePlayer = () => {
             }
             if (currentVideoId) {
                 setVideoId(currentVideoId);
-                setEmbedUrl(`https://www.youtube.com/embed/${currentVideoId}?autoplay=1&mute=1&loop=1&playlist=${currentVideoId}&controls=0`);
             } else {
                 setVideoId('');
-                setEmbedUrl('');
             }
         } catch (error) {
             console.error("Invalid YouTube URL:", error);
             setVideoId('');
-            setEmbedUrl('');
         }
-    }, [systemSettings.youtubeLink]);
+    }, [systemSettings.youtubeLink, autoBackupSettings.officeEndTime]);
 
-    if (!embedUrl) {
+    React.useEffect(() => {
+        if (videoId && canPlay) {
+            setEmbedUrl(`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}&controls=0`);
+        } else {
+            setEmbedUrl(''); // Don't play if outside office hours or no video ID
+        }
+    }, [videoId, canPlay]);
+
+    if (!videoId) {
         return (
             <div className="p-2">
                 <div className="aspect-video w-full flex items-center justify-center bg-muted text-muted-foreground text-xs rounded-lg">
@@ -177,15 +195,21 @@ const YouTubePlayer = () => {
     
     return (
         <div className="p-2">
-            <div className="aspect-video">
-              <iframe
-                className="w-full h-full rounded-lg pointer-events-none"
-                src={embedUrl}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
+            <div className="aspect-video bg-black rounded-lg">
+              {embedUrl ? (
+                <iframe
+                    className="w-full h-full rounded-lg pointer-events-none"
+                    src={embedUrl}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                ></iframe>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white/50 text-xs">
+                    Player is offline.
+                </div>
+              )}
             </div>
         </div>
     )
@@ -330,4 +354,3 @@ function MenuIcon(props: React.SVGProps<SVGSVGElement>) {
   );
 }
 
-    
