@@ -38,6 +38,7 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarFooter,
 } from '@/components/ui/sidebar';
 import { Button } from './ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
@@ -228,6 +229,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             )}
           </Accordion>
         </SidebarContent>
+         <SidebarFooter>
+          <div className="p-2">
+            <div className="aspect-video">
+              <iframe
+                className="w-full h-full rounded-lg"
+                src="https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1&mute=1&controls=0&loop=1&playlist=jfKfPfyJRdk"
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
+          </div>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <header className="flex h-12 items-center justify-between border-b bg-card px-4 md:hidden print:hidden">
