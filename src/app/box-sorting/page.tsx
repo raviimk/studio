@@ -321,7 +321,7 @@ export default function BoxSortingPage() {
     const kapan = firstPacket.packetNumber.split('-')[0].replace('R', '') || 'N/A';
     
     const shapeMap: Record<string, string> = {
-        'ROUND': 'રાઉન્ડ 4P', 'PEAR': 'પાન', 'EMERALD': 'ચોકી', 'MARQUISE': 'માર્કિસ',
+        'ROUND': 'રાઉન્ડ 4P', 'PEAR': 'પાન', 'EMERALD': 'ચોકી', 'MARQUISE': 'માર્કिस',
         'PRINCESS': 'પ્રિન્સેસ', 'SQUARE': 'ચોકી', 'CHOKI': 'ચોકી',
     };
     const gujaratiShape = shapeMap[firstPacket.shape.toUpperCase()] || firstPacket.shape;
@@ -381,6 +381,33 @@ export default function BoxSortingPage() {
 
   const ranges = sortingMode === 'cent' ? centRanges : diameterRanges;
   const noRangesConfigured = ranges.length === 0;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete') {
+        // Prevent default browser behavior if needed
+        e.preventDefault();
+
+        // Find the first box of the first shape
+        if (shapeSummary.length > 0) {
+          const firstShape = shapeSummary[0];
+          const firstBoxLabel = Object.keys(firstShape.boxes).sort((a,b) => a.localeCompare(b))[0];
+
+          if (firstShape && firstBoxLabel) {
+            handleDeleteBox(firstShape.shape, firstBoxLabel);
+          }
+        } else {
+            toast({variant: 'destructive', title: 'No Boxes', description: 'There are no boxes to delete.'})
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [shapeSummary, setPackets, toast]);
+
 
   return (
     <>
