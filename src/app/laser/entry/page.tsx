@@ -87,7 +87,7 @@ export default function NewLaserLotPage() {
     form.setValue('machine', mapping ? mapping.machine : 'N/A');
   };
   
-  const currentPacketCount = watch('packetCount') || 0;
+  const currentPacketCount = formSubmitted ? currentLotDetails?.packetCount || 0 : watch('packetCount') || 0;
 
   const handleInitialSubmit = (values: FormValues) => {
     const existingLot = laserLots.find(
