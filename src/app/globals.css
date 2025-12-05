@@ -639,6 +639,25 @@ body {
       transform: scale(1);
     }
   }
-}
 
-    
+  /* Machine Name Glow Animations */
+  @keyframes green-glow {
+    0% { box-shadow: 0 0 2px #22c55e, inset 0 0 2px #22c55e; }
+    50% { box-shadow: 0 0 8px #22c55e, inset 0 0 8px #22c55e; }
+    100% { box-shadow: 0 0 2px #22c55e, inset 0 0 2px #22c55e; }
+  }
+  .animate-green-glow {
+    animation: green-glow 2s ease-in-out infinite;
+    border-color: #22c55e;
+  }
+
+  @keyframes dharmaj-glow {
+    0% { box-shadow: 0 0 2px #f59e0b, inset 0 0 2px #f59e0b; }
+    50% { box-shadow: 0 0 8px #f59e0b, inset 0 0 8px #f59e0b; }
+    100% { box-shadow: 0 0 2px #f59e0b, inset 0 0 2px #f59e0b; }
+  }
+  .animate-dharmaj-glow {
+    animation: dharmaj-glow 2s ease-in-out infinite;
+    border-color: #f59e0b;
+  }
+}

@@ -80,6 +80,7 @@ export default function NewLaserLotPage() {
 
   const { watch } = form;
   const currentLotNumberStr = watch('lotNumber');
+  const machineName = watch('machine');
   
   const handleTensionChange = (value: string) => {
     form.setValue('tensionType', value);
@@ -203,15 +204,15 @@ export default function NewLaserLotPage() {
   function createFinalLot() {
      if (!currentLotDetails) return;
 
-    if (scannedPackets.length !== currentPacketCount) {
-        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${currentPacketCount} packets, but found ${scannedPackets.length}.` });
+    if (scannedPackets.length !== currentLotDetails.packetCount) {
+        toast({ variant: 'destructive', title: 'Packet Count Mismatch', description: `Expected ${currentLotDetails.packetCount} packets, but found ${scannedPackets.length}.` });
         return;
     }
 
     const newLot: LaserLot = {
       id: uuidv4(),
       ...currentLotDetails,
-      packetCount: currentPacketCount,
+      packetCount: currentLotDetails.packetCount,
       scannedPackets,
       entryDate: new Date().toISOString(),
       isReturned: false,
@@ -294,7 +295,22 @@ export default function NewLaserLotPage() {
                           </FormItem>
                       )} />
                       <FormField control={form.control} name="machine" render={({ field }) => (
-                          <FormItem><FormLabel>Machine Name</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
+                          <FormItem>
+                              <FormLabel>Machine Name</FormLabel>
+                              <FormControl>
+                                <Input 
+                                    {...field} 
+                                    readOnly 
+                                    disabled 
+                                    className={cn(
+                                        "font-bold",
+                                        machineName?.toUpperCase() === 'GREEN' && 'animate-green-glow',
+                                        machineName?.toUpperCase() === 'DHARMAJ' && 'animate-dharmaj-glow'
+                                    )}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
                       )} />
                       <FormField control={form.control} name="packetCount" render={({ field }) => (
                           <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
@@ -354,7 +370,7 @@ export default function NewLaserLotPage() {
                       </form>
 
                       <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
-                         {Array.from({ length: currentPacketCount }).map((_, index) => {
+                         {Array.from({ length: currentLotDetails.packetCount }).map((_, index) => {
                               const packet = scannedPackets[index];
                               return (
                                   <Tooltip key={index}>
@@ -391,9 +407,9 @@ export default function NewLaserLotPage() {
                       
                       <div className="flex justify-between items-center mt-4">
                           <p className="text-sm text-muted-foreground font-semibold">
-                              Scanned: {scannedPackets.length} / {currentPacketCount}
+                              Scanned: {scannedPackets.length} / {currentLotDetails.packetCount}
                           </p>
-                          <Button onClick={createFinalLot} disabled={currentPacketCount === 0 || scannedPackets.length !== currentPacketCount}>
+                          <Button onClick={createFinalLot} disabled={currentLotDetails.packetCount === 0 || scannedPackets.length !== currentLotDetails.packetCount}>
                              <PackagePlus className="mr-2 h-4 w-4"/>
                               Create Laser Lot
                           </Button>
