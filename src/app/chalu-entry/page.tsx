@@ -25,6 +25,7 @@ export default function ChaluEntryPage() {
   const [adjustment, setAdjustment] = useState('');
   const [suffix, setSuffix] = useState('');
   const [currentPcs, setCurrentPcs] = useState('');
+  const [kapanFilter, setKapanFilter] = useState('');
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -134,21 +135,21 @@ export default function ChaluEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Vajan (Weight)</label>
-              <Input 
-                type="number"
-                value={vajan}
-                onChange={(e) => setVajan(e.target.value)}
-                placeholder="Enter weight"
-              />
-            </div>
-             <div>
               <label className="text-sm font-medium">Current PCS</label>
               <Input 
                 type="number"
                 value={currentPcs} 
                 onChange={(e) => setCurrentPcs(e.target.value)}
                 className="font-bold text-lg"
+              />
+            </div>
+             <div>
+              <label className="text-sm font-medium">Vajan (Weight)</label>
+              <Input 
+                type="number"
+                value={vajan}
+                onChange={(e) => setVajan(e.target.value)}
+                placeholder="Enter weight"
               />
             </div>
           </div>
@@ -161,7 +162,15 @@ export default function ChaluEntryPage() {
       <Card>
           <CardHeader>
               <CardTitle>Entry Log (Example)</CardTitle>
-              <CardDescription>This is a placeholder to show how saved entries would look.</CardDescription>
+              <div className="flex justify-between items-center">
+                <CardDescription>This is a placeholder to show how saved entries would look.</CardDescription>
+                <Input
+                    placeholder="Filter by Kapan..."
+                    value={kapanFilter}
+                    onChange={(e) => setKapanFilter(e.target.value)}
+                    className="max-w-xs"
+                />
+              </div>
           </CardHeader>
           <CardContent>
               <Table>
@@ -176,6 +185,7 @@ export default function ChaluEntryPage() {
                       </TableRow>
                   </TableHeader>
                   <TableBody>
+                      {(!kapanFilter || "Kapan 1".toLowerCase().includes(kapanFilter.toLowerCase())) && (
                       <TableRow>
                           <TableCell>
                             <Input defaultValue="Kapan 1 / P-101" className="font-medium" />
@@ -186,6 +196,8 @@ export default function ChaluEntryPage() {
                           <TableCell><Input defaultValue="C, G" /></TableCell>
                           <TableCell><Input type="number" defaultValue="8" className="font-bold" /></TableCell>
                       </TableRow>
+                      )}
+                       {(!kapanFilter || "Kapan 2".toLowerCase().includes(kapanFilter.toLowerCase())) && (
                        <TableRow>
                           <TableCell>
                             <Input defaultValue="Kapan 2 / P-205" className="font-medium" />
@@ -196,6 +208,7 @@ export default function ChaluEntryPage() {
                           <TableCell><Input defaultValue="Z, AA, AB, AC, AD" /></TableCell>
                           <TableCell><Input type="number" defaultValue="30" className="font-bold" /></TableCell>
                       </TableRow>
+                      )}
                   </TableBody>
               </Table>
           </CardContent>
