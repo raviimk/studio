@@ -8,6 +8,7 @@ import IntroAnimation from '@/components/IntroAnimation';
 import { useState, useEffect } from 'react';
 import { SystemStateProvider } from '@/hooks/useSystemState';
 import { LayoutProvider } from '@/hooks/useLayout';
+import { FirebaseClientProvider } from '@/firebase';
 
 
 const SHOW_INTRO = true; // Master switch for the intro animation
@@ -49,19 +50,23 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <SystemStateProvider>
-            <LayoutProvider>
-              {!introFinished ? (
-                <IntroAnimation onFinished={() => setIntroFinished(true)} />
-              ) : (
-                <div className="animate-simple-fade-in">
-                  <AppShell>{children}</AppShell>
-                  <Toaster />
-                </div>
-              )}
-            </LayoutProvider>
-        </SystemStateProvider>
+        <FirebaseClientProvider>
+            <SystemStateProvider>
+                <LayoutProvider>
+                  {!introFinished ? (
+                    <IntroAnimation onFinished={() => setIntroFinished(true)} />
+                  ) : (
+                    <div className="animate-simple-fade-in">
+                      <AppShell>{children}</AppShell>
+                      <Toaster />
+                    </div>
+                  )}
+                </LayoutProvider>
+            </SystemStateProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );
 }
+
+    

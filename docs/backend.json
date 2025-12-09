@@ -1,0 +1,59 @@
+
+{
+  "entities": {
+    "chaluEntry": {
+      "title": "Chalu Entry",
+      "description": "Represents a single chalu/running packet entry in the production log.",
+      "type": "object",
+      "properties": {
+        "kapanNumber": {
+          "type": "string",
+          "description": "The Kapan number for the entry."
+        },
+        "packetNumber": {
+          "type": "string",
+          "description": "The specific packet number."
+        },
+        "vajan": {
+          "type": "number",
+          "description": "The weight of the packet."
+        },
+        "originalPcs": {
+          "type": "number",
+          "description": "The original number of pieces."
+        },
+        "adjustment": {
+          "type": "number",
+          "description": "The adjustment quantity (+ or -)."
+        },
+        "suffix": {
+          "type": "string",
+          "description": "The calculated or manually entered suffix for adjustments."
+        },
+        "currentPcs": {
+          "type": "number",
+          "description": "The current number of pieces after adjustment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the entry was created."
+        }
+      },
+      "required": ["kapanNumber", "packetNumber", "originalPcs", "currentPcs", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/chaluEntries/{chaluEntryId}": {
+      "schema": {
+        "$ref": "#/entities/chaluEntry"
+      },
+      "description": "Stores all the Chalu/Running packet entries."
+    }
+  }
+}
+
+    

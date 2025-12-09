@@ -12,11 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Maximize, Minimize, Save } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
+import { useCollection, useDoc, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 
 export default function ChaluEntryPage() {
   const { toast } = useToast();
   const { isFullscreen, setFullscreen } = useLayout();
   const router = useRouter();
+
+  const firestore = useFirestore();
+  const { data: chaluEntries, loading } = useCollection(firestore ? collection(firestore, 'chaluEntries') : null);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -50,8 +55,58 @@ export default function ChaluEntryPage() {
     }
   }, [originalCount, adjustmentValue]);
 
-  const handleSave = () => {
-    toast({ title: 'Saved (Simulation)', description: 'This is a UI demonstration. No data was saved.' });
+  const handleSave = async () => {
+    if (!firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
+        return;
+    }
+    
+    if(!kapanNumber || !packetNumber || !vajan || !originalPcs || !currentPcs) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Please fill all required fields.' });
+        return;
+    }
+
+    try {
+        await addDoc(collection(firestore, 'chaluEntries'), {
+            kapanNumber,
+            packetNumber,
+            vajan: parseFloat(vajan) || 0,
+            originalPcs: parseInt(originalPcs, 10) || 0,
+            adjustment: parseInt(adjustment, 10) || 0,
+            suffix,
+            currentPcs: parseInt(currentPcs, 10) || 0,
+            createdAt: serverTimestamp(),
+        });
+        toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
+        // Reset form
+        setKapanNumber('');
+        setPacketNumber('');
+        setVajan('');
+        setOriginalPcs('');
+        setAdjustment('');
+        setSuffix('');
+        setCurrentPcs('');
+
+    } catch (e) {
+        console.error('Error adding document: ', e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not save the entry.' });
+    }
+  };
+
+  const handleUpdate = async (id: string, field: string, value: string) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'chaluEntries', id);
+    let updatedValue: string | number = value;
+    if(field === 'vajan' || field === 'originalPcs' || field === 'adjustment' || field === 'currentPcs') {
+        updatedValue = Number(value);
+    }
+    try {
+      await updateDoc(docRef, { [field]: updatedValue });
+      toast({ title: 'Updated', description: 'Field updated successfully.'});
+    } catch(e) {
+      console.error("Error updating document:", e);
+      toast({ variant: 'destructive', title: 'Update Failed' });
+    }
   };
   
   useEffect(() => {
@@ -66,12 +121,16 @@ export default function ChaluEntryPage() {
   
   const handleToggleFullscreen = () => {
       if (isFullscreen) {
-          setFullscreen(false);
           router.push('/');
-      } else {
-          setFullscreen(true);
       }
+      setFullscreen(!isFullscreen);
   };
+
+  const filteredEntries = useMemo(() => {
+      if (!chaluEntries) return [];
+      if (!kapanFilter) return chaluEntries;
+      return chaluEntries.filter(entry => entry.kapanNumber.toLowerCase().includes(kapanFilter.toLowerCase()));
+  }, [chaluEntries, kapanFilter]);
 
 
   return (
@@ -95,8 +154,9 @@ export default function ChaluEntryPage() {
               <Select value={kapanNumber} onValueChange={setKapanNumber}>
                 <SelectTrigger><SelectValue placeholder="Select Kapan" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="kapan1">Kapan 1</SelectItem>
-                  <SelectItem value="kapan2">Kapan 2</SelectItem>
+                  {[...new Set(chaluEntries?.map(e => e.kapanNumber) || [])].map(kapan => (
+                    <SelectItem key={kapan} value={kapan}>{kapan}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -130,8 +190,8 @@ export default function ChaluEntryPage() {
               <label className="text-sm font-medium">Suffix</label>
               <Input 
                 value={suffix} 
-                onChange={(e) => setSuffix(e.target.value.toUpperCase())}
-                placeholder="Auto or Manual"
+                readOnly
+                placeholder="Auto"
               />
             </div>
             <div>
@@ -139,7 +199,7 @@ export default function ChaluEntryPage() {
               <Input 
                 type="number"
                 value={currentPcs} 
-                onChange={(e) => setCurrentPcs(e.target.value)}
+                readOnly
                 className="font-bold text-lg"
               />
             </div>
@@ -161,9 +221,9 @@ export default function ChaluEntryPage() {
       
       <Card>
           <CardHeader>
-              <CardTitle>Entry Log (Example)</CardTitle>
+              <CardTitle>Entry Log</CardTitle>
               <div className="flex justify-between items-center">
-                <CardDescription>This is a placeholder to show how saved entries would look.</CardDescription>
+                <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
                 <Input
                     placeholder="Filter by Kapan..."
                     value={kapanFilter}
@@ -185,29 +245,29 @@ export default function ChaluEntryPage() {
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                      {(!kapanFilter || "Kapan 1".toLowerCase().includes(kapanFilter.toLowerCase())) && (
-                      <TableRow>
+                      {loading && <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>}
+                      {!loading && filteredEntries.map(entry => (
+                      <TableRow key={entry.id}>
                           <TableCell>
-                            <Input defaultValue="Kapan 1 / P-101" className="font-medium" />
+                            <Input 
+                                defaultValue={`${entry.kapanNumber} / ${entry.packetNumber}`} 
+                                className="font-medium"
+                                onBlur={(e) => {
+                                    const [kapan, packet] = e.target.value.split(' / ');
+                                    if(kapan !== entry.kapanNumber) handleUpdate(entry.id, 'kapanNumber', kapan);
+                                    if(packet !== entry.packetNumber) handleUpdate(entry.id, 'packetNumber', packet);
+                                }}
+                            />
                           </TableCell>
-                          <TableCell><Input type="number" defaultValue="0.54" /></TableCell>
-                          <TableCell><Input type="number" defaultValue="10" /></TableCell>
-                          <TableCell><Input type="number" defaultValue="-2" className="font-semibold text-destructive" /></TableCell>
-                          <TableCell><Input defaultValue="C, G" /></TableCell>
-                          <TableCell><Input type="number" defaultValue="8" className="font-bold" /></TableCell>
+                          <TableCell><Input type="number" defaultValue={entry.vajan} onBlur={(e) => handleUpdate(entry.id, 'vajan', e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" defaultValue={entry.originalPcs} onBlur={(e) => handleUpdate(entry.id, 'originalPcs', e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" defaultValue={entry.adjustment} className={cn(entry.adjustment > 0 ? "text-green-600" : "text-destructive", "font-semibold")} onBlur={(e) => handleUpdate(entry.id, 'adjustment', e.target.value)} /></TableCell>
+                          <TableCell><Input defaultValue={entry.suffix} onBlur={(e) => handleUpdate(entry.id, 'suffix', e.target.value)} /></TableCell>
+                          <TableCell><Input type="number" defaultValue={entry.currentPcs} className="font-bold" onBlur={(e) => handleUpdate(entry.id, 'currentPcs', e.target.value)} /></TableCell>
                       </TableRow>
-                      )}
-                       {(!kapanFilter || "Kapan 2".toLowerCase().includes(kapanFilter.toLowerCase())) && (
-                       <TableRow>
-                          <TableCell>
-                            <Input defaultValue="Kapan 2 / P-205" className="font-medium" />
-                          </TableCell>
-                          <TableCell><Input type="number" defaultValue="1.20" /></TableCell>
-                          <TableCell><Input type="number" defaultValue="25" /></TableCell>
-                          <TableCell><Input type="number" defaultValue="+5" className="font-semibold text-green-600" /></TableCell>
-                          <TableCell><Input defaultValue="Z, AA, AB, AC, AD" /></TableCell>
-                          <TableCell><Input type="number" defaultValue="30" className="font-bold" /></TableCell>
-                      </TableRow>
+                      ))}
+                      {!loading && filteredEntries.length === 0 && (
+                          <TableRow><TableCell colSpan={6} className="text-center">No entries found.</TableCell></TableRow>
                       )}
                   </TableBody>
               </Table>
@@ -216,3 +276,5 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
+
+    
