@@ -20,6 +20,7 @@ export default function ChaluEntryPage() {
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
+  const [vajan, setVajan] = useState('');
   const [originalPcs, setOriginalPcs] = useState('');
   const [adjustment, setAdjustment] = useState('');
 
@@ -65,7 +66,7 @@ export default function ChaluEntryPage() {
           <CardDescription>Select a lot and enter the number of packets completed or adjusted today.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
             <div className="lg:col-span-1">
               <label className="text-sm font-medium">Kapan Number</label>
               <Select value={kapanNumber} onValueChange={setKapanNumber}>
@@ -82,6 +83,15 @@ export default function ChaluEntryPage() {
                 value={packetNumber}
                 onChange={(e) => setPacketNumber(e.target.value)}
                 placeholder="Enter packet no."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Vajan (Weight)</label>
+              <Input 
+                type="number"
+                value={vajan}
+                onChange={(e) => setVajan(e.target.value)}
+                placeholder="Enter weight"
               />
             </div>
             <div>
@@ -128,6 +138,7 @@ export default function ChaluEntryPage() {
                   <TableHeader>
                       <TableRow>
                           <TableHead>Kapan / Packet</TableHead>
+                          <TableHead>Vajan</TableHead>
                           <TableHead>Original</TableHead>
                           <TableHead>Adjustment</TableHead>
                           <TableHead>Current</TableHead>
@@ -138,6 +149,7 @@ export default function ChaluEntryPage() {
                           <TableCell>
                             <div className="font-medium">Kapan 1 / P-101</div>
                           </TableCell>
+                          <TableCell>0.54</TableCell>
                           <TableCell>10</TableCell>
                           <TableCell className="font-semibold text-destructive">-2</TableCell>
                           <TableCell className="font-bold">8</TableCell>
@@ -146,6 +158,7 @@ export default function ChaluEntryPage() {
                           <TableCell>
                             <div className="font-medium">Kapan 2 / P-205</div>
                           </TableCell>
+                          <TableCell>1.20</TableCell>
                           <TableCell>25</TableCell>
                           <TableCell className="font-semibold text-green-600">+5</TableCell>
                           <TableCell className="font-bold">30</TableCell>
