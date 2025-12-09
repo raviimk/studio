@@ -304,17 +304,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </AccordionItem>
               ) : (
                 <div key={item.label} className="px-3">
-                  <Link href={item.href}>
+                  <Link href={item.href} legacyBehavior={false}>
                     <SidebarMenuButton
                       asChild
                       isActive={pathname === item.href}
                       variant="ghost"
                       className="w-full justify-start"
                     >
-                      <a>
+                      <span>
                         <item.icon size={18} />
                         <span>{item.label}</span>
-                      </a>
+                      </span>
                     </SidebarMenuButton>
                   </Link>
                 </div>
