@@ -30,13 +30,13 @@ export default function ChaluEntryPage() {
   };
   
   useEffect(() => {
+    // Automatically enter fullscreen when component mounts
+    setFullscreen(true);
     // Exit fullscreen when the component unmounts
     return () => {
-        if(isFullscreen) {
-            setFullscreen(false);
-        }
+        setFullscreen(false);
     }
-  }, [isFullscreen, setFullscreen]);
+  }, [setFullscreen]);
 
 
   return (
