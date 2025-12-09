@@ -86,15 +86,6 @@ export default function ChaluEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Vajan (Weight)</label>
-              <Input 
-                type="number"
-                value={vajan}
-                onChange={(e) => setVajan(e.target.value)}
-                placeholder="Enter weight"
-              />
-            </div>
-            <div>
               <label className="text-sm font-medium">Original PCS</label>
               <Input 
                 type="number"
@@ -119,6 +110,15 @@ export default function ChaluEntryPage() {
                 readOnly 
                 disabled 
                 className="font-bold text-lg"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Vajan (Weight)</label>
+              <Input 
+                type="number"
+                value={vajan}
+                onChange={(e) => setVajan(e.target.value)}
+                placeholder="Enter weight"
               />
             </div>
           </div>
