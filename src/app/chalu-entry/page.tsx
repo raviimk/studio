@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import { Maximize, Minimize, Save } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 export default function ChaluEntryPage() {
   const { toast } = useToast();
@@ -190,7 +191,7 @@ export default function ChaluEntryPage() {
               <label className="text-sm font-medium">Suffix</label>
               <Input 
                 value={suffix} 
-                readOnly
+                onChange={(e) => setSuffix(e.target.value)}
                 placeholder="Auto"
               />
             </div>
@@ -199,7 +200,7 @@ export default function ChaluEntryPage() {
               <Input 
                 type="number"
                 value={currentPcs} 
-                readOnly
+                onChange={(e) => setCurrentPcs(e.target.value)}
                 className="font-bold text-lg"
               />
             </div>
@@ -275,6 +276,5 @@ export default function ChaluEntryPage() {
       </Card>
     </div>
   );
-}
 
     
