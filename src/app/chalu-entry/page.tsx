@@ -24,12 +24,15 @@ export default function ChaluEntryPage() {
   const [originalPcs, setOriginalPcs] = useState('');
   const [adjustment, setAdjustment] = useState('');
   const [suffix, setSuffix] = useState('');
+  const [currentPcs, setCurrentPcs] = useState('');
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
-  const currentCount = originalCount + adjustmentValue;
-
+  
   useEffect(() => {
+    const calculatedCurrent = originalCount + adjustmentValue;
+    setCurrentPcs(String(calculatedCurrent));
+
     if (adjustmentValue > 0) {
       if (originalCount > 0) {
         const suffixes = [];
@@ -52,7 +55,9 @@ export default function ChaluEntryPage() {
   
   useEffect(() => {
     // Automatically enter fullscreen when component mounts
-    setFullscreen(true);
+    if (!isFullscreen) {
+      setFullscreen(true);
+    }
     // Exit fullscreen when the component unmounts
     return () => {
         setFullscreen(false);
@@ -125,15 +130,14 @@ export default function ChaluEntryPage() {
                 value={suffix} 
                 onChange={(e) => setSuffix(e.target.value.toUpperCase())}
                 placeholder="Auto or Manual"
-                disabled={adjustmentValue > 0}
               />
             </div>
             <div>
               <label className="text-sm font-medium">Current PCS</label>
               <Input 
-                value={currentCount} 
-                readOnly 
-                disabled 
+                type="number"
+                value={currentPcs} 
+                onChange={(e) => setCurrentPcs(e.target.value)}
                 className="font-bold text-lg"
               />
             </div>
