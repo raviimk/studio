@@ -31,15 +31,17 @@ export default function ChaluEntryPage() {
 
   useEffect(() => {
     if (adjustmentValue > 0) {
-      // Automatically determine the next suffix if adding
-      if(originalCount > 0) {
-        const nextSuffixCharCode = 'A'.charCodeAt(0) + originalCount;
-        setSuffix(String.fromCharCode(nextSuffixCharCode));
+      if (originalCount > 0) {
+        const suffixes = [];
+        for (let i = 0; i < adjustmentValue; i++) {
+          const nextSuffixCharCode = 'A'.charCodeAt(0) + originalCount + i;
+          suffixes.push(String.fromCharCode(nextSuffixCharCode));
+        }
+        setSuffix(suffixes.join(', '));
       } else {
         setSuffix('');
       }
     } else {
-      // Clear suffix if not adding
       setSuffix('');
     }
   }, [originalCount, adjustmentValue]);
