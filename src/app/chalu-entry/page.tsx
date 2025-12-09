@@ -23,10 +23,26 @@ export default function ChaluEntryPage() {
   const [vajan, setVajan] = useState('');
   const [originalPcs, setOriginalPcs] = useState('');
   const [adjustment, setAdjustment] = useState('');
+  const [suffix, setSuffix] = useState('');
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
   const currentCount = originalCount + adjustmentValue;
+
+  useEffect(() => {
+    if (adjustmentValue > 0) {
+      // Automatically determine the next suffix if adding
+      if(originalCount > 0) {
+        const nextSuffixCharCode = 'A'.charCodeAt(0) + originalCount;
+        setSuffix(String.fromCharCode(nextSuffixCharCode));
+      } else {
+        setSuffix('');
+      }
+    } else {
+      // Clear suffix if not adding
+      setSuffix('');
+    }
+  }, [originalCount, adjustmentValue]);
 
   const handleSave = () => {
     toast({ title: 'Saved (Simulation)', description: 'This is a UI demonstration. No data was saved.' });
@@ -45,8 +61,6 @@ export default function ChaluEntryPage() {
   const handleToggleFullscreen = () => {
       if (isFullscreen) {
           router.push('/');
-      } else {
-          setFullscreen(true);
       }
   };
 
@@ -66,7 +80,7 @@ export default function ChaluEntryPage() {
           <CardDescription>Select a lot and enter the number of packets completed or adjusted today.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+          <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
             <div className="lg:col-span-1">
               <label className="text-sm font-medium">Kapan Number</label>
               <Select value={kapanNumber} onValueChange={setKapanNumber}>
@@ -104,6 +118,15 @@ export default function ChaluEntryPage() {
               />
             </div>
              <div>
+              <label className="text-sm font-medium">Suffix</label>
+              <Input 
+                value={suffix} 
+                onChange={(e) => setSuffix(e.target.value.toUpperCase())}
+                placeholder="Auto or Manual"
+                disabled={adjustmentValue > 0}
+              />
+            </div>
+            <div>
               <label className="text-sm font-medium">Current PCS</label>
               <Input 
                 value={currentCount} 
@@ -141,6 +164,7 @@ export default function ChaluEntryPage() {
                           <TableHead>Vajan</TableHead>
                           <TableHead>Original</TableHead>
                           <TableHead>Adjustment</TableHead>
+                          <TableHead>Suffix</TableHead>
                           <TableHead>Current</TableHead>
                       </TableRow>
                   </TableHeader>
@@ -152,6 +176,7 @@ export default function ChaluEntryPage() {
                           <TableCell>0.54</TableCell>
                           <TableCell>10</TableCell>
                           <TableCell className="font-semibold text-destructive">-2</TableCell>
+                          <TableCell>C, G</TableCell>
                           <TableCell className="font-bold">8</TableCell>
                       </TableRow>
                        <TableRow>
@@ -161,6 +186,7 @@ export default function ChaluEntryPage() {
                           <TableCell>1.20</TableCell>
                           <TableCell>25</TableCell>
                           <TableCell className="font-semibold text-green-600">+5</TableCell>
+                          <TableCell>Z, AA, AB, AC, AD</TableCell>
                           <TableCell className="font-bold">30</TableCell>
                       </TableRow>
                   </TableBody>
