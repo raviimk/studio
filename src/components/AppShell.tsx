@@ -150,8 +150,12 @@ const YouTubePlayer = () => {
     React.useEffect(() => {
         const checkTime = () => {
           const now = new Date();
-          const startTime = systemSettings.videoStartTime ? parse(systemSettings.videoStartTime, 'HH:mm', now) : set(now, { hours: 0, minutes: 0, seconds: 0 });
-          const endTime = systemSettings.videoEndTime ? parse(systemSettings.videoEndTime, 'HH:mm', now) : set(now, { hours: 23, minutes: 59, seconds: 59 });
+          const startTimeString = systemSettings.videoStartTime || '00:00';
+          const endTimeString = systemSettings.videoEndTime || '23:59';
+
+          const startTime = parse(startTimeString, 'HH:mm', now);
+          const endTime = parse(endTimeString, 'HH:mm', now);
+          
           setCanPlay(isWithinInterval(now, { start: startTime, end: endTime }));
         };
         checkTime();
