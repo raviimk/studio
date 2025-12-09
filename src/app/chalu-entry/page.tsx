@@ -134,21 +134,21 @@ export default function ChaluEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Current PCS</label>
-              <Input 
-                type="number"
-                value={currentPcs} 
-                onChange={(e) => setCurrentPcs(e.target.value)}
-                className="font-bold text-lg"
-              />
-            </div>
-             <div>
               <label className="text-sm font-medium">Vajan (Weight)</label>
               <Input 
                 type="number"
                 value={vajan}
                 onChange={(e) => setVajan(e.target.value)}
                 placeholder="Enter weight"
+              />
+            </div>
+             <div>
+              <label className="text-sm font-medium">Current PCS</label>
+              <Input 
+                type="number"
+                value={currentPcs} 
+                onChange={(e) => setCurrentPcs(e.target.value)}
+                className="font-bold text-lg"
               />
             </div>
           </div>
@@ -178,23 +178,23 @@ export default function ChaluEntryPage() {
                   <TableBody>
                       <TableRow>
                           <TableCell>
-                            <div className="font-medium">Kapan 1 / P-101</div>
+                            <Input defaultValue="Kapan 1 / P-101" className="font-medium" />
                           </TableCell>
-                          <TableCell>0.54</TableCell>
-                          <TableCell>10</TableCell>
-                          <TableCell className="font-semibold text-destructive">-2</TableCell>
-                          <TableCell>C, G</TableCell>
-                          <TableCell className="font-bold">8</TableCell>
+                          <TableCell><Input type="number" defaultValue="0.54" /></TableCell>
+                          <TableCell><Input type="number" defaultValue="10" /></TableCell>
+                          <TableCell><Input type="number" defaultValue="-2" className="font-semibold text-destructive" /></TableCell>
+                          <TableCell><Input defaultValue="C, G" /></TableCell>
+                          <TableCell><Input type="number" defaultValue="8" className="font-bold" /></TableCell>
                       </TableRow>
                        <TableRow>
                           <TableCell>
-                            <div className="font-medium">Kapan 2 / P-205</div>
+                            <Input defaultValue="Kapan 2 / P-205" className="font-medium" />
                           </TableCell>
-                          <TableCell>1.20</TableCell>
-                          <TableCell>25</TableCell>
-                          <TableCell className="font-semibold text-green-600">+5</TableCell>
-                          <TableCell>Z, AA, AB, AC, AD</TableCell>
-                          <TableCell className="font-bold">30</TableCell>
+                          <TableCell><Input type="number" defaultValue="1.20" /></TableCell>
+                          <TableCell><Input type="number" defaultValue="25" /></TableCell>
+                          <TableCell><Input type="number" defaultValue="+5" className="font-semibold text-green-600" /></TableCell>
+                          <TableCell><Input defaultValue="Z, AA, AB, AC, AD" /></TableCell>
+                          <TableCell><Input type="number" defaultValue="30" className="font-bold" /></TableCell>
                       </TableRow>
                   </TableBody>
               </Table>
