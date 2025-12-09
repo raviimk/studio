@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { useLayout } from '@/hooks/useLayout';
 export default function ChaluEntryPage() {
   const { toast } = useToast();
   const { isFullscreen, setFullscreen } = useLayout();
+  const router = useRouter();
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -38,13 +40,21 @@ export default function ChaluEntryPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  
+  const handleToggleFullscreen = () => {
+      if (isFullscreen) {
+          router.push('/');
+      } else {
+          setFullscreen(true);
+      }
+  };
 
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <div className="flex justify-between items-start">
         <PageHeader title="Chalu / Running Packet Entry" description="Log progress on active lots." />
-        <Button variant="ghost" size="icon" onClick={() => setFullscreen(!isFullscreen)}>
+        <Button variant="ghost" size="icon" onClick={handleToggleFullscreen}>
             {isFullscreen ? <Minimize/> : <Maximize />}
         </Button>
       </div>
