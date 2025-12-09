@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query } from 'firebase/firestore';
@@ -54,6 +54,10 @@ export default function ChaluEntryPage() {
   // State for new kapan dialog
   const [isKapanDialogOpen, setKapanDialogOpen] = useState(false);
   const [newKapanNumber, setNewKapanNumber] = useState('');
+
+  // State for inline editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
 
 
   const originalCount = parseInt(originalPcs, 10) || 0;
@@ -116,21 +120,42 @@ export default function ChaluEntryPage() {
     }
   };
 
-  const handleUpdate = async (id: string, field: string, value: string) => {
+  const handleEditClick = (entry: any) => {
+    setEditingId(entry.id);
+    setEditFormData({ ...entry });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditFormData({});
+  };
+  
+  const handleSaveEdit = async (id: string) => {
     if (!firestore) return;
     const docRef = doc(firestore, 'chaluEntries', id);
-    let updatedValue: string | number = value;
-    if(field === 'vajan' || field === 'originalPcs' || field === 'adjustment' || field === 'currentPcs') {
-        updatedValue = Number(value);
-    }
+    const { id: _, ...dataToSave } = editFormData; // Exclude id from data
+    
+    // Ensure numeric fields are numbers
+    dataToSave.vajan = parseFloat(dataToSave.vajan) || 0;
+    dataToSave.originalPcs = parseInt(dataToSave.originalPcs, 10) || 0;
+    dataToSave.adjustment = parseInt(dataToSave.adjustment, 10) || 0;
+    dataToSave.currentPcs = parseInt(dataToSave.currentPcs, 10) || 0;
+
     try {
-      await updateDoc(docRef, { [field]: updatedValue });
-      toast({ title: 'Updated', description: 'Field updated successfully.'});
+      await updateDoc(docRef, dataToSave);
+      toast({ title: 'Updated', description: 'Entry updated successfully.'});
+      handleCancelEdit();
     } catch(e) {
       console.error("Error updating document:", e);
       toast({ variant: 'destructive', title: 'Update Failed' });
     }
   };
+  
+  const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditFormData((prev: any) => ({ ...prev, [name]: value }));
+  };
+
 
   const handleAddKapan = async () => {
     if (!firestore || !newKapanNumber.trim()) return;
@@ -162,7 +187,7 @@ export default function ChaluEntryPage() {
         setFullscreen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setFullscreen]);
+  }, []);
   
   const handleToggleFullscreen = () => {
       if (isFullscreen) {
@@ -299,38 +324,54 @@ export default function ChaluEntryPage() {
               <Table>
                   <TableHeader>
                       <TableRow>
-                          <TableHead>Kapan / Packet</TableHead>
-                          <TableHead>Vajan</TableHead>
+                          <TableHead>Kapan</TableHead>
+                          <TableHead>Packet</TableHead>
                           <TableHead>Original</TableHead>
                           <TableHead>Adjustment</TableHead>
                           <TableHead>Suffix</TableHead>
                           <TableHead>Current</TableHead>
+                          <TableHead>Vajan</TableHead>
+                          <TableHead>Actions</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                      {loadingEntries && <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>}
+                      {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
                       {!loadingEntries && filteredEntries.map(entry => (
                       <TableRow key={entry.id}>
-                          <TableCell>
-                            <Input 
-                                defaultValue={`${entry.kapanNumber} / ${entry.packetNumber}`} 
-                                className="font-medium"
-                                onBlur={(e) => {
-                                    const [kapan, packet] = e.target.value.split(' / ');
-                                    if(kapan !== entry.kapanNumber) handleUpdate(entry.id, 'kapanNumber', kapan);
-                                    if(packet !== entry.packetNumber) handleUpdate(entry.id, 'packetNumber', packet);
-                                }}
-                            />
-                          </TableCell>
-                          <TableCell><Input type="number" defaultValue={entry.vajan} onBlur={(e) => handleUpdate(entry.id, 'vajan', e.target.value)} /></TableCell>
-                          <TableCell><Input type="number" defaultValue={entry.originalPcs} onBlur={(e) => handleUpdate(entry.id, 'originalPcs', e.target.value)} /></TableCell>
-                          <TableCell><Input type="number" defaultValue={entry.adjustment} className={cn(entry.adjustment > 0 ? "text-green-600" : "text-destructive", "font-semibold")} onBlur={(e) => handleUpdate(entry.id, 'adjustment', e.target.value)} /></TableCell>
-                          <TableCell><Input defaultValue={entry.suffix} onBlur={(e) => handleUpdate(entry.id, 'suffix', e.target.value)} /></TableCell>
-                          <TableCell><Input type="number" defaultValue={entry.currentPcs} className="font-bold" onBlur={(e) => handleUpdate(entry.id, 'currentPcs', e.target.value)} /></TableCell>
+                        {editingId === entry.id ? (
+                            <>
+                                <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell><Input type="number" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
+                                <TableCell>
+                                    <Button size="sm" onClick={() => handleSaveEdit(entry.id)}><Save className="h-4 w-4" /></Button>
+                                    <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+                                </TableCell>
+                            </>
+                        ) : (
+                             <>
+                                <TableCell>{entry.kapanNumber}</TableCell>
+                                <TableCell>{entry.packetNumber}</TableCell>
+                                <TableCell>{entry.originalPcs}</TableCell>
+                                <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
+                                  {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
+                                </TableCell>
+                                <TableCell>{entry.suffix}</TableCell>
+                                <TableCell className="font-bold">{entry.currentPcs}</TableCell>
+                                <TableCell>{entry.vajan}</TableCell>
+                                <TableCell>
+                                    <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
+                                </TableCell>
+                            </>
+                        )}
                       </TableRow>
                       ))}
                       {!loadingEntries && filteredEntries.length === 0 && (
-                          <TableRow><TableCell colSpan={6} className="text-center">No entries found.</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={8} className="text-center">No entries found.</TableCell></TableRow>
                       )}
                   </TableBody>
               </Table>
@@ -338,5 +379,4 @@ export default function ChaluEntryPage() {
       </Card>
     </div>
   );
-
-    
+}
