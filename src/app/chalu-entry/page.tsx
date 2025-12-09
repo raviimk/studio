@@ -55,14 +55,10 @@ export default function ChaluEntryPage() {
   
   useEffect(() => {
     // Automatically enter fullscreen when component mounts
-    if (!isFullscreen) {
-      setFullscreen(true);
-    }
+    setFullscreen(true);
     // Exit fullscreen when the component unmounts
     return () => {
-        if (isFullscreen) {
-            setFullscreen(false);
-        }
+        setFullscreen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
