@@ -36,7 +36,8 @@ export default function ChaluEntryPage() {
     return () => {
         setFullscreen(false);
     }
-  }, [setFullscreen]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   return (
