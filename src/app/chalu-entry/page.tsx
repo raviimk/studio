@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Save } from 'lucide-react';
+import { Maximize, Minimize, Save } from 'lucide-react';
+import { useLayout } from '@/hooks/useLayout';
 
 export default function ChaluEntryPage() {
   const { toast } = useToast();
+  const { isFullscreen, setFullscreen } = useLayout();
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -26,10 +28,25 @@ export default function ChaluEntryPage() {
   const handleSave = () => {
     toast({ title: 'Saved (Simulation)', description: 'This is a UI demonstration. No data was saved.' });
   };
+  
+  useEffect(() => {
+    // Exit fullscreen when the component unmounts
+    return () => {
+        if(isFullscreen) {
+            setFullscreen(false);
+        }
+    }
+  }, [isFullscreen, setFullscreen]);
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-      <PageHeader title="Chalu / Running Packet Entry" description="Log progress on active lots." />
+      <div className="flex justify-between items-start">
+        <PageHeader title="Chalu / Running Packet Entry" description="Log progress on active lots." />
+        <Button variant="ghost" size="icon" onClick={() => setFullscreen(!isFullscreen)}>
+            {isFullscreen ? <Minimize/> : <Maximize />}
+        </Button>
+      </div>
       
       <Card>
         <CardHeader>

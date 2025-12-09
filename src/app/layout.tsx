@@ -7,6 +7,7 @@ import { AppShell } from '@/components/AppShell';
 import IntroAnimation from '@/components/IntroAnimation';
 import { useState, useEffect } from 'react';
 import { SystemStateProvider } from '@/hooks/useSystemState';
+import { LayoutProvider } from '@/hooks/useLayout';
 
 
 const SHOW_INTRO = true; // Master switch for the intro animation
@@ -49,14 +50,16 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <SystemStateProvider>
-          {!introFinished ? (
-            <IntroAnimation onFinished={() => setIntroFinished(true)} />
-          ) : (
-            <div className="animate-simple-fade-in">
-              <AppShell>{children}</AppShell>
-              <Toaster />
-            </div>
-          )}
+            <LayoutProvider>
+              {!introFinished ? (
+                <IntroAnimation onFinished={() => setIntroFinished(true)} />
+              ) : (
+                <div className="animate-simple-fade-in">
+                  <AppShell>{children}</AppShell>
+                  <Toaster />
+                </div>
+              )}
+            </LayoutProvider>
         </SystemStateProvider>
       </body>
     </html>

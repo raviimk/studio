@@ -52,6 +52,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { AUTO_BACKUP_SETTINGS_KEY, SYSTEM_SETTINGS_KEY } from '@/lib/constants';
 import { AutoBackupSettings, SystemSettings } from '@/lib/types';
 import { isWithinInterval, set, parse } from 'date-fns';
+import { useLayout } from '@/hooks/useLayout';
 
 
 const menuItems = [
@@ -153,10 +154,14 @@ const YouTubePlayer = () => {
           const startTimeString = systemSettings.videoStartTime || '00:00';
           const endTimeString = systemSettings.videoEndTime || '23:59';
 
-          const startTime = parse(startTimeString, 'HH:mm', now);
-          const endTime = parse(endTimeString, 'HH:mm', now);
-          
-          setCanPlay(isWithinInterval(now, { start: startTime, end: endTime }));
+          try {
+            const startTime = parse(startTimeString, 'HH:mm', new Date());
+            const endTime = parse(endTimeString, 'HH:mm', new Date());
+            setCanPlay(isWithinInterval(now, { start: startTime, end: endTime }));
+          } catch(e) {
+            console.error("Invalid time format in settings", e);
+            setCanPlay(false);
+          }
         };
         checkTime();
         const interval = setInterval(checkTime, 60000); // Check every minute
@@ -217,6 +222,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   useAutoBackup();
   const { resetDeleteButton } = useSystemState();
+  const { isFullscreen } = useLayout();
 
   // Hide AI Insights and combine reports
   const updatedMenuItems = menuItems.map(item => {
@@ -234,6 +240,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return item;
   }).filter(item => item.label !== 'AI Insights');
 
+
+  if (isFullscreen) {
+    return (
+        <>
+            {children}
+            <Toaster />
+        </>
+    );
+  }
 
   return (
     <SidebarProvider>
