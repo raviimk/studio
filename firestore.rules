@@ -12,6 +12,11 @@ service cloud.firestore {
     match /chaluEntries/{chaluEntryId} {
       allow read, write: if true;
     }
+
+    // Allow public access to the 'kapans' collection
+    match /kapans/{kapanId} {
+      allow read, write: if true;
+    }
   }
 }
 

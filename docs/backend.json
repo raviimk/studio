@@ -40,7 +40,27 @@
           "description": "Timestamp when the entry was created."
         }
       },
-      "required": ["kapanNumber", "packetNumber", "originalPcs", "currentPcs", "createdAt"]
+      "required": [
+        "kapanNumber",
+        "packetNumber",
+        "originalPcs",
+        "currentPcs",
+        "createdAt"
+      ]
+    },
+    "kapan": {
+      "title": "Kapan",
+      "description": "Represents a single Kapan (lot group).",
+      "type": "object",
+      "properties": {
+        "kapanNumber": {
+          "type": "string",
+          "description": "The unique Kapan number."
+        }
+      },
+      "required": [
+        "kapanNumber"
+      ]
     }
   },
   "auth": {
@@ -52,6 +72,12 @@
         "$ref": "#/entities/chaluEntry"
       },
       "description": "Stores all the Chalu/Running packet entries."
+    },
+    "/kapans/{kapanId}": {
+      "schema": {
+        "$ref": "#/entities/kapan"
+      },
+      "description": "Stores the list of all available Kapan numbers."
     }
   }
 }

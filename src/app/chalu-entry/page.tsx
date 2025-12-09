@@ -10,11 +10,17 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+
+type Kapan = {
+    id: string;
+    kapanNumber: string;
+};
 
 export default function ChaluEntryPage() {
   const { toast } = useToast();
@@ -22,11 +28,19 @@ export default function ChaluEntryPage() {
   const router = useRouter();
 
   const firestore = useFirestore();
+  
   const chaluEntriesQuery = useMemo(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'chaluEntries'));
   }, [firestore]);
-  const { data: chaluEntries, loading } = useCollection(chaluEntriesQuery);
+
+  const kapansQuery = useMemo(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'kapans'));
+  }, [firestore]);
+
+  const { data: chaluEntries, loading: loadingEntries } = useCollection(chaluEntriesQuery);
+  const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -36,6 +50,11 @@ export default function ChaluEntryPage() {
   const [suffix, setSuffix] = useState('');
   const [currentPcs, setCurrentPcs] = useState('');
   const [kapanFilter, setKapanFilter] = useState('');
+  
+  // State for new kapan dialog
+  const [isKapanDialogOpen, setKapanDialogOpen] = useState(false);
+  const [newKapanNumber, setNewKapanNumber] = useState('');
+
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -84,7 +103,6 @@ export default function ChaluEntryPage() {
         });
         toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
         // Reset form
-        setKapanNumber('');
         setPacketNumber('');
         setVajan('');
         setOriginalPcs('');
@@ -113,6 +131,28 @@ export default function ChaluEntryPage() {
       toast({ variant: 'destructive', title: 'Update Failed' });
     }
   };
+
+  const handleAddKapan = async () => {
+    if (!firestore || !newKapanNumber.trim()) return;
+
+    const existingKapan = kapans?.find(k => k.kapanNumber === newKapanNumber.trim());
+    if (existingKapan) {
+        toast({ variant: 'destructive', title: 'Duplicate Kapan', description: 'This Kapan number already exists.' });
+        return;
+    }
+
+    try {
+        await addDoc(collection(firestore, 'kapans'), {
+            kapanNumber: newKapanNumber.trim(),
+        });
+        toast({ title: 'Success', description: 'New Kapan added successfully.'});
+        setNewKapanNumber('');
+        setKapanDialogOpen(false);
+    } catch (e) {
+         console.error('Error adding Kapan: ', e);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not add the new Kapan.' });
+    }
+  }
   
   useEffect(() => {
     // Automatically enter fullscreen when component mounts
@@ -156,14 +196,32 @@ export default function ChaluEntryPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
             <div className="lg:col-span-1">
               <label className="text-sm font-medium">Kapan Number</label>
-              <Select value={kapanNumber} onValueChange={setKapanNumber}>
-                <SelectTrigger><SelectValue placeholder="Select Kapan" /></SelectTrigger>
-                <SelectContent>
-                  {[...new Set(chaluEntries?.map(e => e.kapanNumber) || [])].map(kapan => (
-                    <SelectItem key={kapan} value={kapan}>{kapan}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={kapanNumber} onValueChange={setKapanNumber}>
+                    <SelectTrigger><SelectValue placeholder="Select Kapan" /></SelectTrigger>
+                    <SelectContent>
+                    {kapans?.map(k => (
+                        <SelectItem key={k.id} value={k.kapanNumber}>{k.kapanNumber}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                <Dialog open={isKapanDialogOpen} onOpenChange={setKapanDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="icon"><PlusCircle className="h-4 w-4"/></Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add New Kapan</DialogTitle>
+                            <DialogDescription>Create a new Kapan number that will be available in the dropdown.</DialogDescription>
+                        </DialogHeader>
+                        <Input value={newKapanNumber} onChange={(e) => setNewKapanNumber(e.target.value)} placeholder="Enter new Kapan number"/>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setKapanDialogOpen(false)}>Cancel</Button>
+                            <Button onClick={handleAddKapan}>Save Kapan</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+              </div>
             </div>
             <div className="lg:col-span-1">
               <label className="text-sm font-medium">Packet Number</label>
@@ -250,8 +308,8 @@ export default function ChaluEntryPage() {
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                      {loading && <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>}
-                      {!loading && filteredEntries.map(entry => (
+                      {loadingEntries && <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>}
+                      {!loadingEntries && filteredEntries.map(entry => (
                       <TableRow key={entry.id}>
                           <TableCell>
                             <Input 
@@ -271,7 +329,7 @@ export default function ChaluEntryPage() {
                           <TableCell><Input type="number" defaultValue={entry.currentPcs} className="font-bold" onBlur={(e) => handleUpdate(entry.id, 'currentPcs', e.target.value)} /></TableCell>
                       </TableRow>
                       ))}
-                      {!loading && filteredEntries.length === 0 && (
+                      {!loadingEntries && filteredEntries.length === 0 && (
                           <TableRow><TableCell colSpan={6} className="text-center">No entries found.</TableCell></TableRow>
                       )}
                   </TableBody>
