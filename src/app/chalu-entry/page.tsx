@@ -60,14 +60,19 @@ export default function ChaluEntryPage() {
     }
     // Exit fullscreen when the component unmounts
     return () => {
-        setFullscreen(false);
+        if (isFullscreen) {
+            setFullscreen(false);
+        }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   const handleToggleFullscreen = () => {
       if (isFullscreen) {
+          setFullscreen(false);
           router.push('/');
+      } else {
+          setFullscreen(true);
       }
   };
 
@@ -141,7 +146,7 @@ export default function ChaluEntryPage() {
                 className="font-bold text-lg"
               />
             </div>
-            <div>
+             <div>
               <label className="text-sm font-medium">Vajan (Weight)</label>
               <Input 
                 type="number"
