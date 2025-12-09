@@ -24,6 +24,7 @@ import {
   Box,
   ClipboardCheck,
   Wrench,
+  PenSquare,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -96,6 +97,7 @@ const menuItems = [
       { label: 'Udhda Report', href: '/udhdha/report' },
     ],
   },
+  { label: 'Chalu Entry', href: '/chalu-entry', icon: PenSquare },
   {
     label: "Tools",
     icon: Wrench,
