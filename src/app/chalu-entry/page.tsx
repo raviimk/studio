@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Maximize, Minimize, Save } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, query } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 
 export default function ChaluEntryPage() {
@@ -22,7 +22,11 @@ export default function ChaluEntryPage() {
   const router = useRouter();
 
   const firestore = useFirestore();
-  const { data: chaluEntries, loading } = useCollection(firestore ? collection(firestore, 'chaluEntries') : null);
+  const chaluEntriesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'chaluEntries'));
+  }, [firestore]);
+  const { data: chaluEntries, loading } = useCollection(chaluEntriesQuery);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -118,7 +122,7 @@ export default function ChaluEntryPage() {
         setFullscreen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setFullscreen]);
   
   const handleToggleFullscreen = () => {
       if (isFullscreen) {

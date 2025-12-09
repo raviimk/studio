@@ -18,28 +18,26 @@ interface Options {
 }
 
 export const useCollection = <T extends DocumentData>(
-  path: string | null,
+  collectionQuery: Query<DocumentData> | null,
   options?: Options
 ) => {
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<FirestoreError | null>(null);
 
-  const firestore = useFirestore();
-  const pathRef = useRef(path);
-  pathRef.current = path;
+  const queryRef = useRef(collectionQuery);
+  queryRef.current = collectionQuery;
 
   useEffect(() => {
-    if (!firestore || !pathRef.current) {
+    if (!queryRef.current) {
       setLoading(false);
+      setData([]);
       return;
     }
     setLoading(true);
 
-    const collectionQuery: Query<DocumentData> = query(collection(firestore, pathRef.current));
-
     const unsubscribe = onSnapshot(
-      collectionQuery,
+      queryRef.current,
       (snapshot: QuerySnapshot<DocumentData>) => {
         const result: T[] = [];
         snapshot.forEach((doc) => {
@@ -52,13 +50,12 @@ export const useCollection = <T extends DocumentData>(
       (err: FirestoreError) => {
         setError(err);
         setLoading(false);
+        console.error(err);
       }
     );
 
     return () => unsubscribe();
-  }, [firestore]);
+  }, [collectionQuery]);
 
   return { data, loading, error };
 };
-
-    
