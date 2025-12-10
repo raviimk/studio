@@ -10,12 +10,24 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, query } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 type Kapan = {
     id: string;
@@ -155,6 +167,18 @@ export default function ChaluEntryPage() {
     const { name, value } = e.target;
     setEditFormData((prev: any) => ({ ...prev, [name]: value }));
   };
+
+  const handleDeleteEntry = async (id: string) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'chaluEntries', id);
+    try {
+        await deleteDoc(docRef);
+        toast({ title: 'Deleted', description: 'Entry removed successfully.'});
+    } catch (e) {
+        console.error("Error deleting document:", e);
+        toast({ variant: 'destructive', title: 'Delete Failed' });
+    }
+  }
 
 
   const handleAddKapan = async () => {
@@ -363,8 +387,25 @@ export default function ChaluEntryPage() {
                                 <TableCell>{entry.suffix}</TableCell>
                                 <TableCell className="font-bold">{entry.currentPcs}</TableCell>
                                 <TableCell>{entry.vajan}</TableCell>
-                                <TableCell>
+                                <TableCell className="flex gap-1">
                                     <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm" className="w-9 p-0">
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </TableCell>
                             </>
                         )}
@@ -380,3 +421,5 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
+
+    
