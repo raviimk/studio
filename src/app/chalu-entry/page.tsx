@@ -366,7 +366,7 @@ export default function ChaluEntryPage() {
               />
             </div>
              <div>
-              <label className="text-sm font-medium">પ્લસ</label>
+              <label className="text-sm font-medium">પ્લસ/માઈનસ</label>
               <Input 
                 value={suffix} 
                 onChange={(e) => setSuffix(e.target.value)}
@@ -451,7 +451,7 @@ export default function ChaluEntryPage() {
                                                   <TableHead>પેકેટ</TableHead>
                                                   <TableHead>ઓરિજિનલ</TableHead>
                                                   <TableHead>નુકશાની</TableHead>
-                                                  <TableHead>પ્લસ</TableHead>
+                                                  <TableHead>પ્લસ/માઈનસ</TableHead>
                                                   <TableHead>ટોટલ</TableHead>
                                                   <TableHead>વજન</TableHead>
                                               </TableRow>
