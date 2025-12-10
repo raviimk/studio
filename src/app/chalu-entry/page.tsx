@@ -487,7 +487,7 @@ export default function ChaluEntryPage() {
                           <TableHead>પેકેટ</TableHead>
                           <TableHead>ઓરિજિનલ થાન</TableHead>
                           <TableHead>નુકશાની(+/-)</TableHead>
-                          <TableHead>પ્લસ</TableHead>
+                          <TableHead>પ્લસ/માઈનસ</TableHead>
                           <TableHead>ટો.થાન</TableHead>
                           <TableHead>વજન</TableHead>
                           <TableHead>સુધારો</TableHead>
