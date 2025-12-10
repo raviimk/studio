@@ -220,7 +220,7 @@ export default function ChaluEntryPage() {
         <CardContent>
           <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
             <div className="lg:col-span-1">
-              <label className="text-sm font-medium">Kapan Number</label>
+              <label className="text-sm font-medium">કાપણ નંબર</label>
               <div className="flex gap-2">
                 <Select value={kapanNumber} onValueChange={setKapanNumber}>
                     <SelectTrigger><SelectValue placeholder="Select Kapan" /></SelectTrigger>
@@ -249,7 +249,7 @@ export default function ChaluEntryPage() {
               </div>
             </div>
             <div className="lg:col-span-1">
-              <label className="text-sm font-medium">Packet Number</label>
+              <label className="text-sm font-medium">પેકેટ નંબર</label>
               <Input 
                 value={packetNumber}
                 onChange={(e) => setPacketNumber(e.target.value)}
@@ -257,7 +257,7 @@ export default function ChaluEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Original PCS</label>
+              <label className="text-sm font-medium">ઓ.થાન</label>
               <Input 
                 type="number"
                 value={originalPcs}
@@ -266,7 +266,7 @@ export default function ChaluEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Adjustment (+/-)</label>
+              <label className="text-sm font-medium">નુકશાની(+/-)</label>
               <Input 
                 type="number" 
                 value={adjustment} 
@@ -275,7 +275,7 @@ export default function ChaluEntryPage() {
               />
             </div>
              <div>
-              <label className="text-sm font-medium">Suffix</label>
+              <label className="text-sm font-medium">પ્લસ</label>
               <Input 
                 value={suffix} 
                 onChange={(e) => setSuffix(e.target.value)}
@@ -283,7 +283,7 @@ export default function ChaluEntryPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Current PCS</label>
+              <label className="text-sm font-medium">ટો.થાન</label>
               <Input 
                 type="number"
                 value={currentPcs} 
@@ -292,7 +292,7 @@ export default function ChaluEntryPage() {
               />
             </div>
              <div>
-              <label className="text-sm font-medium">Vajan (Weight)</label>
+              <label className="text-sm font-medium">વજન(Weight)</label>
               <Input 
                 type="number"
                 value={vajan}
@@ -324,14 +324,14 @@ export default function ChaluEntryPage() {
               <Table>
                   <TableHeader>
                       <TableRow>
-                          <TableHead>Kapan</TableHead>
-                          <TableHead>Packet</TableHead>
-                          <TableHead>Original</TableHead>
-                          <TableHead>Adjustment</TableHead>
-                          <TableHead>Suffix</TableHead>
-                          <TableHead>Current</TableHead>
-                          <TableHead>Vajan</TableHead>
-                          <TableHead>Actions</TableHead>
+                          <TableHead>કાપણ</TableHead>
+                          <TableHead>પેકેટ</TableHead>
+                          <TableHead>ઓરિજિનલ થાન</TableHead>
+                          <TableHead>નુકશાની(+/-)</TableHead>
+                          <TableHead>પ્લસ</TableHead>
+                          <TableHead>ટો.થાન</TableHead>
+                          <TableHead>વજન</TableHead>
+                          <TableHead>સુધારો</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
