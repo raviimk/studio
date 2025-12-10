@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc } from 'firebase/firestore';
@@ -62,6 +62,7 @@ export default function ChaluEntryPage() {
   const [suffix, setSuffix] = useState('');
   const [currentPcs, setCurrentPcs] = useState('');
   const [kapanFilter, setKapanFilter] = useState('');
+  const [isReportOpen, setReportOpen] = useState(false);
   
   // State for new kapan dialog
   const [isKapanDialogOpen, setKapanDialogOpen] = useState(false);
@@ -286,8 +287,9 @@ export default function ChaluEntryPage() {
     return {
         totalPlus,
         totalMinus,
-        totalVajan,
+        totalVajan: totalVajan.toFixed(3),
         totalEntries: filteredEntries.length,
+        entries: filteredEntries.sort((a,b) => (a.packetNumber || '').localeCompare(b.packetNumber || '')),
     };
   }, [filteredEntries, kapanFilter]);
 
@@ -401,38 +403,83 @@ export default function ChaluEntryPage() {
               <CardTitle>Entry Log</CardTitle>
               <div className="flex justify-between items-center">
                 <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
-                <Input
-                    placeholder="Filter by Kapan..."
-                    value={kapanFilter}
-                    onChange={(e) => setKapanFilter(e.target.value)}
-                    className="max-w-xs"
-                />
+                <div className="flex gap-2 items-center">
+                    <Input
+                        placeholder="Filter by Kapan..."
+                        value={kapanFilter}
+                        onChange={(e) => setKapanFilter(e.target.value)}
+                        className="max-w-xs"
+                    />
+                     <Dialog open={isReportOpen} onOpenChange={setReportOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" disabled={!kapanFilter || !reportSummary}>
+                                <FileText className="mr-2 h-4 w-4" /> View Report
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl">
+                            <DialogHeader>
+                                <DialogTitle>Full Report for Kapan: {kapanFilter}</DialogTitle>
+                                <DialogDescription>A detailed summary and list of all entries for this Kapan.</DialogDescription>
+                            </DialogHeader>
+                            {reportSummary && (
+                                <>
+                                    <div className="mb-4 border rounded-lg p-4 bg-muted/50">
+                                        <h3 className="font-semibold text-lg mb-2">Summary</h3>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div className="text-center">
+                                                <p className="text-sm text-muted-foreground">Total Entries</p>
+                                                <p className="text-2xl font-bold">{reportSummary.totalEntries}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-sm text-muted-foreground">Total Weight</p>
+                                                <p className="text-2xl font-bold">{reportSummary.totalVajan}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-sm text-muted-foreground">Total Plus</p>
+                                                <p className="text-2xl font-bold text-green-600">+{reportSummary.totalPlus}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-sm text-muted-foreground">Total Minus</p>
+                                                <p className="text-2xl font-bold text-destructive">{reportSummary.totalMinus}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="max-h-[50vh] overflow-y-auto">
+                                        <Table>
+                                          <TableHeader>
+                                              <TableRow>
+                                                  <TableHead>પેકેટ</TableHead>
+                                                  <TableHead>ઓરિજિનલ</TableHead>
+                                                  <TableHead>નુકશાની</TableHead>
+                                                  <TableHead>પ્લસ</TableHead>
+                                                  <TableHead>ટોટલ</TableHead>
+                                                  <TableHead>વજન</TableHead>
+                                              </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                              {reportSummary.entries.map(entry => (
+                                                  <TableRow key={entry.id}>
+                                                      <TableCell>{entry.packetNumber}</TableCell>
+                                                      <TableCell>{entry.originalPcs}</TableCell>
+                                                      <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "")}>
+                                                          {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
+                                                      </TableCell>
+                                                      <TableCell>{entry.suffix}</TableCell>
+                                                      <TableCell className="font-bold">{entry.currentPcs}</TableCell>
+                                                      <TableCell>{entry.vajan}</TableCell>
+                                                  </TableRow>
+                                              ))}
+                                          </TableBody>
+                                        </Table>
+                                    </div>
+                                </>
+                            )}
+                        </DialogContent>
+                     </Dialog>
+                </div>
               </div>
           </CardHeader>
           <CardContent>
-              {reportSummary && (
-                <div className="mb-4 border rounded-lg p-4 bg-muted/50">
-                    <h3 className="font-semibold text-lg mb-2">Summary for Kapan: {kapanFilter}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                            <p className="text-sm text-muted-foreground">Total Entries</p>
-                            <p className="text-2xl font-bold">{reportSummary.totalEntries}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-sm text-muted-foreground">Total Weight</p>
-                            <p className="text-2xl font-bold">{reportSummary.totalVajan.toFixed(3)}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-sm text-muted-foreground">Total Plus</p>
-                            <p className="text-2xl font-bold text-green-600">+{reportSummary.totalPlus}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-sm text-muted-foreground">Total Minus</p>
-                            <p className="text-2xl font-bold text-destructive">{reportSummary.totalMinus}</p>
-                        </div>
-                    </div>
-                </div>
-              )}
               <Table>
                   <TableHeader>
                       <TableRow>
