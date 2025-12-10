@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useDoc, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc } from 'firebase/firestore';
@@ -67,6 +67,12 @@ export default function ChaluEntryPage() {
   // State for new kapan dialog
   const [isKapanDialogOpen, setKapanDialogOpen] = useState(false);
   const [newKapanNumber, setNewKapanNumber] = useState('');
+  
+  // State for managing kapans
+  const [isManageKapanOpen, setManageKapanOpen] = useState(false);
+  const [editingKapanId, setEditingKapanId] = useState<string | null>(null);
+  const [editingKapanValue, setEditingKapanValue] = useState('');
+
 
   // State for inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -234,6 +240,38 @@ export default function ChaluEntryPage() {
     }
   }
   
+    const handleDeleteKapan = async (id: string) => {
+        if (!firestore) return;
+        try {
+            await deleteDoc(doc(firestore, 'kapans', id));
+            toast({ title: 'Kapan Deleted' });
+        } catch (e) {
+            console.error("Error deleting Kapan:", e);
+            toast({ variant: 'destructive', title: 'Delete Failed' });
+        }
+    };
+    
+    const handleEditKapan = (kapan: Kapan) => {
+        setEditingKapanId(kapan.id);
+        setEditingKapanValue(kapan.kapanNumber);
+    };
+
+    const handleSaveKapan = async () => {
+        if (!firestore || !editingKapanId || !editingKapanValue.trim()) return;
+        try {
+            await updateDoc(doc(firestore, 'kapans', editingKapanId), {
+                kapanNumber: editingKapanValue.trim(),
+            });
+            toast({ title: 'Kapan Updated' });
+            setEditingKapanId(null);
+            setEditingKapanValue('');
+        } catch(e) {
+             console.error("Error updating Kapan:", e);
+            toast({ variant: 'destructive', title: 'Update Failed' });
+        }
+    };
+
+
   useEffect(() => {
     // Automatically enter fullscreen when component mounts
     setFullscreen(true);
@@ -324,7 +362,7 @@ export default function ChaluEntryPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
             <div className="lg:col-span-1">
               <label className="text-sm font-medium">કાપણ નંબર</label>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <Select value={kapanNumber} onValueChange={setKapanNumber}>
                     <SelectTrigger><SelectValue placeholder="કાપણ ?" /></SelectTrigger>
                     <SelectContent>
@@ -347,6 +385,58 @@ export default function ChaluEntryPage() {
                             <Button variant="outline" onClick={() => setKapanDialogOpen(false)}>Cancel</Button>
                             <Button onClick={handleAddKapan}>Save Kapan</Button>
                         </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+                 <Dialog open={isManageKapanOpen} onOpenChange={setManageKapanOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="icon"><Settings className="h-4 w-4"/></Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Manage Kapans</DialogTitle>
+                            <DialogDescription>Edit or delete existing Kapan numbers.</DialogDescription>
+                        </DialogHeader>
+                        <div className="max-h-96 overflow-y-auto">
+                            <Table>
+                                <TableBody>
+                                    {(kapans || []).map(k => (
+                                        <TableRow key={k.id}>
+                                            <TableCell>
+                                                {editingKapanId === k.id ? (
+                                                    <Input value={editingKapanValue} onChange={e => setEditingKapanValue(e.target.value)} />
+                                                ) : (
+                                                    k.kapanNumber
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                {editingKapanId === k.id ? (
+                                                     <div className="flex gap-1 justify-end">
+                                                        <Button size="sm" onClick={handleSaveKapan}><Save className="h-4 w-4" /></Button>
+                                                        <Button size="sm" variant="ghost" onClick={() => setEditingKapanId(null)}><X className="h-4 w-4" /></Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex gap-1 justify-end">
+                                                        <Button size="sm" variant="outline" onClick={() => handleEditKapan(k)}><Edit className="h-4 w-4" /></Button>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete Kapan "{k.kapanNumber}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDeleteKapan(k.id)}>Delete</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </div>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </DialogContent>
                 </Dialog>
               </div>
