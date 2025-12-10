@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -71,6 +71,18 @@ export default function ChaluEntryPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
 
+  // Use refs to store the latest state for the cleanup function
+  const stateRef = useRef({
+      kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
+      editingId, editFormData, firestore, toast
+  });
+
+  useEffect(() => {
+      stateRef.current = {
+          kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
+          editingId, editFormData, firestore, toast
+      };
+  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast]);
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -95,15 +107,16 @@ export default function ChaluEntryPage() {
     }
   }, [originalCount, adjustmentValue]);
 
-  const handleSave = async () => {
+  const handleSave = async (showToast = true) => {
+    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment } = stateRef.current;
     if (!firestore) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
-        return;
+        if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
+        return false;
     }
     
     if(!kapanNumber || !packetNumber || !vajan || !originalPcs || !currentPcs) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Please fill all required fields.' });
-        return;
+        if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Please fill all required fields.' });
+        return false;
     }
 
     try {
@@ -117,7 +130,7 @@ export default function ChaluEntryPage() {
             currentPcs: parseInt(currentPcs, 10) || 0,
             createdAt: serverTimestamp(),
         });
-        toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
+        if(showToast) toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
         // Reset form
         setPacketNumber('');
         setVajan('');
@@ -125,10 +138,12 @@ export default function ChaluEntryPage() {
         setAdjustment('');
         setSuffix('');
         setCurrentPcs('');
+        return true;
 
     } catch (e) {
         console.error('Error adding document: ', e);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not save the entry.' });
+        if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Could not save the entry.' });
+        return false;
     }
   };
 
@@ -142,8 +157,9 @@ export default function ChaluEntryPage() {
     setEditFormData({});
   };
   
-  const handleSaveEdit = async (id: string) => {
-    if (!firestore) return;
+  const handleSaveEdit = async (id: string, showToast = true) => {
+      const { firestore, editFormData } = stateRef.current;
+    if (!firestore) return false;
     const docRef = doc(firestore, 'chaluEntries', id);
     const { id: _, ...dataToSave } = editFormData; // Exclude id from data
     
@@ -155,11 +171,13 @@ export default function ChaluEntryPage() {
 
     try {
       await updateDoc(docRef, dataToSave);
-      toast({ title: 'Updated', description: 'Entry updated successfully.'});
+      if(showToast) toast({ title: 'Updated', description: 'Entry updated successfully.'});
       handleCancelEdit();
+      return true;
     } catch(e) {
       console.error("Error updating document:", e);
-      toast({ variant: 'destructive', title: 'Update Failed' });
+      if(showToast) toast({ variant: 'destructive', title: 'Update Failed' });
+      return false;
     }
   };
   
@@ -206,8 +224,29 @@ export default function ChaluEntryPage() {
   useEffect(() => {
     // Automatically enter fullscreen when component mounts
     setFullscreen(true);
-    // Exit fullscreen when the component unmounts
+
+    const autoSave = async () => {
+        const { kapanNumber, packetNumber, editingId } = stateRef.current;
+        // Autosave new entry if required fields are filled
+        if (kapanNumber && packetNumber) {
+            const success = await handleSave(false);
+            if (success) {
+                stateRef.current.toast({ title: 'Auto-saved', description: 'New entry was automatically saved.' });
+            }
+        }
+        // Autosave edited entry
+        if (editingId) {
+            const success = await handleSaveEdit(editingId, false);
+            if (success) {
+                stateRef.current.toast({ title: 'Auto-saved', description: 'Your changes were automatically saved.' });
+            }
+        }
+    };
+
+    // This cleanup function will run when the component is unmounted (e.g., page navigation)
     return () => {
+        autoSave();
+        // Exit fullscreen when the component unmounts
         setFullscreen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -325,7 +364,7 @@ export default function ChaluEntryPage() {
               />
             </div>
           </div>
-          <Button onClick={handleSave} className="mt-4">
+          <Button onClick={() => handleSave(true)} className="mt-4">
             <Save className="mr-2" /> Save Progress
           </Button>
         </CardContent>
@@ -372,7 +411,7 @@ export default function ChaluEntryPage() {
                                 <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
                                 <TableCell><Input type="number" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
                                 <TableCell>
-                                    <Button size="sm" onClick={() => handleSaveEdit(entry.id)}><Save className="h-4 w-4" /></Button>
+                                    <Button size="sm" onClick={() => handleSaveEdit(entry.id, true)}><Save className="h-4 w-4" /></Button>
                                     <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
                                 </TableCell>
                             </>
@@ -422,4 +461,3 @@ export default function ChaluEntryPage() {
   );
 }
 
-    
