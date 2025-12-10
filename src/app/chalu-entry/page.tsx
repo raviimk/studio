@@ -326,7 +326,7 @@ export default function ChaluEntryPage() {
               <label className="text-sm font-medium">કાપણ નંબર</label>
               <div className="flex gap-2">
                 <Select value={kapanNumber} onValueChange={setKapanNumber}>
-                    <SelectTrigger><SelectValue placeholder="Select Kapan" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="કાપણ ?" /></SelectTrigger>
                     <SelectContent>
                     {kapans?.sort((a, b) => a.kapanNumber.localeCompare(b.kapanNumber, undefined, { numeric: true })).map(k => (
                         <SelectItem key={k.id} value={k.kapanNumber}>{k.kapanNumber}</SelectItem>
@@ -356,7 +356,7 @@ export default function ChaluEntryPage() {
               <Input 
                 value={packetNumber}
                 onChange={(e) => setPacketNumber(e.target.value)}
-                placeholder="Enter packet no."
+                placeholder="પેકેટ નંબર ?."
               />
             </div>
             <div>
@@ -365,7 +365,7 @@ export default function ChaluEntryPage() {
                 type="number"
                 value={originalPcs}
                 onChange={(e) => setOriginalPcs(e.target.value)}
-                placeholder="Enter original count"
+                placeholder="ઓરિજિનલ કેટલા ?"
               />
             </div>
             <div>
@@ -400,7 +400,7 @@ export default function ChaluEntryPage() {
                 type="number"
                 value={vajan}
                 onChange={(e) => setVajan(e.target.value)}
-                placeholder="Enter weight"
+                placeholder="વજન લખો"
               />
             </div>
           </div>
