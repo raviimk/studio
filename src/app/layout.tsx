@@ -1,4 +1,3 @@
-
 'use client';
 
 import './globals.css';
@@ -8,7 +7,7 @@ import IntroAnimation from '@/components/IntroAnimation';
 import { useState, useEffect } from 'react';
 import { SystemStateProvider } from '@/hooks/useSystemState';
 import { LayoutProvider } from '@/hooks/useLayout';
-import { FirebaseClientProvider } from '@/firebase';
+import { FirebaseProvider } from '@/firebase/provider';
 
 
 const SHOW_INTRO = true; // Master switch for the intro animation
@@ -50,7 +49,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
+        <FirebaseProvider>
             <SystemStateProvider>
                 <LayoutProvider>
                   {!introFinished ? (
@@ -63,10 +62,8 @@ export default function RootLayout({
                   )}
                 </LayoutProvider>
             </SystemStateProvider>
-        </FirebaseClientProvider>
+        </FirebaseProvider>
       </body>
     </html>
   );
 }
-
-    
