@@ -458,10 +458,10 @@ export default function ChaluEntryPage() {
                                           </TableHeader>
                                           <TableBody>
                                               {reportSummary.entries.map(entry => (
-                                                  <TableRow key={entry.id}>
+                                                  <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
                                                       <TableCell>{entry.packetNumber}</TableCell>
                                                       <TableCell>{entry.originalPcs}</TableCell>
-                                                      <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "")}>
+                                                      <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
                                                           {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
                                                       </TableCell>
                                                       <TableCell>{entry.suffix}</TableCell>
@@ -496,7 +496,7 @@ export default function ChaluEntryPage() {
                   <TableBody>
                       {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
                       {!loadingEntries && filteredEntries.map(entry => (
-                      <TableRow key={entry.id}>
+                      <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
                         {editingId === entry.id ? (
                             <>
                                 <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
@@ -556,4 +556,3 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
-
