@@ -103,6 +103,18 @@ export default function ChaluEntryPage() {
       } else {
         setSuffix('');
       }
+    } else if (adjustmentValue < 0) {
+        if (originalCount > 0) {
+            const suffixes = [];
+            for (let i = 0; i < Math.abs(adjustmentValue); i++) {
+                if (originalCount - 1 - i < 0) break; // Don't go below 'A'
+                const charCode = 'A'.charCodeAt(0) + originalCount - 1 - i;
+                suffixes.unshift(`-${String.fromCharCode(charCode)}`);
+            }
+            setSuffix(suffixes.join(', '));
+        } else {
+            setSuffix('');
+        }
     } else {
       setSuffix('');
     }
