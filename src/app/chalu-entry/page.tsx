@@ -309,7 +309,7 @@ export default function ChaluEntryPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <div className="flex justify-between items-start">
-        <PageHeader title="Chalu / Running Packet Entry" description="Log progress on active lots." />
+        <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
         <Button variant="ghost" size="icon" onClick={handleToggleFullscreen}>
             {isFullscreen ? <Minimize/> : <Maximize />}
         </Button>
@@ -317,7 +317,7 @@ export default function ChaluEntryPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Log Production Progress</CardTitle>
+          <CardTitle>ATIXE PRO</CardTitle>
           <CardDescription>Select a lot and enter the number of packets completed or adjusted today.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -328,7 +328,7 @@ export default function ChaluEntryPage() {
                 <Select value={kapanNumber} onValueChange={setKapanNumber}>
                     <SelectTrigger><SelectValue placeholder="Select Kapan" /></SelectTrigger>
                     <SelectContent>
-                    {kapans?.map(k => (
+                    {kapans?.sort((a, b) => a.kapanNumber.localeCompare(b.kapanNumber, undefined, { numeric: true })).map(k => (
                         <SelectItem key={k.id} value={k.kapanNumber}>{k.kapanNumber}</SelectItem>
                     ))}
                     </SelectContent>
@@ -405,14 +405,14 @@ export default function ChaluEntryPage() {
             </div>
           </div>
           <Button onClick={() => handleSave(true)} className="mt-4">
-            <Save className="mr-2" /> Save Progress
+            <Save className="mr-2" /> Save
           </Button>
         </CardContent>
       </Card>
       
       <Card>
           <CardHeader>
-              <CardTitle>Entry Log</CardTitle>
+              <CardTitle>અત્યાર સુધી ની એન્ટ્રી</CardTitle>
               <div className="flex justify-between items-center">
                 <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
                 <div className="flex gap-2 items-center">
