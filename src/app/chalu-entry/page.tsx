@@ -265,6 +265,32 @@ export default function ChaluEntryPage() {
       return chaluEntries.filter(entry => entry.kapanNumber.toLowerCase().includes(kapanFilter.toLowerCase()));
   }, [chaluEntries, kapanFilter]);
 
+  const reportSummary = useMemo(() => {
+    if (!kapanFilter || filteredEntries.length === 0) return null;
+    
+    let totalPlus = 0;
+    let totalMinus = 0;
+    let totalVajan = 0;
+
+    filteredEntries.forEach(entry => {
+        if (entry.kapanNumber.toLowerCase().includes(kapanFilter.toLowerCase())) {
+            totalVajan += entry.vajan || 0;
+            if (entry.adjustment > 0) {
+                totalPlus += entry.adjustment;
+            } else {
+                totalMinus += entry.adjustment;
+            }
+        }
+    });
+
+    return {
+        totalPlus,
+        totalMinus,
+        totalVajan,
+        totalEntries: filteredEntries.length,
+    };
+  }, [filteredEntries, kapanFilter]);
+
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
@@ -384,6 +410,29 @@ export default function ChaluEntryPage() {
               </div>
           </CardHeader>
           <CardContent>
+              {reportSummary && (
+                <div className="mb-4 border rounded-lg p-4 bg-muted/50">
+                    <h3 className="font-semibold text-lg mb-2">Summary for Kapan: {kapanFilter}</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Total Entries</p>
+                            <p className="text-2xl font-bold">{reportSummary.totalEntries}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Total Weight</p>
+                            <p className="text-2xl font-bold">{reportSummary.totalVajan.toFixed(3)}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Total Plus</p>
+                            <p className="text-2xl font-bold text-green-600">+{reportSummary.totalPlus}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-sm text-muted-foreground">Total Minus</p>
+                            <p className="text-2xl font-bold text-destructive">{reportSummary.totalMinus}</p>
+                        </div>
+                    </div>
+                </div>
+              )}
               <Table>
                   <TableHeader>
                       <TableRow>
