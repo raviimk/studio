@@ -586,6 +586,7 @@ export default function ControlPanelPage() {
                   <Card>
                       <CardHeader><CardTitle>Manage Laser Mappings</CardTitle></CardHeader>
                       <CardContent>
+                        <div className="max-h-96 overflow-y-auto">
                           <Table>
                               <TableHeader><TableRow><TableHead>Tension</TableHead><TableHead>Machine</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                               <TableBody>
@@ -601,6 +602,7 @@ export default function ControlPanelPage() {
                                   ))}
                               </TableBody>
                           </Table>
+                        </div>
                       </CardContent>
                   </Card>
               </div>
