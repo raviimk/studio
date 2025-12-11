@@ -105,6 +105,11 @@ export default {
           '0%, 100%': { textShadow: '0 0 2px hsl(var(--primary-foreground) / 0.7)' },
           '50%': { textShadow: '0 0 5px hsl(var(--primary-foreground) / 0.9)' },
         },
+        pulse: {
+          '50%': {
+            opacity: '.5',
+          },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -112,6 +117,7 @@ export default {
         'fade-in-slide-up': 'fade-in-slide-up 0.4s ease-out',
         'glow': 'glow 3s ease-in-out infinite',
         'spin-slow': 'spin-slow 20s linear infinite',
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },
