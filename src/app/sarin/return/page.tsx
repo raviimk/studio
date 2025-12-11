@@ -228,7 +228,7 @@ export default function ReturnSarinLotPage() {
                     <TableBody>
                     {unreturnedEntries.map(entry => {
                         const timeDiff = differenceInMinutes(now, parseISO(entry.date));
-                        const isOverdue = timeDiff > 5;
+                        const isOverdue = timeDiff > 10;
                         return (
                         <TableRow key={entry.id}>
                             <TableCell>{entry.lotNumber}</TableCell>
@@ -289,7 +289,7 @@ export default function ReturnSarinLotPage() {
                 <TableBody>
                   {unreturnedEntries.map(lot => {
                     const timeDiff = differenceInMinutes(now, parseISO(lot.date));
-                    const isOverdue = timeDiff > 5;
+                    const isOverdue = timeDiff > 10;
                     return (
                     <TableRow key={lot.id}>
                       <TableCell>{lot.lotNumber}</TableCell>
@@ -353,3 +353,5 @@ export default function ReturnSarinLotPage() {
     </div>
   );
 }
+
+    
