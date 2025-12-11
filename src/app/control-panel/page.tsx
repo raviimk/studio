@@ -521,7 +521,21 @@ export default function ControlPanelPage() {
                                   <TableCell>{map.machine}</TableCell>
                                   <TableCell className="flex gap-1">
                                       <Button variant="ghost" size="icon" onClick={() => openEditDialog('sarin', { id: map.id, field1: map.operatorName, field2: map.machine })}><Edit className="h-4 w-4" /></Button>
-                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteSarinOperator(map.operatorId)}><Trash2 className="h-4 w-4" /></Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>This will permanently delete the operator <strong>{map.operatorName}</strong> and their machine mapping. This action cannot be undone.</AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDeleteSarinOperator(map.operatorId)}>Delete</AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
                                   </TableCell>
                               </TableRow>
                           ))}
@@ -557,7 +571,21 @@ export default function ControlPanelPage() {
                                           <TableCell>{op.name}</TableCell>
                                           <TableCell className="flex gap-1">
                                               <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: op.id, field1: op.name, field2: ''})}><Edit className="h-4 w-4" /></Button>
-                                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                              <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                  <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                  <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the operator <strong>{op.name}</strong>. This action cannot be undone.</AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteLaserOperator(op.id)}>Delete</AlertDialogAction>
+                                                  </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                              </AlertDialog>
                                           </TableCell>
                                       </TableRow>
                                   ))}
@@ -596,7 +624,21 @@ export default function ControlPanelPage() {
                                           <TableCell>{map.machine}</TableCell>
                                           <TableCell className="flex gap-1">
                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: map.id, field1: map.tensionType, field2: map.machine })}><Edit className="h-4 w-4" /></Button>
-                                              <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserMapping(map.id)}><Trash2 className="h-4 w-4" /></Button>
+                                               <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                  <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                  <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the mapping for tension <strong>{map.tensionType}</strong>. This action cannot be undone.</AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteLaserMapping(map.id)}>Delete</AlertDialogAction>
+                                                  </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                              </AlertDialog>
                                           </TableCell>
                                       </TableRow>
                                   ))}
@@ -666,7 +708,23 @@ export default function ControlPanelPage() {
                                             <TableCell>{r.from.toFixed(3)}</TableCell>
                                             <TableCell>{r.to.toFixed(3)}</TableCell>
                                             <TableCell>{r.rate.toFixed(2)}</TableCell>
-                                            <TableCell><Button variant="ghost" size="icon" onClick={() => handleDeleteFourPRate(r.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                            <TableCell>
+                                              <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                  <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                  <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete this rate range. This action cannot be undone.</AlertDialogDescription>
+                                                  </AlertDialogHeader>
+                                                  <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteFourPRate(r.id)}>Delete</AlertDialogAction>
+                                                  </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                              </AlertDialog>
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -715,7 +773,21 @@ export default function ControlPanelPage() {
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell className="flex gap-1">
                                                 <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: op.id, field1: op.name, field2: ''})}><Edit className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                <AlertDialog>
+                                                  <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                                  </AlertDialogTrigger>
+                                                  <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                      <AlertDialogDescription>This will permanently delete the operator <strong>{op.name}</strong>. This action cannot be undone.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                      <AlertDialogAction onClick={() => handleDeleteFourPOperator(op.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -751,7 +823,21 @@ export default function ControlPanelPage() {
                                                 <Button variant="ghost" size="icon" onClick={() => handleToggleDefaultTechingOperator(op.id)}>
                                                     <Star className={cn("h-4 w-4", op.isDefault ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
                                                 </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPTechingOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
+                                                <AlertDialog>
+                                                  <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                                  </AlertDialogTrigger>
+                                                  <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                      <AlertDialogDescription>This will permanently delete the operator <strong>{op.name}</strong>. This action cannot be undone.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                      <AlertDialogAction onClick={() => handleDeleteFourPTechingOperator(op.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                  </AlertDialogContent>
+                                                </AlertDialog>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -821,7 +907,21 @@ export default function ControlPanelPage() {
                                   <TableCell>{(range.to ?? 0).toFixed(3)}</TableCell>
                                   <TableCell>{range.label}</TableCell>
                                   <TableCell>
-                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteBoxSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>This will permanently delete the range for box <strong>{range.label}</strong>. This action cannot be undone.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteBoxSortingRange(range.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
                                   </TableCell>
                               </TableRow>
                           ))}
@@ -867,7 +967,21 @@ export default function ControlPanelPage() {
                                   <TableCell>{(range.to ?? 0).toFixed(2)}</TableCell>
                                   <TableCell>{range.label}</TableCell>
                                   <TableCell>
-                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteDiameterSortingRange(range.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70" /></Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>This will permanently delete the range for box <strong>{range.label}</strong>. This action cannot be undone.</AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteDiameterSortingRange(range.id)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
                                   </TableCell>
                               </TableRow>
                           ))}
