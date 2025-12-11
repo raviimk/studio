@@ -110,13 +110,11 @@ const systemSettingsSchema = z.object({
 
 const PASSKEY = "raviix07";
 
-type OperatorType = 'sarin' | 'laser' | '4p' | '4p-teching';
-type EditingOperator = {
-    type: OperatorType;
+type EditingData = {
     id: string;
-    name: string;
-    // Sarin specific
-    operatorId?: string;
+    field1: string;
+    field2: string;
+    type: 'sarin' | 'laser';
 };
 
 export default function ControlPanelPage() {
@@ -146,10 +144,9 @@ export default function ControlPanelPage() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State for editing operator
-  const [isEditOpDialogOpen, setEditOpDialogOpen] = useState(false);
-  const [editingOperator, setEditingOperator] = useState<EditingOperator | null>(null);
-  const [newOperatorName, setNewOperatorName] = useState('');
+  // State for editing dialog
+  const [isEditDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingData, setEditingData] = useState<EditingData | null>(null);
 
   // Passkey state
   const { isDeleteDisabled, setDeleteDisabled } = useSystemState();
@@ -291,83 +288,6 @@ export default function ControlPanelPage() {
     toast({ title: 'Success', description: 'System settings updated.' });
   }
 
-  const openEditDialog = (type: OperatorType, op: { id: string; name: string, operatorId?: string }) => {
-    setEditingOperator({ type, id: op.id, name: op.name, operatorId: op.operatorId });
-    setNewOperatorName(op.name);
-    setEditOpDialogOpen(true);
-  };
-  
-  const handleSaveOperatorName = () => {
-    if (!editingOperator || !newOperatorName.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'New name cannot be empty.' });
-      return;
-    }
-    const oldName = editingOperator.name;
-    const newName = newOperatorName.trim();
-
-    if (oldName === newName) {
-      setEditOpDialogOpen(false);
-      return;
-    }
-
-    const cascadeUpdates = (oldName: string, newName: string) => {
-        // Sarin Packets
-        setSarinPackets(prev => prev.map(p => {
-            if (p.operator === oldName) p.operator = newName;
-            if (p.returnedBy === oldName) p.returnedBy = newName;
-            return p;
-        }));
-        // Laser Lots
-        setLaserLots(prev => prev.map(l => {
-            if (l.returnedBy === oldName) l.returnedBy = newName;
-            return l;
-        }));
-        // 4P Teching Lots
-        setFourPTechingLots(prev => prev.map(lot => {
-            if (lot.techingOperator === oldName) lot.techingOperator = newName;
-            if (lot.fourPOperator === oldName) lot.fourPOperator = newName;
-            if (lot.fourPData) {
-                lot.fourPData = lot.fourPData.map(d => d.operator === oldName ? {...d, operator: newName} : d);
-            }
-            return lot;
-        }));
-        // Reassignment Logs
-        setReassignLogs(prev => prev.map(log => {
-            if (log.fromOperator === oldName) log.fromOperator = newName;
-            if (log.toOperator === oldName) log.toOperator = newName;
-            return log;
-        }));
-        // Udhda Packets
-        setUdhdhaPackets(prev => prev.map(p => {
-            if (p.operator === oldName) p.operator = newName;
-            return p;
-        }));
-    };
-
-    switch (editingOperator.type) {
-      case 'sarin':
-        setSarinOperators(prev => prev.map(op => op.id === editingOperator.operatorId ? { ...op, name: newName } : op));
-        setSarinMappings(prev => prev.map(m => m.id === editingOperator.id ? { ...m, operatorName: newName } : m));
-        break;
-      case 'laser':
-        setLaserOperators(prev => prev.map(op => op.id === editingOperator.id ? { ...op, name: newName } : op));
-        break;
-      case '4p':
-        setFourPOperators(prev => prev.map(op => op.id === editingOperator.id ? { ...op, name: newName } : op));
-        break;
-      case '4p-teching':
-        setFourPTechingOperators(prev => prev.map(op => op.id === editingOperator.id ? { ...op, name: newName } : op));
-        break;
-    }
-    
-    cascadeUpdates(oldName, newName);
-
-    toast({ title: 'Success', description: `Operator "${oldName}" renamed to "${newName}" and all associated records updated.` });
-    setEditOpDialogOpen(false);
-    setEditingOperator(null);
-    setNewOperatorName('');
-  };
-
   const doBackup = () => {
     const success = handleBackup(`backup-${format(new Date(), 'yyyy-MM-dd-HH-mm')}.json`);
     if (success) {
@@ -474,6 +394,89 @@ export default function ControlPanelPage() {
     }
   };
 
+  const openEditDialog = (type: 'sarin' | 'laser', item: {id: string, field1: string, field2: string}) => {
+    setEditingData({ ...item, type });
+    setEditDialogOpen(true);
+  };
+  
+  const cascadeNameUpdate = (oldName: string, newName: string) => {
+    if (oldName === newName) return;
+
+    // Sarin Packets
+    setSarinPackets(prev => prev.map(p => {
+        let updatedPacket = { ...p };
+        if (p.operator === oldName) updatedPacket.operator = newName;
+        if (p.returnedBy === oldName) updatedPacket.returnedBy = newName;
+        return updatedPacket;
+    }));
+    // Laser Lots
+    setLaserLots(prev => prev.map(l => {
+        if (l.returnedBy === oldName) return { ...l, returnedBy: newName };
+        return l;
+    }));
+    // 4P Teching Lots
+    setFourPTechingLots(prev => prev.map(lot => {
+        let updatedLot = { ...lot };
+        if (lot.techingOperator === oldName) updatedLot.techingOperator = newName;
+        if (lot.fourPOperator === oldName) updatedLot.fourPOperator = newName;
+        if (lot.fourPData) {
+            updatedLot.fourPData = lot.fourPData.map(d => d.operator === oldName ? {...d, operator: newName} : d);
+        }
+        return updatedLot;
+    }));
+    // Reassignment Logs
+    setReassignLogs(prev => prev.map(log => {
+        let updatedLog = { ...log };
+        if (log.fromOperator === oldName) updatedLog.fromOperator = newName;
+        if (log.toOperator === oldName) updatedLog.toOperator = newName;
+        return updatedLog;
+    }));
+    // Udhda Packets
+    setUdhdhaPackets(prev => prev.map(p => {
+        if (p.operator === oldName) return { ...p, operator: newName };
+        return p;
+    }));
+
+    toast({ title: 'Success', description: `Name updated to "${newName}" across all records.` });
+  };
+
+
+  const handleSaveEdit = () => {
+    if (!editingData) return;
+
+    const { id, field1: newName, field2: newMachine, type } = editingData;
+    
+    if (type === 'sarin') {
+        const originalMapping = sarinMappings.find(m => m.id === id);
+        if (!originalMapping) return;
+
+        // Cascade name change if operator name was edited
+        if (originalMapping.operatorName !== newName) {
+            const operator = sarinOperators.find(o => o.id === originalMapping.operatorId);
+            if (operator) {
+                setSarinOperators(prev => prev.map(o => o.id === operator.id ? { ...o, name: newName } : o));
+                cascadeNameUpdate(originalMapping.operatorName, newName);
+            }
+        }
+        
+        setSarinMappings(prev => prev.map(m => m.id === id ? { ...m, operatorName: newName, machine: newMachine } : m));
+
+    } else if (type === 'laser') {
+        if (editingData.field2 === '') { // This is a Laser Operator edit
+            const originalOperator = laserOperators.find(o => o.id === id);
+            if (originalOperator) {
+                 cascadeNameUpdate(originalOperator.name, newName);
+                 setLaserOperators(prev => prev.map(o => o.id === id ? { ...o, name: newName } : o));
+            }
+        } else { // This is a Laser Mapping edit
+             setLaserMappings(prev => prev.map(m => m.id === id ? { ...m, tensionType: newName, machine: newMachine } : m));
+        }
+    }
+    
+    toast({ title: 'Success', description: 'Entry updated successfully.'});
+    setEditDialogOpen(false);
+  };
+
 
   return (
     <>
@@ -517,7 +520,7 @@ export default function ControlPanelPage() {
                                   <TableCell>{map.operatorName}</TableCell>
                                   <TableCell>{map.machine}</TableCell>
                                   <TableCell className="flex gap-1">
-                                      <Button variant="ghost" size="icon" onClick={() => openEditDialog('sarin', map)}><Edit className="h-4 w-4" /></Button>
+                                      <Button variant="ghost" size="icon" onClick={() => openEditDialog('sarin', { id: map.id, field1: map.operatorName, field2: map.machine })}><Edit className="h-4 w-4" /></Button>
                                       <Button variant="ghost" size="icon" onClick={() => handleDeleteSarinOperator(map.operatorId)}><Trash2 className="h-4 w-4" /></Button>
                                   </TableCell>
                               </TableRow>
@@ -553,7 +556,7 @@ export default function ControlPanelPage() {
                                       <TableRow key={op.id}>
                                           <TableCell>{op.name}</TableCell>
                                           <TableCell className="flex gap-1">
-                                              <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', op)}><Edit className="h-4 w-4" /></Button>
+                                              <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: op.id, field1: op.name, field2: ''})}><Edit className="h-4 w-4" /></Button>
                                               <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
                                           </TableCell>
                                       </TableRow>
@@ -590,7 +593,8 @@ export default function ControlPanelPage() {
                                       <TableRow key={map.id}>
                                           <TableCell>{map.tensionType}</TableCell>
                                           <TableCell>{map.machine}</TableCell>
-                                          <TableCell>
+                                          <TableCell className="flex gap-1">
+                                               <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: map.id, field1: map.tensionType, field2: map.machine })}><Edit className="h-4 w-4" /></Button>
                                               <Button variant="ghost" size="icon" onClick={() => handleDeleteLaserMapping(map.id)}><Trash2 className="h-4 w-4" /></Button>
                                           </TableCell>
                                       </TableRow>
@@ -708,7 +712,7 @@ export default function ControlPanelPage() {
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell className="flex gap-1">
-                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('4p', op)}><Edit className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: op.id, field1: op.name, field2: ''})}><Edit className="h-4 w-4" /></Button>
                                                 <Button variant="ghost" size="icon" onClick={() => handleDeleteFourPOperator(op.id)}><Trash2 className="h-4 w-4" /></Button>
                                             </TableCell>
                                         </TableRow>
@@ -741,7 +745,7 @@ export default function ControlPanelPage() {
                                         <TableRow key={op.id}>
                                             <TableCell>{op.name}</TableCell>
                                             <TableCell className="flex gap-1">
-                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('4p-teching', op)}><Edit className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" onClick={() => openEditDialog('laser', { id: op.id, field1: op.name, field2: ''})}><Edit className="h-4 w-4" /></Button>
                                                 <Button variant="ghost" size="icon" onClick={() => handleToggleDefaultTechingOperator(op.id)}>
                                                     <Star className={cn("h-4 w-4", op.isDefault ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground")} />
                                                 </Button>
@@ -998,26 +1002,38 @@ export default function ControlPanelPage() {
         </Tabs>
       </div>
 
-      {/* Edit Operator Dialog */}
-      <Dialog open={isEditOpDialogOpen} onOpenChange={setEditOpDialogOpen}>
+      {/* Edit Dialog */}
+       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Edit Operator Name</DialogTitle>
+                <DialogTitle>Edit Entry</DialogTitle>
                 <DialogDescription>
-                    Update the name for <span className="font-bold">{editingOperator?.name}</span>. This will update all associated records.
+                    Update the details for this entry.
                 </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-                <Label htmlFor="newOpName">New Name</Label>
-                <Input
-                    id="newOpName"
-                    value={newOperatorName}
-                    onChange={(e) => setNewOperatorName(e.target.value)}
-                />
-            </div>
+            {editingData && (
+                 <div className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>{editingData.type === 'sarin' ? 'Operator Name' : (editingData.field2 === '' ? 'Operator Name' : 'Tension Type')}</Label>
+                        <Input
+                            value={editingData.field1}
+                            onChange={(e) => setEditingData({...editingData, field1: e.target.value})}
+                        />
+                    </div>
+                    {editingData.field2 !== '' && (
+                         <div className="space-y-2">
+                            <Label>Machine Name</Label>
+                            <Input
+                                value={editingData.field2}
+                                onChange={(e) => setEditingData({...editingData, field2: e.target.value})}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
             <DialogFooter>
-                <Button variant="outline" onClick={() => setEditOpDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleSaveOperatorName}>Save Name</Button>
+                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleSaveEdit}>Save Changes</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1048,7 +1064,3 @@ export default function ControlPanelPage() {
     </>
   );
 }
-
-    
-
-    
