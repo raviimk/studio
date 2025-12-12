@@ -105,6 +105,8 @@ const systemSettingsSchema = z.object({
   youtubeLink: z.string().url('Please enter a valid YouTube URL.'),
   videoStartTime: z.string().optional(),
   videoEndTime: z.string().optional(),
+  autoCreateLaserLot: z.boolean().optional(),
+  autoCreateLaserLotDelay: z.coerce.number().optional(),
 });
 
 
@@ -133,7 +135,7 @@ export default function ControlPanelPage() {
   const [diameterSortingRanges, setDiameterSortingRanges] = useLocalStorage<BoxDiameterRange[]>(DIAMETER_SORTING_RANGES_KEY, []);
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
-  const [systemSettings, setSystemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg', videoStartTime: '09:00', videoEndTime: '18:30' });
+  const [systemSettings, setSystemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg', videoStartTime: '09:00', videoEndTime: '18:30', autoCreateLaserLot: false, autoCreateLaserLotDelay: 10 });
   
   // Data for cascading edits
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
@@ -991,6 +993,36 @@ export default function ControlPanelPage() {
             </Card>
           </TabsContent>
           <TabsContent value="system" className="space-y-6 mt-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Laser Lot Auto-Creation</CardTitle>
+                    <CardDescription>
+                        Automatically create the laser lot after all packets have been scanned.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Form {...systemSettingsForm}>
+                        <form onSubmit={systemSettingsForm.handleSubmit(handleUpdateSystemSettings)} className="space-y-4 max-w-lg">
+                            <FormField control={systemSettingsForm.control} name="autoCreateLaserLot" render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                    <div className="space-y-0.5">
+                                        <FormLabel>Enable Auto-Creation</FormLabel>
+                                    </div>
+                                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                </FormItem>
+                            )} />
+                             <FormField control={systemSettingsForm.control} name="autoCreateLaserLotDelay" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Auto-Creation Delay (seconds)</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <Button type="submit">Update Auto-Creation Settings</Button>
+                        </form>
+                   </Form>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>YouTube Player Settings</CardTitle>

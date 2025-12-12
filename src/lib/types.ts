@@ -207,6 +207,8 @@ export interface SystemSettings {
   youtubeLink: string;
   videoStartTime?: string;
   videoEndTime?: string;
+  autoCreateLaserLot?: boolean;
+  autoCreateLaserLotDelay?: number;
 }
 
     

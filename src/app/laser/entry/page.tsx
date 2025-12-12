@@ -6,15 +6,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus, Check, Pencil } from 'lucide-react';
+import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus, Check, Pencil, Timer } from 'lucide-react';
 import { isSameMonth, startOfMonth } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY } from '@/lib/constants';
-import { LaserLot, LaserMapping, ScannedPacket } from '@/lib/types';
+import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY, SYSTEM_SETTINGS_KEY } from '@/lib/constants';
+import { LaserLot, LaserMapping, ScannedPacket, SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageHeader from '@/components/PageHeader';
@@ -48,6 +48,8 @@ export default function NewLaserLotPage() {
   const { toast } = useToast();
   const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [laserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [systemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: '', autoCreateLaserLot: false, autoCreateLaserLotDelay: 10 });
+
 
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [currentLotDetails, setCurrentLotDetails] = useState<FormValues | null>(null);
@@ -63,6 +65,8 @@ export default function NewLaserLotPage() {
   const [lastCompletedLot, setLastCompletedLot] = useState<number | null>(null);
   
   const [viewingLot, setViewingLot] = useState<LaserLot | null>(null);
+  
+  const [countdown, setCountdown] = useState<number | null>(null);
 
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -201,7 +205,7 @@ export default function NewLaserLotPage() {
       barcodeInputRef.current?.focus();
   }
 
-  function createFinalLot() {
+  const createFinalLot = React.useCallback(() => {
      if (!currentLotDetails) return;
 
     if (scannedPackets.length !== currentLotDetails.packetCount) {
@@ -217,7 +221,7 @@ export default function NewLaserLotPage() {
       entryDate: new Date().toISOString(),
       isReturned: false,
     };
-    setLaserLots([...laserLots, newLot]);
+    setLaserLots(prev => [...prev, newLot]);
     setLastCompletedLot(parseInt(newLot.lotNumber, 10)); // Trigger animation
     toast({ title: 'Success', description: 'New laser lot has been created.' });
     
@@ -226,7 +230,30 @@ export default function NewLaserLotPage() {
     setScannedPackets([]);
     setBarcode('');
     setCurrentLotDetails(null);
-  }
+    setCountdown(null);
+  }, [currentLotDetails, form, laserLots, setLaserLots, scannedPackets, toast]);
+
+  useEffect(() => {
+    if (scannedPackets.length > 0 && currentPacketCount > 0 && scannedPackets.length === currentPacketCount) {
+        if(systemSettings.autoCreateLaserLot) {
+            setCountdown(systemSettings.autoCreateLaserLotDelay || 10);
+        }
+    } else {
+        setCountdown(null);
+    }
+  }, [scannedPackets, currentPacketCount, systemSettings]);
+  
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown > 0) {
+        const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        return () => clearTimeout(timer);
+    }
+    if (countdown === 0) {
+        createFinalLot();
+    }
+  }, [countdown, createFinalLot]);
+
 
   const { lotSeries, completedLots, nextLot } = React.useMemo(() => {
     const today = new Date();
@@ -409,9 +436,18 @@ export default function NewLaserLotPage() {
                           <p className="text-sm text-muted-foreground font-semibold">
                               Scanned: {scannedPackets.length} / {currentLotDetails.packetCount}
                           </p>
-                          <Button onClick={createFinalLot} disabled={currentLotDetails.packetCount === 0 || scannedPackets.length !== currentLotDetails.packetCount}>
-                             <PackagePlus className="mr-2 h-4 w-4"/>
-                              Create Laser Lot
+                           <Button onClick={createFinalLot} disabled={countdown !== null || (currentLotDetails.packetCount > 0 && scannedPackets.length !== currentLotDetails.packetCount)}>
+                             {countdown !== null ? (
+                                <>
+                                <Timer className="mr-2 h-4 w-4 animate-spin"/>
+                                Creating in {countdown}s...
+                                </>
+                            ) : (
+                                <>
+                                <PackagePlus className="mr-2 h-4 w-4"/>
+                                Create Laser Lot
+                                </>
+                            )}
                           </Button>
                       </div>
                   </CardContent>
