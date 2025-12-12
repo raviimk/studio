@@ -436,19 +436,16 @@ export default function NewLaserLotPage() {
                           <p className="text-sm text-muted-foreground font-semibold">
                               Scanned: {scannedPackets.length} / {currentLotDetails.packetCount}
                           </p>
-                           <Button onClick={createFinalLot} disabled={currentLotDetails.packetCount > 0 && scannedPackets.length !== currentLotDetails.packetCount}>
-                             {countdown !== null ? (
-                                <>
-                                <Timer className="mr-2 h-4 w-4 animate-spin"/>
-                                Creating in {countdown}s...
-                                </>
-                            ) : (
-                                <>
-                                <PackagePlus className="mr-2 h-4 w-4"/>
+                           <Button onClick={createFinalLot} disabled={scannedPackets.length !== currentLotDetails.packetCount}>
+                                <PackagePlus className="mr-2 h-4 w-4" />
                                 Create Laser Lot
-                                </>
-                            )}
-                          </Button>
+                                {countdown !== null && (
+                                    <span className="flex items-center ml-2 bg-primary/20 text-primary-foreground/80 rounded-full px-2 py-0.5 text-xs">
+                                        <Timer className="mr-1 h-3 w-3 animate-spin"/>
+                                        {countdown}
+                                    </span>
+                                )}
+                            </Button>
                       </div>
                   </CardContent>
               </Card>
