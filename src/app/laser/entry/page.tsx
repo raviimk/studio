@@ -436,7 +436,7 @@ export default function NewLaserLotPage() {
                           <p className="text-sm text-muted-foreground font-semibold">
                               Scanned: {scannedPackets.length} / {currentLotDetails.packetCount}
                           </p>
-                           <Button onClick={createFinalLot} disabled={countdown !== null || (currentLotDetails.packetCount > 0 && scannedPackets.length !== currentLotDetails.packetCount)}>
+                           <Button onClick={createFinalLot} disabled={currentLotDetails.packetCount > 0 && scannedPackets.length !== currentLotDetails.packetCount}>
                              {countdown !== null ? (
                                 <>
                                 <Timer className="mr-2 h-4 w-4 animate-spin"/>
