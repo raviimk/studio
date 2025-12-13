@@ -14,7 +14,7 @@ import { Barcode, Trash2, Tag, Weight, Edit, Save, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+import { format, isToday, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -63,6 +63,11 @@ export default function FourPTechingEntryPage() {
   
   // State for searching
   const [searchTerm, setSearchTerm] = useState('');
+  
+  const todaysLotCount = useMemo(() => {
+    if (!fourPTechingLots) return 0;
+    return fourPTechingLots.filter(lot => isToday(parseISO(lot.entryDate))).length;
+  }, [fourPTechingLots]);
 
 
   useEffect(() => {
@@ -261,6 +266,15 @@ export default function FourPTechingEntryPage() {
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <PageHeader title="4P Teching Entry" description="Create a new entry for 4P Teching work." />
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Today's Lots Created</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <p className="text-4xl font-bold">{todaysLotCount}</p>
+        </CardContent>
+      </Card>
 
       <Card>
           <CardHeader>
