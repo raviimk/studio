@@ -69,6 +69,16 @@ export default function FourPTechingEntryPage() {
     return fourPTechingLots.filter(lot => isToday(parseISO(lot.entryDate))).length;
   }, [fourPTechingLots]);
 
+  const todaysReturnedCount = useMemo(() => {
+      if (!fourPTechingLots) return 0;
+      return fourPTechingLots.filter(lot => 
+          isToday(parseISO(lot.entryDate)) && 
+          lot.isReturnedToFourP && 
+          lot.returnDate && 
+          isToday(parseISO(lot.returnDate))
+      ).length;
+  }, [fourPTechingLots]);
+
 
   useEffect(() => {
       // Auto-select default operator if one exists
@@ -269,10 +279,17 @@ export default function FourPTechingEntryPage() {
       
       <Card>
         <CardHeader>
-            <CardTitle>Today's Lots Created</CardTitle>
+          <CardTitle>Today's Summary</CardTitle>
         </CardHeader>
-        <CardContent>
-            <p className="font-headline text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysLotCount}</p>
+        <CardContent className="flex items-center gap-8">
+            <div>
+                <p className="text-sm text-muted-foreground">Lots Created</p>
+                <p className="font-headline text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysLotCount}</p>
+            </div>
+            <div>
+                <p className="text-sm text-muted-foreground">Returned Today</p>
+                <p className="font-headline text-5xl font-bold text-green-600">{todaysReturnedCount}</p>
+            </div>
         </CardContent>
       </Card>
 
@@ -459,3 +476,5 @@ export default function FourPTechingEntryPage() {
     </div>
   );
 }
+
+    
