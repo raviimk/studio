@@ -64,24 +64,26 @@ export default function FourPTechingEntryPage() {
   // State for searching
   const [searchTerm, setSearchTerm] = useState('');
   
-  const todaysTechingPcs = useMemo(() => {
-    if (!fourPTechingLots) return 0;
-    return fourPTechingLots.reduce((sum, lot) => {
-        if (isToday(parseISO(lot.entryDate))) {
-            return sum + (lot.finalPcs || 0);
-        }
-        return sum;
-    }, 0);
-  }, [fourPTechingLots]);
+  const todaysStats = useMemo(() => {
+    if (!fourPTechingLots) return { techedPcs: 0, techedLots: 0, returnedPcs: 0, returnedLots: 0 };
+    
+    let techedPcs = 0;
+    let techedLots = 0;
+    let returnedPcs = 0;
+    let returnedLots = 0;
 
-  const todaysReturnedPcs = useMemo(() => {
-      if (!fourPTechingLots) return 0;
-      return fourPTechingLots.reduce((sum, lot) => {
-        if (lot.isReturnedToFourP && lot.returnDate && isToday(parseISO(lot.returnDate))) {
-            return sum + (lot.finalPcs || 0);
+    fourPTechingLots.forEach(lot => {
+        if (isToday(parseISO(lot.entryDate))) {
+            techedLots++;
+            techedPcs += (lot.finalPcs || 0);
         }
-        return sum;
-      }, 0);
+        if (lot.isReturnedToFourP && lot.returnDate && isToday(parseISO(lot.returnDate))) {
+            returnedLots++;
+            returnedPcs += (lot.finalPcs || 0);
+        }
+    });
+    
+    return { techedPcs, techedLots, returnedPcs, returnedLots };
   }, [fourPTechingLots]);
 
 
@@ -282,18 +284,26 @@ export default function FourPTechingEntryPage() {
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <PageHeader title="4P Teching Entry" description="Create a new entry for 4P Teching work." />
       
-      <Card>
+       <Card>
         <CardHeader>
           <CardTitle>Today's Summary</CardTitle>
         </CardHeader>
-        <CardContent className="flex items-center gap-8">
-            <div>
-                <p className="text-sm text-muted-foreground">Teching PCS Today</p>
-                <p className="font-headline text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysTechingPcs}</p>
+        <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center md:text-left">
+                <p className="text-sm text-muted-foreground">Teched Lots</p>
+                <p className="font-headline text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysStats.techedLots}</p>
             </div>
-            <div>
-                <p className="text-sm text-muted-foreground">4P Returned PCS Today</p>
-                <p className="font-headline text-5xl font-bold text-green-600">{todaysReturnedPcs}</p>
+            <div className="text-center md:text-left">
+                <p className="text-sm text-muted-foreground">Teched PCS</p>
+                <p className="font-headline text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysStats.techedPcs}</p>
+            </div>
+            <div className="text-center md:text-left">
+                <p className="text-sm text-muted-foreground">Returned Lots</p>
+                <p className="font-headline text-4xl font-bold text-green-600">{todaysStats.returnedLots}</p>
+            </div>
+             <div className="text-center md:text-left">
+                <p className="text-sm text-muted-foreground">Returned PCS</p>
+                <p className="font-headline text-4xl font-bold text-green-600">{todaysStats.returnedPcs}</p>
             </div>
         </CardContent>
       </Card>
