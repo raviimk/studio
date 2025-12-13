@@ -272,7 +272,7 @@ export default function FourPTechingEntryPage() {
             <CardTitle>Today's Lots Created</CardTitle>
         </CardHeader>
         <CardContent>
-            <p className="text-4xl font-bold">{todaysLotCount}</p>
+            <p className="font-headline text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysLotCount}</p>
         </CardContent>
       </Card>
 
