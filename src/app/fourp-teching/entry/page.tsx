@@ -64,19 +64,24 @@ export default function FourPTechingEntryPage() {
   // State for searching
   const [searchTerm, setSearchTerm] = useState('');
   
-  const todaysLotCount = useMemo(() => {
+  const todaysTechingPcs = useMemo(() => {
     if (!fourPTechingLots) return 0;
-    return fourPTechingLots.filter(lot => isToday(parseISO(lot.entryDate))).length;
+    return fourPTechingLots.reduce((sum, lot) => {
+        if (isToday(parseISO(lot.entryDate))) {
+            return sum + (lot.finalPcs || 0);
+        }
+        return sum;
+    }, 0);
   }, [fourPTechingLots]);
 
-  const todaysReturnedCount = useMemo(() => {
+  const todaysReturnedPcs = useMemo(() => {
       if (!fourPTechingLots) return 0;
-      return fourPTechingLots.filter(lot => 
-          isToday(parseISO(lot.entryDate)) && 
-          lot.isReturnedToFourP && 
-          lot.returnDate && 
-          isToday(parseISO(lot.returnDate))
-      ).length;
+      return fourPTechingLots.reduce((sum, lot) => {
+        if (lot.isReturnedToFourP && lot.returnDate && isToday(parseISO(lot.returnDate))) {
+            return sum + (lot.finalPcs || 0);
+        }
+        return sum;
+      }, 0);
   }, [fourPTechingLots]);
 
 
@@ -283,12 +288,12 @@ export default function FourPTechingEntryPage() {
         </CardHeader>
         <CardContent className="flex items-center gap-8">
             <div>
-                <p className="text-sm text-muted-foreground">Lots Created</p>
-                <p className="font-headline text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysLotCount}</p>
+                <p className="text-sm text-muted-foreground">Teching PCS Today</p>
+                <p className="font-headline text-5xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysTechingPcs}</p>
             </div>
             <div>
-                <p className="text-sm text-muted-foreground">Returned Today</p>
-                <p className="font-headline text-5xl font-bold text-green-600">{todaysReturnedCount}</p>
+                <p className="text-sm text-muted-foreground">4P Returned PCS Today</p>
+                <p className="font-headline text-5xl font-bold text-green-600">{todaysReturnedPcs}</p>
             </div>
         </CardContent>
       </Card>
@@ -476,5 +481,3 @@ export default function FourPTechingEntryPage() {
     </div>
   );
 }
-
-    
