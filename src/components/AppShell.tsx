@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -25,6 +24,7 @@ import {
   ClipboardCheck,
   Wrench,
   PenSquare,
+  GitCompare,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -105,6 +105,7 @@ const menuItems = [
     subItems: [
       { label: 'Box Sorting', href: '/box-sorting', icon: Box, },
       { label: 'Packet Verifier', href: '/packet-verifier', icon: ListTodo, },
+      { label: 'Packet Matcher', href: '/packet-matcher', icon: GitCompare, },
       { label: 'Kapan Verifier', href: '/kapan-verifier', icon: ClipboardCheck, },
       { label: 'Packet Reassignment', href: '/reassignment', icon: Replace, },
       { label: 'Packet History', href: '/packet-history', icon: History, },
