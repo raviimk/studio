@@ -483,7 +483,7 @@ export default function NewLaserLotPage() {
             </div>
             
             <div className="sticky top-8">
-                 <Card className="max-w-md mx-auto glass-card">
+                 <Card className="glass-card">
                     <CardHeader>
                       <CardTitle className="text-sm font-medium text-center">Today's Summary</CardTitle>
                     </CardHeader>
@@ -491,19 +491,22 @@ export default function NewLaserLotPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
                                 <p className="text-xs text-muted-foreground">Lots Created</p>
-                                <p className="text-xl font-bold">{todaysStats.createdLots}</p>
+                                <p className="font-headline text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-pulse">{todaysStats.createdLots}</p>
                             </div>
                             <div className="text-center">
                                 <p className="text-xs text-muted-foreground">Lots Returned</p>
-                                <p className="text-xl font-bold">{todaysStats.returnedLots}</p>
+                                <p className="font-headline text-3xl font-bold text-green-600">{todaysStats.returnedLots}</p>
                             </div>
                         </div>
                          {todaysStats.operatorSummary.length > 0 && (
                             <div className="mt-4 pt-4 border-t">
                                 <h4 className="text-xs font-medium text-center text-muted-foreground mb-2">Returned PCS by Operator</h4>
-                                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
+                                <div className="space-y-1 text-xs">
                                     {todaysStats.operatorSummary.map(op => (
-                                        <span key={op.operator}><span className="font-semibold">{op.operator}:</span> {op.pcs}</span>
+                                        <div key={op.operator} className="flex justify-between">
+                                            <span className="font-semibold">{op.operator}:</span> 
+                                            <span>{op.pcs}</span>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
