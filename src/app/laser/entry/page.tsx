@@ -322,191 +322,195 @@ export default function NewLaserLotPage() {
     <TooltipProvider>
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="New Laser Lot" description="Today's Laser Department Summary" />
-        <div className="space-y-6">
-          <Card className="max-w-md mx-auto glass-card">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-center">Today's Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Lots Created</p>
-                        <p className="text-xl font-bold">{todaysStats.createdLots}</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-xs text-muted-foreground">Lots Returned</p>
-                        <p className="text-xl font-bold">{todaysStats.returnedLots}</p>
-                    </div>
-                </div>
-                 {todaysStats.operatorSummary.length > 0 && (
-                    <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-xs font-medium text-center text-muted-foreground mb-2">Returned PCS by Operator</h4>
-                        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
-                            {todaysStats.operatorSummary.map(op => (
-                                <span key={op.operator}><span className="font-semibold">{op.operator}:</span> {op.pcs}</span>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </CardContent>
-          </Card>
-
-          <Card className="max-w-4xl mx-auto glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-primary" />
-                    <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                        Step 1: Lot Details
-                    </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-              <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                      <FormField control={form.control} name="kapanNumber" render={({ field }) => (
-                          <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={form.control} name="lotNumber" render={({ field }) => (
-                          <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={form.control} name="tensionType" render={({ field }) => (
-                          <FormItem><FormLabel>Tension Type</FormLabel>
-                              <Select onValueChange={handleTensionChange} value={field.value} disabled={formSubmitted}>
-                                  <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
-                                  <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
-                              </Select><FormMessage />
-                          </FormItem>
-                      )} />
-                      <FormField control={form.control} name="machine" render={({ field }) => (
-                          <FormItem>
-                              <FormLabel>Machine Name</FormLabel>
-                              <FormControl>
-                                <Input 
-                                    {...field} 
-                                    readOnly 
-                                    disabled 
-                                    className={cn(
-                                        "font-bold",
-                                        machineName?.toUpperCase() === 'GREEN' && 'animate-green-glow',
-                                        machineName?.toUpperCase() === 'DHARMAJ' && 'animate-dharmaj-glow'
-                                    )}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                          </FormItem>
-                      )} />
-                      <FormField control={form.control} name="packetCount" render={({ field }) => (
-                          <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                  </div>
-                   {!formSubmitted && (
-                        <Button type="submit">Next: Scan Packets</Button>
-                    )}
-                  </form>
-              </Form>
-              </CardContent>
-          </Card>
-
-          <Card className="max-w-4xl mx-auto glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="w-6 h-6 text-primary" />
-                    <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                        Laser Lot Series
-                    </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <LotSeriesViewer 
-                      series={lotSeries}
-                      completedLots={completedLots}
-                      currentLot={parseInt(currentLotNumberStr, 10)}
-                      nextLot={nextLot}
-                      lastCompletedLot={lastCompletedLot}
-                      onLotClick={handleLotClick}
-                  />
-              </CardContent>
-          </Card>
-
-          {formSubmitted && currentLotDetails && (
+        <div className="grid lg:grid-cols-[1fr,300px] gap-8 items-start">
+            <div className="space-y-6">
               <Card className="max-w-4xl mx-auto glass-card">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Sparkles className="w-6 h-6 text-primary" />
                         <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                           Step 2: Scan Packets
+                            Step 1: Lot Details
                         </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                      <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
-                          <Input 
-                              ref={barcodeInputRef}
-                              placeholder="Scan barcode..."
-                              value={barcode}
-                              onChange={e => setBarcode(e.target.value)}
-                              disabled={scannedPackets.length >= currentPacketCount && currentPacketCount > 0}
-                          />
-                          <Button type="submit" disabled={!barcode || (scannedPackets.length >= currentPacketCount && currentPacketCount > 0)}>
-                              <Barcode className="mr-2 h-4 w-4" /> Add
-                          </Button>
+                  <Form {...form}>
+                      <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                          <FormField control={form.control} name="kapanNumber" render={({ field }) => (
+                              <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="lotNumber" render={({ field }) => (
+                              <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                          <FormField control={form.control} name="tensionType" render={({ field }) => (
+                              <FormItem><FormLabel>Tension Type</FormLabel>
+                                  <Select onValueChange={handleTensionChange} value={field.value} disabled={formSubmitted}>
+                                      <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
+                                      <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
+                                  </Select><FormMessage />
+                              </FormItem>
+                          )} />
+                          <FormField control={form.control} name="machine" render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Machine Name</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                        {...field} 
+                                        readOnly 
+                                        disabled 
+                                        className={cn(
+                                            "font-bold",
+                                            machineName?.toUpperCase() === 'GREEN' && 'animate-green-glow',
+                                            machineName?.toUpperCase() === 'DHARMAJ' && 'animate-dharmaj-glow'
+                                        )}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )} />
+                          <FormField control={form.control} name="packetCount" render={({ field }) => (
+                              <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                          )} />
+                      </div>
+                       {!formSubmitted && (
+                            <Button type="submit">Next: Scan Packets</Button>
+                        )}
                       </form>
-
-                      <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
-                         {Array.from({ length: currentLotDetails.packetCount }).map((_, index) => {
-                              const packet = scannedPackets[index];
-                              return (
-                                  <Tooltip key={index}>
-                                      <TooltipTrigger asChild>
-                                          <div className={cn(
-                                              "relative h-12 flex items-center justify-center rounded-md border text-sm font-mono overflow-hidden",
-                                              packet ? 'bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700' : 'bg-muted/50'
-                                          )}>
-                                              {!packet && (index + 1)}
-                                              {packet && (
-                                                <>
-                                                  <span className="absolute bottom-0.5 left-1 text-xs font-bold text-green-700/70 animate-move-br">{index + 1}</span>
-                                                  <span className="absolute top-0.5 right-1 text-xs font-semibold text-green-800/80 animate-move-tr">
-                                                      {`${packet.packetNumber}${packet.suffix ? `-${packet.suffix}` : ''}`}
-                                                  </span>
-                                                </>
-                                              )}
-                                          </div>
-                                      </TooltipTrigger>
-                                       {packet && (
-                                        <TooltipContent>
-                                            <div className="flex flex-col gap-2 p-1">
-                                                <p className="font-mono">{packet.fullBarcode}</p>
-                                                <Button variant="destructive" size="sm" onClick={() => handleDeletePacket(packet.id)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Scan
-                                                </Button>
-                                            </div>
-                                        </TooltipContent>
-                                       )}
-                                  </Tooltip>
-                              );
-                          })}
-                      </div>
-                      
-                      <div className="flex justify-between items-center mt-4">
-                          <p className="text-sm text-muted-foreground font-semibold">
-                              Scanned: {scannedPackets.length} / {currentLotDetails.packetCount}
-                          </p>
-                           <Button onClick={createFinalLot} disabled={scannedPackets.length !== currentLotDetails.packetCount}>
-                                <PackagePlus className="mr-2 h-4 w-4" />
-                                Create Laser Lot
-                                {countdown !== null && (
-                                    <span className="flex items-center ml-2 bg-primary/20 text-primary-foreground/80 rounded-full px-2 py-0.5 text-xs">
-                                        <Timer className="mr-1 h-3 w-3 animate-spin"/>
-                                        {countdown}
-                                    </span>
-                                )}
-                            </Button>
-                      </div>
+                  </Form>
                   </CardContent>
               </Card>
-          )}
+
+              <Card className="max-w-4xl mx-auto glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Sparkles className="w-6 h-6 text-primary" />
+                        <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                            Laser Lot Series
+                        </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <LotSeriesViewer 
+                          series={lotSeries}
+                          completedLots={completedLots}
+                          currentLot={parseInt(currentLotNumberStr, 10)}
+                          nextLot={nextLot}
+                          lastCompletedLot={lastCompletedLot}
+                          onLotClick={handleLotClick}
+                      />
+                  </CardContent>
+              </Card>
+
+              {formSubmitted && currentLotDetails && (
+                  <Card className="max-w-4xl mx-auto glass-card">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Sparkles className="w-6 h-6 text-primary" />
+                            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                               Step 2: Scan Packets
+                            </span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                          <form onSubmit={handleBarcodeScan} className="flex gap-2 mb-4">
+                              <Input 
+                                  ref={barcodeInputRef}
+                                  placeholder="Scan barcode..."
+                                  value={barcode}
+                                  onChange={e => setBarcode(e.target.value)}
+                                  disabled={scannedPackets.length >= currentPacketCount && currentPacketCount > 0}
+                              />
+                              <Button type="submit" disabled={!barcode || (scannedPackets.length >= currentPacketCount && currentPacketCount > 0)}>
+                                  <Barcode className="mr-2 h-4 w-4" /> Add
+                              </Button>
+                          </form>
+
+                          <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                             {Array.from({ length: currentLotDetails.packetCount }).map((_, index) => {
+                                  const packet = scannedPackets[index];
+                                  return (
+                                      <Tooltip key={index}>
+                                          <TooltipTrigger asChild>
+                                              <div className={cn(
+                                                  "relative h-12 flex items-center justify-center rounded-md border text-sm font-mono overflow-hidden",
+                                                  packet ? 'bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700' : 'bg-muted/50'
+                                              )}>
+                                                  {!packet && (index + 1)}
+                                                  {packet && (
+                                                    <>
+                                                      <span className="absolute bottom-0.5 left-1 text-xs font-bold text-green-700/70 animate-move-br">{index + 1}</span>
+                                                      <span className="absolute top-0.5 right-1 text-xs font-semibold text-green-800/80 animate-move-tr">
+                                                          {`${packet.packetNumber}${packet.suffix ? `-${packet.suffix}` : ''}`}
+                                                      </span>
+                                                    </>
+                                                  )}
+                                              </div>
+                                          </TooltipTrigger>
+                                           {packet && (
+                                            <TooltipContent>
+                                                <div className="flex flex-col gap-2 p-1">
+                                                    <p className="font-mono">{packet.fullBarcode}</p>
+                                                    <Button variant="destructive" size="sm" onClick={() => handleDeletePacket(packet.id)}>
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete Scan
+                                                    </Button>
+                                                </div>
+                                            </TooltipContent>
+                                           )}
+                                      </Tooltip>
+                                  );
+                              })}
+                          </div>
+                          
+                          <div className="flex justify-between items-center mt-4">
+                              <p className="text-sm text-muted-foreground font-semibold">
+                                  Scanned: {scannedPackets.length} / {currentLotDetails.packetCount}
+                              </p>
+                               <Button onClick={createFinalLot} disabled={scannedPackets.length !== currentLotDetails.packetCount}>
+                                    <PackagePlus className="mr-2 h-4 w-4" />
+                                    Create Laser Lot
+                                    {countdown !== null && (
+                                        <span className="flex items-center ml-2 bg-primary/20 text-primary-foreground/80 rounded-full px-2 py-0.5 text-xs">
+                                            <Timer className="mr-1 h-3 w-3 animate-spin"/>
+                                            {countdown}
+                                        </span>
+                                    )}
+                                </Button>
+                          </div>
+                      </CardContent>
+                  </Card>
+              )}
+            </div>
+            
+            <div className="sticky top-8">
+                 <Card className="max-w-md mx-auto glass-card">
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium text-center">Today's Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="text-center">
+                                <p className="text-xs text-muted-foreground">Lots Created</p>
+                                <p className="text-xl font-bold">{todaysStats.createdLots}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs text-muted-foreground">Lots Returned</p>
+                                <p className="text-xl font-bold">{todaysStats.returnedLots}</p>
+                            </div>
+                        </div>
+                         {todaysStats.operatorSummary.length > 0 && (
+                            <div className="mt-4 pt-4 border-t">
+                                <h4 className="text-xs font-medium text-center text-muted-foreground mb-2">Returned PCS by Operator</h4>
+                                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
+                                    {todaysStats.operatorSummary.map(op => (
+                                        <span key={op.operator}><span className="font-semibold">{op.operator}:</span> {op.pcs}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                  </Card>
+            </div>
         </div>
         
         <div className="flex justify-center items-center mt-8">
