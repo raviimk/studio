@@ -323,25 +323,25 @@ export default function NewLaserLotPage() {
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="New Laser Lot" description="Today's Laser Department Summary" />
         <div className="space-y-6">
-          <Card>
+          <Card className="max-w-2xl mx-auto glass-card">
             <CardHeader>
-              <CardTitle>Today's Summary</CardTitle>
+              <CardTitle className="text-base font-medium text-center">Today's Summary</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Lots Created</p>
-                        <p className="text-4xl font-bold">{todaysStats.createdLots}</p>
+                        <p className="text-xs text-muted-foreground">Lots Created</p>
+                        <p className="text-2xl font-bold">{todaysStats.createdLots}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Lots Returned</p>
-                        <p className="text-4xl font-bold">{todaysStats.returnedLots}</p>
+                        <p className="text-xs text-muted-foreground">Lots Returned</p>
+                        <p className="text-2xl font-bold">{todaysStats.returnedLots}</p>
                     </div>
                 </div>
                  {todaysStats.operatorSummary.length > 0 && (
                     <div className="mt-4 pt-4 border-t">
-                        <h4 className="text-sm font-medium text-center text-muted-foreground mb-2">Returned PCS by Operator</h4>
-                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
+                        <h4 className="text-xs font-medium text-center text-muted-foreground mb-2">Returned PCS by Operator</h4>
+                        <div className="flex flex-wrap justify-center gap-x-3 gap-y-1 text-xs">
                             {todaysStats.operatorSummary.map(op => (
                                 <span key={op.operator}><span className="font-semibold">{op.operator}:</span> {op.pcs}</span>
                             ))}
