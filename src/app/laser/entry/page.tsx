@@ -323,19 +323,19 @@ export default function NewLaserLotPage() {
       <div className="container mx-auto py-8 px-4 md:px-6">
         <PageHeader title="New Laser Lot" description="Today's Laser Department Summary" />
         <div className="space-y-6">
-          <Card className="max-w-2xl mx-auto glass-card">
+          <Card className="max-w-md mx-auto glass-card">
             <CardHeader>
-              <CardTitle className="text-base font-medium text-center">Today's Summary</CardTitle>
+              <CardTitle className="text-sm font-medium text-center">Today's Summary</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
                         <p className="text-xs text-muted-foreground">Lots Created</p>
-                        <p className="text-2xl font-bold">{todaysStats.createdLots}</p>
+                        <p className="text-xl font-bold">{todaysStats.createdLots}</p>
                     </div>
                     <div className="text-center">
                         <p className="text-xs text-muted-foreground">Lots Returned</p>
-                        <p className="text-2xl font-bold">{todaysStats.returnedLots}</p>
+                        <p className="text-xl font-bold">{todaysStats.returnedLots}</p>
                     </div>
                 </div>
                  {todaysStats.operatorSummary.length > 0 && (
