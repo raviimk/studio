@@ -16,7 +16,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY, SYSTEM_SETTINGS_KEY } from '@/lib/constants';
 import { LaserLot, LaserMapping, ScannedPacket, SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import PageHeader from '@/components/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -87,10 +87,11 @@ export default function NewLaserLotPage() {
   const machineName = watch('machine');
 
   const todaysStats = useMemo(() => {
-    if (!laserLots) return { createdLots: 0, returnedLots: 0 };
+    if (!laserLots) return { createdLots: 0, returnedLots: 0, operatorSummary: [] };
     
     let createdLots = 0;
     let returnedLots = 0;
+    const operatorSummary: Record<string, { operator: string, pcs: number }> = {};
 
     laserLots.forEach(lot => {
         if (isToday(parseISO(lot.entryDate))) {
@@ -98,10 +99,20 @@ export default function NewLaserLotPage() {
         }
         if (lot.isReturned && lot.returnDate && isToday(parseISO(lot.returnDate))) {
             returnedLots++;
+            if (lot.returnedBy) {
+                 if (!operatorSummary[lot.returnedBy]) {
+                    operatorSummary[lot.returnedBy] = { operator: lot.returnedBy, pcs: 0 };
+                }
+                operatorSummary[lot.returnedBy].pcs += lot.subPacketCount ?? lot.packetCount;
+            }
         }
     });
     
-    return { createdLots, returnedLots };
+    return { 
+        createdLots, 
+        returnedLots,
+        operatorSummary: Object.values(operatorSummary).sort((a,b) => b.pcs - a.pcs)
+    };
   }, [laserLots]);
   
   const handleTensionChange = (value: string) => {
@@ -316,15 +327,27 @@ export default function NewLaserLotPage() {
             <CardHeader>
               <CardTitle>Today's Summary</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Lots Created</p>
-                    <p className="text-4xl font-bold">{todaysStats.createdLots}</p>
+            <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Lots Created</p>
+                        <p className="text-4xl font-bold">{todaysStats.createdLots}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm text-muted-foreground">Lots Returned</p>
+                        <p className="text-4xl font-bold">{todaysStats.returnedLots}</p>
+                    </div>
                 </div>
-                <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Lots Returned</p>
-                    <p className="text-4xl font-bold">{todaysStats.returnedLots}</p>
-                </div>
+                 {todaysStats.operatorSummary.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                        <h4 className="text-sm font-medium text-center text-muted-foreground mb-2">Returned PCS by Operator</h4>
+                        <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
+                            {todaysStats.operatorSummary.map(op => (
+                                <span key={op.operator}><span className="font-semibold">{op.operator}:</span> {op.pcs}</span>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </CardContent>
           </Card>
 
