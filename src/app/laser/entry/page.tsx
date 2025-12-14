@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { Barcode, AlertTriangle, Trash2, Sparkles, PackagePlus, Check, Pencil, Timer } from 'lucide-react';
-import { isSameMonth, startOfMonth } from 'date-fns';
+import { isSameMonth, startOfMonth, isToday, parseISO } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -85,6 +85,24 @@ export default function NewLaserLotPage() {
   const { watch } = form;
   const currentLotNumberStr = watch('lotNumber');
   const machineName = watch('machine');
+
+  const todaysStats = useMemo(() => {
+    if (!laserLots) return { createdLots: 0, returnedLots: 0 };
+    
+    let createdLots = 0;
+    let returnedLots = 0;
+
+    laserLots.forEach(lot => {
+        if (isToday(parseISO(lot.entryDate))) {
+            createdLots++;
+        }
+        if (lot.isReturned && lot.returnDate && isToday(parseISO(lot.returnDate))) {
+            returnedLots++;
+        }
+    });
+    
+    return { createdLots, returnedLots };
+  }, [laserLots]);
   
   const handleTensionChange = (value: string) => {
     form.setValue('tensionType', value);
@@ -292,8 +310,24 @@ export default function NewLaserLotPage() {
   return (
     <TooltipProvider>
       <div className="container mx-auto py-8 px-4 md:px-6">
-        <PageHeader title="New Laser Lot" description="sl star" />
+        <PageHeader title="New Laser Lot" description="Today's Laser Department Summary" />
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Today's Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Lots Created</p>
+                    <p className="text-4xl font-bold">{todaysStats.createdLots}</p>
+                </div>
+                <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Lots Returned</p>
+                    <p className="text-4xl font-bold">{todaysStats.returnedLots}</p>
+                </div>
+            </CardContent>
+          </Card>
+
           <Card className="max-w-4xl mx-auto glass-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
