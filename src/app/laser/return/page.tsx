@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { LASER_LOTS_KEY, LASER_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY } from '@/lib/constants';
 import { LaserLot, LaserOperator, ScannedPacket, ReturnScanSettings } from '@/lib/types';
@@ -36,7 +36,7 @@ export default function ReturnLaserLotPage() {
   const [lastScanned, setLastScanned] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLTableRowElement | null>>(new Map());
   const [showVictoryAnimation, setShowVictoryAnimation] = useState(false);
-  const [subPacketCount, setSubPacketCount] = useState<number | string>('');
+  const [subPacketCount, setSubPacketCount] = useState<number | string>(0);
   const subPacketInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -69,7 +69,7 @@ export default function ReturnLaserLotPage() {
     setScannedInDialog(new Set());
     setScanInput('');
     setLastScanned(null);
-    setSubPacketCount('');
+    setSubPacketCount(0);
     itemRefs.current.clear();
     setIsDialogOpen(true);
   };
@@ -93,7 +93,7 @@ export default function ReturnLaserLotPage() {
     setScanInput('');
   };
   
-  const handleReturnLot = () => {
+  const handleReturnLot = useCallback(() => {
     if (!selectedLot || !returningOperator) return;
 
     const numSubPackets = typeof subPacketCount === 'string' ? parseInt(subPacketCount, 10) : subPacketCount;
@@ -114,8 +114,8 @@ export default function ReturnLaserLotPage() {
     setIsDialogOpen(false);
     setSelectedLot(null);
     setScannedInDialog(new Set());
-    setSubPacketCount('');
-  };
+    setSubPacketCount(0);
+  }, [laserLots, returningOperator, selectedLot, setLaserLots, subPacketCount, toast]);
   
    const handleLegacyReturn = (lotId: string) => {
     if (!returningOperator) {
@@ -143,19 +143,18 @@ export default function ReturnLaserLotPage() {
   
   useEffect(() => {
     if (allPacketsScanned) {
-      setShowVictoryAnimation(true);
-      const timer = setTimeout(() => {
-        setShowVictoryAnimation(false);
-      }, 3000); // Animation lasts for 3 seconds
-      
-      // Focus the sub-packet input when it appears
-      setTimeout(() => {
-        subPacketInputRef.current?.focus();
-      }, 100);
+        setShowVictoryAnimation(true);
+        const victoryTimer = setTimeout(() => setShowVictoryAnimation(false), 2000);
+        
+        // Auto-return after a short delay
+        const returnTimer = setTimeout(handleReturnLot, 1000);
 
-      return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(victoryTimer);
+            clearTimeout(returnTimer);
+        };
     }
-  }, [allPacketsScanned]);
+}, [allPacketsScanned, handleReturnLot]);
 
   const isConfirmDisabled = useMemo(() => {
     if (!allPacketsScanned) return true;
@@ -304,7 +303,7 @@ export default function ReturnLaserLotPage() {
                           type="number"
                           placeholder="Enter count of sub-packets..."
                           value={subPacketCount}
-                          onChange={(e) => setSubPacketCount(e.target.value)}
+                          onChange={(e) => setSubPacketCount(e.target.value ? parseInt(e.target.value) : 0)}
                         />
                      </div>
                    )}
