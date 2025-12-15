@@ -43,7 +43,7 @@ export default function LaserPerformance() {
     const dataByOperator: { [key: string]: { name: string, lots: number, packets: number } } = {};
     if (!filteredLots) return [];
     filteredLots.forEach(lot => {
-      const operator = lot.returnedBy || 'Unassigned';
+      const operator = lot.returnedBy || 'Chalu Lot';
       if (!dataByOperator[operator]) {
         dataByOperator[operator] = { name: operator, lots: 0, packets: 0 };
       }
