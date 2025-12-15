@@ -48,14 +48,14 @@ export default function LaserPerformance() {
         dataByOperator[operator] = { name: operator, lots: 0, packets: 0 };
       }
       dataByOperator[operator].lots += 1;
-      dataByOperator[operator].packets += lot.packetCount || 0;
+      dataByOperator[operator].packets += (lot.subPacketCount ?? lot.packetCount) || 0;
     });
     return Object.values(dataByOperator);
   }, [filteredLots]);
   
   const totalLots = filteredLots.length;
   const totalMainPackets = filteredLots.reduce((sum, lot) => sum + lot.packetCount, 0);
-  const totalPackets = filteredLots.reduce((sum, lot) => sum + (lot.subPacketCount ?? lot.packetCount), 0);
+  const totalPackets = filteredLots.reduce((sum, lot) => sum + ((lot.subPacketCount ?? lot.packetCount) || 0), 0);
   const returnedLots = filteredLots.filter(lot => lot.isReturned).length;
 
   const topPerformers = [...performanceData].sort((a, b) => b.packets - a.packets).slice(0, 5);
