@@ -329,9 +329,6 @@ export default function SarinPacketEntryPage() {
                 </CardContent>
             </Card>
 
-            <div className="flex justify-center items-center mt-8">
-                    <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow drop-shadow-2xl" />
-            </div>
         </div>
         <div className="sticky top-8">
             <Card className="glass-card">
@@ -364,6 +361,9 @@ export default function SarinPacketEntryPage() {
                     )}
                 </CardContent>
                 </Card>
+                <div className="flex justify-center items-center mt-8">
+                    <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow drop-shadow-2xl" />
+                </div>
         </div>
       </div>
     </div>

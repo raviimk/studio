@@ -513,13 +513,12 @@ export default function NewLaserLotPage() {
                         )}
                     </CardContent>
                   </Card>
+                  <div className="flex justify-center items-center mt-8">
+                    <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow drop-shadow-2xl" />
+                  </div>
             </div>
         </div>
         
-        <div className="flex justify-center items-center mt-8">
-            <LargeDiamondIcon className="w-48 h-48 opacity-20 animate-spin-y-slow drop-shadow-2xl" />
-       </div>
-
         <AlertDialog>
           <AlertDialogTrigger asChild>
               <button ref={kapanMismatchDialogTriggerRef} className="hidden">Open Kapan Mismatch Dialog</button>
