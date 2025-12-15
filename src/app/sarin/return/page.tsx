@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY } from '@/lib/constants';
 import { SarinPacket, SarinOperator, ScannedPacket, ReturnScanSettings } from '@/lib/types';
@@ -133,11 +133,15 @@ export default function ReturnSarinLotPage() {
   
   const allPacketsScanned = useMemo(() => {
     if (!selectedLot) return false;
+    // For lots created before scanning was mandatory
+    if (!selectedLot.sarinMainPackets || selectedLot.sarinMainPackets.length === 0) {
+        return true;
+    }
     return selectedLot.packetCount === scannedInDialog.size;
   }, [selectedLot, scannedInDialog]);
   
-  const handleConfirmReturn = () => {
-    if (!selectedLot || !returningOperator || !allPacketsScanned) return;
+  const handleConfirmReturn = useCallback(() => {
+    if (!selectedLot || !returningOperator) return;
 
     const scannedReturnPackets: ScannedPacket[] = [...scannedInDialog].map(barcode => {
         const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
@@ -160,15 +164,21 @@ export default function ReturnSarinLotPage() {
     setIsDialogOpen(false);
     setSelectedLot(null);
     setScannedInDialog(new Set());
-  };
+  }, [selectedLot, returningOperator, scannedInDialog, sarinPackets, setSarinPackets, toast]);
 
   useEffect(() => {
     if (allPacketsScanned) {
       setShowVictoryAnimation(true);
-      const timer = setTimeout(() => setShowVictoryAnimation(false), 2000);
-      return () => clearTimeout(timer);
+      const victoryTimer = setTimeout(() => setShowVictoryAnimation(false), 2000);
+      
+      const returnTimer = setTimeout(handleConfirmReturn, 1000);
+
+      return () => {
+        clearTimeout(victoryTimer);
+        clearTimeout(returnTimer);
+      };
     }
-  }, [allPacketsScanned]);
+  }, [allPacketsScanned, handleConfirmReturn]);
 
 
   const handleLegacyReturn = (packetId: string) => {
@@ -347,7 +357,11 @@ export default function ReturnSarinLotPage() {
                    </Table>
                 </div>
               </div>
-              <div className="flex justify-end mt-4"><Button onClick={handleConfirmReturn} disabled={!allPacketsScanned}>Confirm Return</Button></div>
+              <div className="flex justify-end mt-4">
+                  <Button onClick={handleConfirmReturn} disabled={!allPacketsScanned}>
+                    Confirm Return
+                  </Button>
+              </div>
           </DialogContent>
         </Dialog>
     </div>
