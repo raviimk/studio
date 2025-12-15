@@ -103,7 +103,6 @@ const menuItems = [
     label: "Tools",
     icon: Wrench,
     subItems: [
-      { label: 'Chalu Entry', href: '/chalu-entry', icon: PenSquare },
       { label: 'Box Sorting', href: '/box-sorting', icon: Box, },
       { label: 'Packet Verifier', href: '/packet-verifier', icon: ListTodo, },
       { label: 'Packet Matcher', href: '/packet-matcher', icon: GitCompare, },
@@ -111,6 +110,7 @@ const menuItems = [
       { label: 'Packet Reassignment', href: '/reassignment', icon: Replace, },
       { label: 'Packet History', href: '/packet-history', icon: History, },
       { label: 'Kapan Checker', href: '/kapan-checker', icon: ClipboardCheck, },
+      { label: 'Chalu Entry', href: '/chalu-entry', icon: PenSquare },
     ]
   },
    {
