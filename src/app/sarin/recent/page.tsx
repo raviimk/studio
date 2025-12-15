@@ -21,6 +21,7 @@ export default function RecentSarinEntriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<SarinPacket>>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [initialTotalPackets, setInitialTotalPackets] = useState(0);
 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this entry?')) {
@@ -31,6 +32,8 @@ export default function RecentSarinEntriesPage() {
 
   const handleEdit = (packet: SarinPacket) => {
     setEditingId(packet.id);
+    const total = (packet.packetCount || 0) + (packet.jiramCount || 0);
+    setInitialTotalPackets(total);
     setEditFormData({
         mainPacketNumber: packet.mainPacketNumber,
         packetCount: packet.packetCount,
@@ -41,6 +44,7 @@ export default function RecentSarinEntriesPage() {
   const handleCancelEdit = () => {
     setEditingId(null);
     setEditFormData({});
+    setInitialTotalPackets(0);
   };
 
   const handleSaveEdit = (id: string) => {
@@ -61,7 +65,22 @@ export default function RecentSarinEntriesPage() {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditFormData(prev => ({ ...prev, [name]: name === 'jiramCount' ? (value ? parseInt(value, 10) : undefined) : parseInt(value, 10) }));
+    const numValue = parseInt(value, 10);
+
+    setEditFormData(prev => {
+        const newFormData = { ...prev };
+        if (name === 'jiramCount') {
+            const newJiram = value === '' ? 0 : numValue;
+            if (!isNaN(newJiram) && newJiram >= 0) {
+                 const newPacketCount = initialTotalPackets - newJiram;
+                 newFormData.jiramCount = newJiram > 0 ? newJiram : undefined;
+                 newFormData.packetCount = newPacketCount >= 0 ? newPacketCount : 0;
+            }
+        } else {
+            newFormData[name as keyof SarinPacket] = isNaN(numValue) ? undefined : numValue;
+        }
+        return newFormData;
+    });
   };
 
   const sortedPackets = useMemo(() => {
