@@ -164,6 +164,7 @@ export default function ReturnSarinLotPage() {
     setIsDialogOpen(false);
     setSelectedLot(null);
     setScannedInDialog(new Set());
+    setReturningOperator('');
   }, [selectedLot, returningOperator, scannedInDialog, sarinPackets, setSarinPackets, toast]);
 
   useEffect(() => {
@@ -194,6 +195,7 @@ export default function ReturnSarinLotPage() {
       );
       setSarinPackets(updatedPackets);
       toast({ title: 'Success', description: `Lot entry has been marked as returned.` });
+      setReturningOperator('');
     }
   };
 
@@ -368,4 +370,3 @@ export default function ReturnSarinLotPage() {
   );
 }
 
-    
