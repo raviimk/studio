@@ -146,12 +146,8 @@ export default function ReturnLaserLotPage() {
         setShowVictoryAnimation(true);
         const victoryTimer = setTimeout(() => setShowVictoryAnimation(false), 2000);
         
-        // Auto-return after a short delay
-        const returnTimer = setTimeout(handleReturnLot, 1000);
-
         return () => {
             clearTimeout(victoryTimer);
-            clearTimeout(returnTimer);
         };
     }
 }, [allPacketsScanned, handleReturnLot]);
