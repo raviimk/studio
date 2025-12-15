@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -98,11 +99,11 @@ const menuItems = [
       { label: 'Udhda Report', href: '/udhdha/report' },
     ],
   },
-  { label: 'Chalu Entry', href: '/chalu-entry', icon: PenSquare },
   {
     label: "Tools",
     icon: Wrench,
     subItems: [
+      { label: 'Chalu Entry', href: '/chalu-entry', icon: PenSquare },
       { label: 'Box Sorting', href: '/box-sorting', icon: Box, },
       { label: 'Packet Verifier', href: '/packet-verifier', icon: ListTodo, },
       { label: 'Packet Matcher', href: '/packet-matcher', icon: GitCompare, },
