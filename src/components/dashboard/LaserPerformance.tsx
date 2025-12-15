@@ -48,7 +48,7 @@ export default function LaserPerformance() {
         dataByOperator[operator] = { name: operator, lots: 0, packets: 0 };
       }
       dataByOperator[operator].lots += 1;
-      dataByOperator[operator].packets += (lot.subPacketCount ?? lot.packetCount) || 0;
+      dataByOperator[operator].packets += lot.packetCount || 0;
     });
     return Object.values(dataByOperator);
   }, [filteredLots]);
@@ -136,14 +136,14 @@ export default function LaserPerformance() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="packets" fill="hsl(var(--primary))" name="Packets Handled" />
+                <Bar dataKey="packets" fill="hsl(var(--primary))" name="Main Packets Handled" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Top 5 Performers (by Packets)</CardTitle>
+            <CardTitle>Top 5 Performers (by Main Packets)</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
              <ResponsiveContainer width="100%" height="100%">
