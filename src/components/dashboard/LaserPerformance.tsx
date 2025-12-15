@@ -40,15 +40,16 @@ export default function LaserPerformance() {
   }, [laserLots, selectedOperator, dateRange]);
 
   const performanceData = useMemo(() => {
-    const dataByOperator: { [key: string]: { name: string, lots: number, packets: number } } = {};
+    const dataByOperator: { [key: string]: { name: string, lots: number, mainPackets: number, makeablePackets: number } } = {};
     if (!filteredLots) return [];
     filteredLots.forEach(lot => {
       const operator = lot.returnedBy || 'Chalu Lot';
       if (!dataByOperator[operator]) {
-        dataByOperator[operator] = { name: operator, lots: 0, packets: 0 };
+        dataByOperator[operator] = { name: operator, lots: 0, mainPackets: 0, makeablePackets: 0 };
       }
       dataByOperator[operator].lots += 1;
-      dataByOperator[operator].packets += lot.packetCount || 0;
+      dataByOperator[operator].mainPackets += lot.packetCount || 0;
+      dataByOperator[operator].makeablePackets += (lot.subPacketCount ?? lot.packetCount) || 0;
     });
     return Object.values(dataByOperator);
   }, [filteredLots]);
@@ -58,7 +59,7 @@ export default function LaserPerformance() {
   const totalPackets = filteredLots.reduce((sum, lot) => sum + ((lot.subPacketCount ?? lot.packetCount) || 0), 0);
   const returnedLots = filteredLots.filter(lot => lot.isReturned).length;
 
-  const topPerformers = [...performanceData].sort((a, b) => b.packets - a.packets).slice(0, 5);
+  const topPerformers = [...performanceData].sort((a, b) => b.makeablePackets - a.makeablePackets).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -136,19 +137,19 @@ export default function LaserPerformance() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="packets" fill="hsl(var(--primary))" name="Main Packets Handled" />
+                <Bar dataKey="mainPackets" fill="hsl(var(--primary))" name="Total Main Packets/Dai" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Top 5 Performers (by Main Packets)</CardTitle>
+            <CardTitle>Top 5 Performers (by Makeable Pcs)</CardTitle>
           </CardHeader>
           <CardContent className="h-[300px]">
              <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                    <Pie data={topPerformers} dataKey="packets" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                    <Pie data={topPerformers} dataKey="makeablePackets" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
                         {topPerformers.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
