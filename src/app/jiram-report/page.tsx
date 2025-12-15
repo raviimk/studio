@@ -1,6 +1,6 @@
 
 'use client';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY } from '@/lib/constants';
 import { JiramReportPacket, SarinPacket } from '@/lib/types';
@@ -54,6 +54,32 @@ export default function JiramReportPage() {
   
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
+
+  // New state for enhanced UX
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [highlightedKapan, setHighlightedKapan] = useState<string | null>(null);
+  const [showSuccessTick, setShowSuccessTick] = useState(false);
+
+  // Auto-focus on mount
+  useEffect(() => {
+    barcodeInputRef.current?.focus();
+  }, []);
+
+  // Effect to clear highlight after a delay
+  useEffect(() => {
+    if (highlightedKapan) {
+      const timer = setTimeout(() => setHighlightedKapan(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedKapan]);
+  
+  // Effect to clear success tick after a delay
+  useEffect(() => {
+    if (showSuccessTick) {
+      const timer = setTimeout(() => setShowSuccessTick(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessTick]);
 
   const kapanSummary = useMemo((): KapanSummary[] => {
     const kapanData: Record<string, { expected: number; scanned: number }> = {};
@@ -122,9 +148,11 @@ export default function JiramReportPage() {
       scanTime: new Date().toISOString(),
     };
 
-    setJiramPackets([...jiramPackets, newPacket]);
+    setJiramPackets(prev => [newPacket, ...prev]);
     toast({ title: 'Packet Scanned', description: `Added ${barcode} to Kapan ${kapanNumber}.` });
     setBarcode('');
+    setHighlightedKapan(kapanNumber);
+    setShowSuccessTick(true);
   };
 
   const handleDeletePacket = (id: string) => {
@@ -149,6 +177,10 @@ export default function JiramReportPage() {
     if (!selectedKapan) return [];
     return jiramPackets.filter(p => p.kapanNumber === selectedKapan).sort((a,b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime());
   }, [jiramPackets, selectedKapan]);
+
+  const recentScans = useMemo(() => {
+    return jiramPackets.slice(0, 5);
+  }, [jiramPackets]);
   
   const getStatusIcon = (status: KapanSummary['status']) => {
     switch (status) {
@@ -162,24 +194,51 @@ export default function JiramReportPage() {
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <PageHeader title="Jiram Verification Report" description="Verify if created Jiram packets match the expected counts from Sarin entries." />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Scan Jiram Packet</CardTitle>
-          <CardDescription>Scan the barcode of a packet created from a Jiram piece. The Kapan number will be extracted automatically.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm">
-            <Input
-              placeholder="Scan Jiram packet barcode..."
-              value={barcode}
-              onChange={e => setBarcode(e.target.value)}
-            />
-            <Button type="submit" disabled={!barcode}>
-              <Barcode className="mr-2 h-4 w-4" /> Scan
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <div className="grid lg:grid-cols-[1fr,350px] gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Scan Jiram Packet</CardTitle>
+            <CardDescription>Scan the barcode of a packet created from a Jiram piece. The Kapan number will be extracted automatically.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm relative">
+              <Input
+                ref={barcodeInputRef}
+                placeholder="Scan Jiram packet barcode..."
+                value={barcode}
+                onChange={e => setBarcode(e.target.value)}
+              />
+              <Button type="submit" disabled={!barcode}>
+                <Barcode className="mr-2 h-4 w-4" /> Scan
+              </Button>
+               {showSuccessTick && (
+                 <div className="absolute right-[-30px] top-1/2 -translate-y-1/2">
+                    <CheckCircle2 className="h-6 w-6 text-green-500" />
+                 </div>
+               )}
+            </form>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Scans</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentScans.length > 0 ? (
+              <ul className="space-y-2">
+                {recentScans.map(p => (
+                  <li key={p.id} className="text-sm font-mono flex justify-between items-center text-muted-foreground animate-in fade-in-50">
+                    <span>{p.barcode}</span>
+                    <span>K:{p.kapanNumber}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-center text-muted-foreground py-4">No scans yet.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
       
       <div className="grid lg:grid-cols-2 gap-8">
         <Card>
@@ -190,7 +249,7 @@ export default function JiramReportPage() {
                 <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                 <TableBody>
                   {kapanSummary.map(k => (
-                    <TableRow key={k.kapanNumber} className="group">
+                    <TableRow key={k.kapanNumber} className={cn("group transition-colors", highlightedKapan === k.kapanNumber && 'bg-yellow-100 dark:bg-yellow-900/30')}>
                       <TableCell className="font-bold cursor-pointer" onClick={() => setSelectedKapan(k.kapanNumber)}>{k.kapanNumber}</TableCell>
                       <TableCell>{k.expected}</TableCell>
                       <TableCell>{k.scanned}</TableCell>
