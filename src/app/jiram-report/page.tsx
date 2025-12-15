@@ -99,12 +99,14 @@ export default function JiramReportPage() {
     const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
     if (!match) {
         toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: 'Cannot extract Kapan number from barcode.' });
+        setBarcode('');
         return;
     }
     const [, kapanNumber] = match;
 
     if (jiramPackets.some(p => p.barcode === barcode)) {
         toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This packet has already been scanned.' });
+        setBarcode('');
         return;
     }
 
