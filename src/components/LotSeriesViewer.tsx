@@ -14,6 +14,7 @@ interface LotSeriesViewerProps {
     currentLot: number | null | undefined;
     nextLot: number | null | undefined;
     lastCompletedLot: number | null;
+    mostRecentCompletedLot: number;
     onLotClick: (lotNumber: number) => void;
 }
 
@@ -26,13 +27,14 @@ const DiamondIcon = ({ className }: { className?: string }) => (
 );
 
 
-export default function LotSeriesViewer({ series, completedLots, currentLot, nextLot, lastCompletedLot, onLotClick }: LotSeriesViewerProps) {
+export default function LotSeriesViewer({ series, completedLots, currentLot, nextLot, lastCompletedLot, mostRecentCompletedLot, onLotClick }: LotSeriesViewerProps) {
     const [api, setApi] = useState<CarouselApi>()
     const [isAnimating, setIsAnimating] = useState<number | null>(null);
 
     useEffect(() => {
         if (!api) return;
 
+        // If a lot is being animated, scroll to it
         if (isAnimating) {
             const animatingIndex = series.indexOf(isAnimating);
             if (animatingIndex !== -1) {
@@ -41,16 +43,29 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
             }
         }
 
-        const currentLotIndex = currentLot ? series.indexOf(currentLot) : -1;
-        if (currentLotIndex !== -1) {
-            api.scrollTo(currentLotIndex, true);
-        } else if (nextLot) {
+        // If a lot is currently being entered, scroll to it
+        if (currentLot) {
+            const currentLotIndex = series.indexOf(currentLot);
+            if (currentLotIndex !== -1) {
+                api.scrollTo(currentLotIndex, true);
+                return;
+            }
+        }
+        
+        // Otherwise, scroll to the most recently completed lot
+        if (mostRecentCompletedLot > 0) {
+            const recentLotIndex = series.indexOf(mostRecentCompletedLot);
+             if (recentLotIndex !== -1) {
+                api.scrollTo(recentLotIndex, true);
+            }
+        } else if (nextLot) { // Fallback for the very first lot
             const nextLotIndex = series.indexOf(nextLot);
             if (nextLotIndex !== -1) {
                 api.scrollTo(nextLotIndex, true);
             }
         }
-    }, [api, currentLot, nextLot, series, isAnimating]);
+
+    }, [api, currentLot, nextLot, series, isAnimating, mostRecentCompletedLot]);
 
     useEffect(() => {
         if (lastCompletedLot) {

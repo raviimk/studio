@@ -284,7 +284,7 @@ export default function NewLaserLotPage() {
   }, [countdown, createFinalLot]);
 
 
-  const { lotSeries, completedLots, nextLot } = React.useMemo(() => {
+  const { lotSeries, completedLots, nextLot, mostRecentCompletedLot } = React.useMemo(() => {
     const today = new Date();
     const lotsThisMonth = laserLots
       .filter(lot => isSameMonth(new Date(lot.entryDate), today))
@@ -308,7 +308,8 @@ export default function NewLaserLotPage() {
     return {
         lotSeries: series,
         completedLots: completed,
-        nextLot: nextLotNumber
+        nextLot: nextLotNumber,
+        mostRecentCompletedLot: maxCompleted
     }
   }, [laserLots, currentLotNumberStr]);
 
@@ -397,6 +398,7 @@ export default function NewLaserLotPage() {
                           currentLot={parseInt(currentLotNumberStr, 10)}
                           nextLot={nextLot}
                           lastCompletedLot={lastCompletedLot}
+                          mostRecentCompletedLot={mostRecentCompletedLot}
                           onLotClick={handleLotClick}
                       />
                   </CardContent>
