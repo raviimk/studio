@@ -38,7 +38,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         if (isAnimating) {
             const animatingIndex = series.indexOf(isAnimating);
             if (animatingIndex !== -1) {
-                api.scrollTo(animatingIndex, true);
+                api.scrollTo(animatingIndex);
                 return;
             }
         }
@@ -47,7 +47,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         if (currentLot) {
             const currentLotIndex = series.indexOf(currentLot);
             if (currentLotIndex !== -1) {
-                api.scrollTo(currentLotIndex, true);
+                api.scrollTo(currentLotIndex);
                 return;
             }
         }
@@ -56,16 +56,37 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         if (mostRecentCompletedLot > 0) {
             const recentLotIndex = series.indexOf(mostRecentCompletedLot);
              if (recentLotIndex !== -1) {
-                api.scrollTo(recentLotIndex, true);
+                api.scrollTo(recentLotIndex);
             }
         } else if (nextLot) { // Fallback for the very first lot
             const nextLotIndex = series.indexOf(nextLot);
             if (nextLotIndex !== -1) {
-                api.scrollTo(nextLotIndex, true);
+                api.scrollTo(nextLotIndex);
             }
         }
 
     }, [api, currentLot, nextLot, series, isAnimating, mostRecentCompletedLot]);
+    
+    useEffect(() => {
+        if (!api) return;
+
+        // Initial animation from start to end
+        let targetIndex = series.indexOf(mostRecentCompletedLot);
+        if (targetIndex === -1 && nextLot) {
+             targetIndex = series.indexOf(nextLot);
+        }
+        if (targetIndex === -1) {
+            targetIndex = 0;
+        }
+
+        setTimeout(() => {
+            if(api.selectedScrollSnap() !== targetIndex) {
+               api.scrollTo(targetIndex);
+            }
+        }, 100); // Delay to ensure animation is visible
+        
+    }, [api, series, mostRecentCompletedLot, nextLot]);
+
 
     useEffect(() => {
         if (lastCompletedLot) {
@@ -114,6 +135,7 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
             opts={{
                 align: "center",
                 dragFree: true,
+                duration: 50, // Animation duration in ms
             }}
             setApi={setApi}
             className="w-full"
@@ -152,3 +174,4 @@ export default function LotSeriesViewer({ series, completedLots, currentLot, nex
         </Carousel>
     );
 }
+
