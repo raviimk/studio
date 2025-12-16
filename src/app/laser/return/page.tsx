@@ -144,13 +144,23 @@ export default function ReturnLaserLotPage() {
   useEffect(() => {
     if (allPacketsScanned) {
         setShowVictoryAnimation(true);
+        subPacketInputRef.current?.focus();
         const victoryTimer = setTimeout(() => setShowVictoryAnimation(false), 2000);
         
         return () => {
             clearTimeout(victoryTimer);
         };
     }
-}, [allPacketsScanned, handleReturnLot]);
+}, [allPacketsScanned]);
+
+  const handleSubPacketKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (!isConfirmDisabled) {
+        handleReturnLot();
+      }
+    }
+  };
 
   const isConfirmDisabled = useMemo(() => {
     if (!allPacketsScanned) return true;
@@ -300,6 +310,7 @@ export default function ReturnLaserLotPage() {
                           placeholder="Enter count of sub-packets..."
                           value={subPacketCount}
                           onChange={(e) => setSubPacketCount(e.target.value ? parseInt(e.target.value) : 0)}
+                          onKeyDown={handleSubPacketKeyDown}
                         />
                      </div>
                    )}
@@ -340,3 +351,5 @@ export default function ReturnLaserLotPage() {
       </div>
   );
 }
+
+    
