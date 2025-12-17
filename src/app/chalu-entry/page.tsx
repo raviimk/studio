@@ -375,7 +375,7 @@ export default function ChaluEntryPage() {
   const filteredEntries = useMemo(() => {
       if (!chaluEntries) return [];
       if (!kapanFilter) return chaluEntries;
-      return chaluEntries.filter(entry => entry.kapanNumber.toLowerCase().includes(kapanFilter.toLowerCase()));
+      return chaluEntries.filter(entry => entry.kapanNumber === kapanFilter);
   }, [chaluEntries, kapanFilter]);
 
   const reportSummary = useMemo(() => {
@@ -386,7 +386,7 @@ export default function ChaluEntryPage() {
     let totalVajan = 0;
 
     filteredEntries.forEach(entry => {
-        if (entry.kapanNumber.toLowerCase().includes(kapanFilter.toLowerCase())) {
+        if (entry.kapanNumber === kapanFilter) {
             totalVajan += entry.vajan || 0;
             if (entry.adjustment > 0) {
                 totalPlus += entry.adjustment;
@@ -469,6 +469,12 @@ export default function ChaluEntryPage() {
     };
     reader.readAsText(file);
   };
+  
+    const uniqueKapansForFilter = useMemo(() => {
+        if (!chaluEntries) return [];
+        const unique = new Set(chaluEntries.map(e => e.kapanNumber));
+        return Array.from(unique).sort((a,b) => a.localeCompare(b, undefined, { numeric: true }));
+    }, [chaluEntries]);
 
 
   return (
@@ -634,12 +640,15 @@ export default function ChaluEntryPage() {
                   <div className="flex justify-between items-center">
                     <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
                     <div className="flex gap-2 items-center">
-                        <Input
-                            placeholder="Filter by Kapan..."
-                            value={kapanFilter}
-                            onChange={(e) => setKapanFilter(e.target.value)}
-                            className="max-w-xs"
-                        />
+                       <Select value={kapanFilter} onValueChange={(value) => setKapanFilter(value === 'all' ? '' : value)}>
+                           <SelectTrigger className="max-w-xs">
+                               <SelectValue placeholder="Filter by Kapan..."/>
+                           </SelectTrigger>
+                           <SelectContent>
+                               <SelectItem value="all">Show All</SelectItem>
+                               {uniqueKapansForFilter.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
+                           </SelectContent>
+                       </Select>
                          <Dialog open={isReportOpen} onOpenChange={setReportOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" disabled={!kapanFilter || !reportSummary}>
