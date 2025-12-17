@@ -119,6 +119,14 @@ export default function ChaluEntryPage() {
     const calculatedCurrent = originalCount + adjustmentValue;
     setCurrentPcs(String(calculatedCurrent));
 
+    const packetSuffixMatch = packetNumber.match(/-([A-Z])$/);
+    const isMainPacket = !packetSuffixMatch || packetSuffixMatch[1] === 'A';
+    
+    if (!isMainPacket) {
+        setSuffix('');
+        return;
+    }
+
     if (adjustmentValue > 0) {
       if (originalCount > 0) {
         const suffixes = [];
@@ -145,7 +153,7 @@ export default function ChaluEntryPage() {
     } else {
       setSuffix('');
     }
-  }, [originalCount, adjustmentValue]);
+  }, [originalCount, adjustmentValue, packetNumber]);
   
   const resetForm = () => {
     setPacketNumber('');
