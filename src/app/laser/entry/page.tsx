@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
@@ -68,6 +67,12 @@ export default function NewLaserLotPage() {
   
   const [countdown, setCountdown] = useState<number | null>(null);
 
+  // Refs for Enter key navigation
+  const kapanRef = useRef<HTMLInputElement>(null);
+  const lotRef = useRef<HTMLInputElement>(null);
+  const tensionRef = useRef<HTMLButtonElement>(null);
+  const packetCountRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,6 +124,7 @@ export default function NewLaserLotPage() {
     form.setValue('tensionType', value);
     const mapping = laserMappings.find(m => m.tensionType === value);
     form.setValue('machine', mapping ? mapping.machine : 'N/A');
+    setTimeout(() => packetCountRef.current?.focus(), 0);
   };
   
   const currentPacketCount = formSubmitted ? currentLotDetails?.packetCount || 0 : watch('packetCount') || 0;
@@ -317,6 +323,13 @@ export default function NewLaserLotPage() {
     const lot = laserLots.find(l => parseInt(l.lotNumber, 10) === lotNumber && isSameMonth(new Date(l.entryDate), new Date()));
     setViewingLot(lot || null);
   }
+  
+  const handleKeyDown = (e: React.KeyboardEvent, nextFieldRef: React.RefObject<HTMLElement>) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        nextFieldRef.current?.focus();
+    }
+  };
 
 
   return (
@@ -339,15 +352,15 @@ export default function NewLaserLotPage() {
                       <form onSubmit={form.handleSubmit(handleInitialSubmit)} className="space-y-6">
                       <div className="grid md:grid-cols-2 gap-6">
                           <FormField control={form.control} name="kapanNumber" render={({ field }) => (
-                              <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} ref={kapanRef} onKeyDown={(e) => handleKeyDown(e, lotRef)} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name="lotNumber" render={({ field }) => (
-                              <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} ref={lotRef} onKeyDown={(e) => handleKeyDown(e, tensionRef)} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
                           )} />
                           <FormField control={form.control} name="tensionType" render={({ field }) => (
                               <FormItem><FormLabel>Tension Type</FormLabel>
                                   <Select onValueChange={handleTensionChange} value={field.value} disabled={formSubmitted}>
-                                      <FormControl><SelectTrigger><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
+                                      <FormControl><SelectTrigger ref={tensionRef}><SelectValue placeholder="Select tension type" /></SelectTrigger></FormControl>
                                       <SelectContent>{laserMappings.map(map => (<SelectItem key={map.id} value={map.tensionType}>{map.tensionType}</SelectItem>))}</SelectContent>
                                   </Select><FormMessage />
                               </FormItem>
@@ -371,11 +384,11 @@ export default function NewLaserLotPage() {
                               </FormItem>
                           )} />
                           <FormField control={form.control} name="packetCount" render={({ field }) => (
-                              <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
+                              <FormItem><FormLabel>Packet Count</FormLabel><FormControl><Input type="number" {...field} ref={packetCountRef} onKeyDown={(e) => handleKeyDown(e, submitRef)} disabled={formSubmitted} /></FormControl><FormMessage /></FormItem>
                           )} />
                       </div>
                        {!formSubmitted && (
-                            <Button type="submit">Next: Scan Packets</Button>
+                            <Button type="submit" ref={submitRef}>Next: Scan Packets</Button>
                         )}
                       </form>
                   </Form>

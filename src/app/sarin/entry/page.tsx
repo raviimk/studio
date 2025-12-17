@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -59,6 +58,16 @@ export default function SarinPacketEntryPage() {
   const [laserLotLoading, setLaserLotLoading] = useState(false);
   const [foundLaserLot, setFoundLaserLot] = useState(false);
   const [initialPacketCount, setInitialPacketCount] = useState(0);
+  
+  // Refs for Enter key navigation
+  const senderRef = useRef<HTMLInputElement>(null);
+  const operatorRef = useRef<HTMLButtonElement>(null);
+  const kapanRef = useRef<HTMLInputElement>(null);
+  const lotRef = useRef<HTMLInputElement>(null);
+  const packetCountRef = useRef<HTMLInputElement>(null);
+  const jiramCountRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -118,6 +127,7 @@ export default function SarinPacketEntryPage() {
       if (operator) {
         const mapping = sarinMappings.find(m => m.operatorId === operator.id);
         setValue('machine', mapping ? mapping.machine : 'N/A');
+        setTimeout(() => kapanRef.current?.focus(), 0);
       }
     } else {
         setValue('machine', '');
@@ -138,6 +148,7 @@ export default function SarinPacketEntryPage() {
             const subPackets = found.subPacketCount || 0;
             setValue('packetCount', subPackets);
             setInitialPacketCount(subPackets); // Store initial value
+            setTimeout(() => packetCountRef.current?.focus(), 100);
         } else {
             setFoundLaserLot(false);
             setValue('sarinMainPackets', []);
@@ -162,6 +173,7 @@ export default function SarinPacketEntryPage() {
         const jiramVal = jiramCount || 0;
         const newPacketCount = initialPacketCount - jiramVal;
         setValue('packetCount', newPacketCount >= 0 ? newPacketCount : 0);
+        setTimeout(() => jiramCountRef.current?.focus(), 0);
     } else {
         setValue('packetCount', initialPacketCount);
     }
@@ -203,8 +215,15 @@ export default function SarinPacketEntryPage() {
     });
     setFoundLaserLot(false);
     setInitialPacketCount(0);
-    form.setFocus('kapanNumber');
+    kapanRef.current?.focus();
   }
+  
+  const handleKeyDown = (e: React.KeyboardEvent, nextFieldRef: React.RefObject<HTMLElement>) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        nextFieldRef.current?.focus();
+    }
+  };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6">
@@ -227,13 +246,13 @@ export default function SarinPacketEntryPage() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                         <FormField control={control} name="senderName" render={({ field }) => (
-                        <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} ref={senderRef} onKeyDown={(e) => handleKeyDown(e, operatorRef)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={control} name="operator" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Operator Name</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Select an operator" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger ref={operatorRef}><SelectValue placeholder="Select an operator" /></SelectTrigger></FormControl>
                             <SelectContent>{sarinOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
                             </Select>
                             <FormMessage />
@@ -243,10 +262,10 @@ export default function SarinPacketEntryPage() {
                         <FormItem><FormLabel>Machine Number</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={control} name="kapanNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Kapan Number</FormLabel><FormControl><Input {...field} ref={kapanRef} onKeyDown={(e) => handleKeyDown(e, lotRef)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={control} name="lotNumber" render={({ field }) => (
-                        <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Lot Number</FormLabel><FormControl><Input {...field} ref={lotRef} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={control} name="mainPacketNumber" render={({ field }) => (
                             <FormItem>
@@ -261,7 +280,7 @@ export default function SarinPacketEntryPage() {
                             </FormItem>
                         )} />
                         <FormField control={control} name="packetCount" render={({ field }) => (
-                        <FormItem><FormLabel>Packet Count (Sub-Packets)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Packet Count (Sub-Packets)</FormLabel><FormControl><Input type="number" {...field} ref={packetCountRef} onKeyDown={(e) => handleKeyDown(e, submitRef)} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <div className="space-y-2">
                         <FormField control={control} name="hasJiram" render={({ field }) => (
@@ -272,7 +291,7 @@ export default function SarinPacketEntryPage() {
                         )} />
                         {hasJiram && (
                             <FormField control={control} name="jiramCount" render={({ field }) => (
-                            <FormItem><FormLabel>Jiram Packet Count</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Jiram Packet Count</FormLabel><FormControl><Input type="number" {...field} ref={jiramCountRef} onKeyDown={(e) => handleKeyDown(e, submitRef)} /></FormControl><FormMessage /></FormItem>
                             )} />
                         )}
                         </div>
@@ -293,7 +312,7 @@ export default function SarinPacketEntryPage() {
                                 )}
                             </div>
                         )}
-                        <button type="submit" disabled={!foundLaserLot} className="uiverse-button mt-6">
+                        <button type="submit" disabled={!foundLaserLot} ref={submitRef} className="uiverse-button mt-6">
                             <div className="state state--default">
                                 <span className="icon">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24" width="24">
