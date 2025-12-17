@@ -127,7 +127,7 @@ export default function DatewiseProductionReport() {
             operator: op, 
             returned: depts.sarinReturned || 0, 
             chalu: depts.sarinChalu || 0, 
-            total: depts.sarinReturned || 0 
+            total: depts.sarinReturned || 0
         }))
         .sort((a,b) => b.total - a.total), [departmentData]);
 
@@ -221,3 +221,4 @@ export default function DatewiseProductionReport() {
     </Card>
   );
 }
+
