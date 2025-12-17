@@ -36,8 +36,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { deleteKapanData } from '@/lib/kapan-deleter';
-import { useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useFirestore } from '@/firebase';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
 
 
 type KapanSummary = {
@@ -57,6 +57,12 @@ export default function JiramReportPage() {
   
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
+
+  const kapansQuery = useMemo(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'kapans'));
+  }, [firestore]);
+  const { data: kapans } = useCollection(kapansQuery);
 
   // New state for enhanced UX
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +138,7 @@ export default function JiramReportPage() {
         return;
     }
     const [, kapanNumber, packetIdentifier] = match;
-    const [packetNumber, suffix] = packetIdentifier.split('-');
+    const [packetNumberStr, suffix] = packetIdentifier.split('-');
 
 
     if (jiramPackets.some(p => p.barcode === barcode)) {
@@ -157,13 +163,27 @@ export default function JiramReportPage() {
 
     // Save to Firestore for Chalu Entry page
     try {
-        await addDoc(collection(firestore, 'jiramEntries'), {
+        const batch = writeBatch(firestore);
+
+        // Add to jiramEntries
+        const jiramDocRef = doc(collection(firestore, 'jiramEntries'));
+        batch.set(jiramDocRef, {
             barcode: barcode,
             kapanNumber: kapanNumber,
             packetNumber: packetIdentifier,
             suffix: suffix || '',
             scanTime: serverTimestamp(),
         });
+        
+        // Check if Kapan exists, if not, add it
+        const kapanExists = kapans?.some(k => k.kapanNumber === kapanNumber);
+        if (!kapanExists) {
+            const kapanDocRef = doc(collection(firestore, 'kapans'));
+            batch.set(kapanDocRef, { kapanNumber });
+        }
+        
+        await batch.commit();
+        
          toast({ title: 'Packet Scanned & Queued', description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
     } catch(err) {
         console.error("Failed to save Jiram scan to Firestore:", err);
@@ -381,3 +401,5 @@ export default function JiramReportPage() {
     </div>
   );
 }
+
+    
