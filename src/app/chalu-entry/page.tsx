@@ -98,6 +98,9 @@ export default function ChaluEntryPage() {
   // State for inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
+  
+  const [lastClickedJiramId, setLastClickedJiramId] = useState<string | null>(null);
+
 
   // Use refs to store the latest state for the cleanup function
   const stateRef = useRef({
@@ -211,6 +214,9 @@ export default function ChaluEntryPage() {
     setPacketNumber(jiramEntry.packetNumber);
     setSuffix(jiramEntry.suffix || '');
     setPendingJiramId(jiramEntry.id);
+    
+    setLastClickedJiramId(jiramEntry.id);
+    setTimeout(() => setLastClickedJiramId(null), 500);
   }
 
   const handleEditClick = (entry: any) => {
@@ -389,6 +395,11 @@ export default function ChaluEntryPage() {
         entries: filteredEntries.sort((a,b) => (a.packetNumber || '').localeCompare(b.packetNumber || '')),
     };
   }, [filteredEntries, kapanFilter]);
+
+  const filteredJiramEntries = useMemo(() => {
+      if (!kapanNumber) return jiramEntries || [];
+      return (jiramEntries || []).filter(entry => entry.kapanNumber === kapanNumber);
+  }, [jiramEntries, kapanNumber]);
 
 
   return (
@@ -707,7 +718,7 @@ export default function ChaluEntryPage() {
 
       <Card className="flex flex-col">
          <CardHeader>
-             <CardTitle>Pending Jiram Scans</CardTitle>
+             <CardTitle>Pending Jiram Scans for Kapan: {kapanNumber || 'All'}</CardTitle>
              <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
@@ -721,14 +732,22 @@ export default function ChaluEntryPage() {
                          </TableRow>
                      </TableHeader>
                      <TableBody>
-                         {jiramEntries?.map(entry => (
-                             <TableRow key={entry.id} className={cn("cursor-pointer", pendingJiramId === entry.id && "bg-accent")}>
-                                 <TableCell onClick={() => handleJiramPacketClick(entry)}>{entry.kapanNumber}</TableCell>
-                                 <TableCell onClick={() => handleJiramPacketClick(entry)}>{entry.packetNumber}</TableCell>
+                         {filteredJiramEntries.map(entry => (
+                             <TableRow 
+                                key={entry.id} 
+                                className={cn(
+                                    "cursor-pointer transition-colors duration-300", 
+                                    pendingJiramId === entry.id && "bg-accent",
+                                    lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50'
+                                )}
+                                onClick={() => handleJiramPacketClick(entry)}
+                              >
+                                 <TableCell>{entry.kapanNumber}</TableCell>
+                                 <TableCell>{entry.packetNumber}</TableCell>
                                  <TableCell>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
+                                            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
@@ -746,8 +765,10 @@ export default function ChaluEntryPage() {
                                  </TableCell>
                              </TableRow>
                          ))}
-                         {jiramEntries?.length === 0 && (
-                             <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No pending Jiram scans.</TableCell></TableRow>
+                         {filteredJiramEntries.length === 0 && (
+                             <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">
+                                {kapanNumber ? `No pending scans for Kapan ${kapanNumber}.` : 'Select a Kapan to see pending scans.'}
+                             </TableCell></TableRow>
                          )}
                      </TableBody>
                  </Table>
