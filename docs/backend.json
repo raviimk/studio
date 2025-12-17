@@ -61,6 +61,35 @@
       "required": [
         "kapanNumber"
       ]
+    },
+    "jiramEntry": {
+      "title": "Jiram Entry",
+      "description": "Represents a single packet scanned during Jiram verification, pending Chalu entry.",
+      "type": "object",
+      "properties": {
+        "barcode": {
+          "type": "string",
+          "description": "The full barcode scanned."
+        },
+        "kapanNumber": {
+          "type": "string",
+          "description": "The Kapan number extracted from the barcode."
+        },
+        "packetNumber": {
+          "type": "string",
+          "description": "The packet number part of the barcode."
+        },
+        "suffix": {
+          "type": "string",
+          "description": "The suffix part of the barcode, if any."
+        },
+        "scanTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the packet was scanned."
+        }
+      },
+      "required": ["barcode", "kapanNumber", "packetNumber", "scanTime"]
     }
   },
   "auth": {
@@ -78,8 +107,12 @@
         "$ref": "#/entities/kapan"
       },
       "description": "Stores the list of all available Kapan numbers."
+    },
+    "/jiramEntries/{jiramEntryId}": {
+      "schema": {
+        "$ref": "#/entities/jiramEntry"
+      },
+      "description": "Stores packets scanned during Jiram verification that are pending Chalu entry."
     }
   }
 }
-
-    

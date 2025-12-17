@@ -10,10 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
-import { useCollection, useDoc, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc } from 'firebase/firestore';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import {
@@ -34,6 +34,18 @@ type Kapan = {
     kapanNumber: string;
 };
 
+type JiramEntry = {
+    id: string;
+    barcode: string;
+    kapanNumber: string;
+    packetNumber: string;
+    suffix: string;
+    scanTime: {
+        seconds: number;
+        nanoseconds: number;
+    }
+}
+
 export default function ChaluEntryPage() {
   const { toast } = useToast();
   const { isFullscreen, setFullscreen } = useLayout();
@@ -50,9 +62,16 @@ export default function ChaluEntryPage() {
       if (!firestore) return null;
       return query(collection(firestore, 'kapans'));
   }, [firestore]);
+  
+  const jiramEntriesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'jiramEntries'), orderBy('scanTime', 'desc'));
+  }, [firestore]);
+
 
   const { data: chaluEntries, loading: loadingEntries } = useCollection(chaluEntriesQuery);
   const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
+  const { data: jiramEntries, loading: loadingJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -64,6 +83,8 @@ export default function ChaluEntryPage() {
   const [kapanFilter, setKapanFilter] = useState('');
   const [isReportOpen, setReportOpen] = useState(false);
   
+  const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
+
   // State for new kapan dialog
   const [isKapanDialogOpen, setKapanDialogOpen] = useState(false);
   const [newKapanNumber, setNewKapanNumber] = useState('');
@@ -81,15 +102,15 @@ export default function ChaluEntryPage() {
   // Use refs to store the latest state for the cleanup function
   const stateRef = useRef({
       kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-      editingId, editFormData, firestore, toast
+      editingId, editFormData, firestore, toast, pendingJiramId
   });
 
   useEffect(() => {
       stateRef.current = {
           kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-          editingId, editFormData, firestore, toast
+          editingId, editFormData, firestore, toast, pendingJiramId
       };
-  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast]);
+  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast, pendingJiramId]);
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -125,9 +146,20 @@ export default function ChaluEntryPage() {
       setSuffix('');
     }
   }, [originalCount, adjustmentValue]);
+  
+  const resetForm = () => {
+    setPacketNumber('');
+    setVajan('');
+    setOriginalPcs('');
+    setAdjustment('');
+    setSuffix('');
+    setCurrentPcs('');
+    setPendingJiramId(null);
+    // Do not reset kapan number
+  }
 
   const handleSave = async (showToast = true) => {
-    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment } = stateRef.current;
+    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId } = stateRef.current;
     if (!firestore) {
         if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
         return false;
@@ -149,14 +181,14 @@ export default function ChaluEntryPage() {
             currentPcs: parseInt(currentPcs, 10) || 0,
             createdAt: serverTimestamp(),
         });
+        
+        // If this entry came from a pending Jiram scan, delete it from the queue
+        if(pendingJiramId) {
+            await deleteDoc(doc(firestore, 'jiramEntries', pendingJiramId));
+        }
+
         if(showToast) toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
-        // Reset form
-        setPacketNumber('');
-        setVajan('');
-        setOriginalPcs('');
-        setAdjustment('');
-        setSuffix('');
-        setCurrentPcs('');
+        resetForm();
         return true;
 
     } catch (e) {
@@ -165,6 +197,13 @@ export default function ChaluEntryPage() {
         return false;
     }
   };
+  
+  const handleJiramPacketClick = (jiramEntry: JiramEntry) => {
+    setKapanNumber(jiramEntry.kapanNumber);
+    setPacketNumber(jiramEntry.packetNumber);
+    setSuffix(jiramEntry.suffix || '');
+    setPendingJiramId(jiramEntry.id);
+  }
 
   const handleEditClick = (entry: any) => {
     setEditingId(entry.id);
@@ -345,315 +384,367 @@ export default function ChaluEntryPage() {
 
 
   return (
-    <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
-      <div className="flex justify-between items-start">
-        <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
-        <Button variant="ghost" size="icon" onClick={handleToggleFullscreen}>
-            {isFullscreen ? <Minimize/> : <Maximize />}
-        </Button>
-      </div>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>ATIXE PRO</CardTitle>
-          <CardDescription>Select a lot and enter the number of packets completed or adjusted today.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
-            <div className="lg:col-span-1">
-              <label className="text-sm font-medium">કાપણ નંબર</label>
-              <div className="flex gap-1">
-                <Select value={kapanNumber} onValueChange={setKapanNumber}>
-                    <SelectTrigger><SelectValue placeholder="કાપણ ?" /></SelectTrigger>
-                    <SelectContent>
-                    {kapans?.sort((a, b) => a.kapanNumber.localeCompare(b.kapanNumber, undefined, { numeric: true })).map(k => (
-                        <SelectItem key={k.id} value={k.kapanNumber}>{k.kapanNumber}</SelectItem>
-                    ))}
-                    </SelectContent>
-                </Select>
-                <Dialog open={isKapanDialogOpen} onOpenChange={setKapanDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="icon"><PlusCircle className="h-4 w-4"/></Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Add New Kapan</DialogTitle>
-                            <DialogDescription>Create a new Kapan number that will be available in the dropdown.</DialogDescription>
-                        </DialogHeader>
-                        <Input value={newKapanNumber} onChange={(e) => setNewKapanNumber(e.target.value)} placeholder="Enter new Kapan number"/>
-                        <DialogFooter>
-                            <Button variant="outline" onClick={() => setKapanDialogOpen(false)}>Cancel</Button>
-                            <Button onClick={handleAddKapan}>Save Kapan</Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
-                 <Dialog open={isManageKapanOpen} onOpenChange={setManageKapanOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="icon"><Settings className="h-4 w-4"/></Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Manage Kapans</DialogTitle>
-                            <DialogDescription>Edit or delete existing Kapan numbers.</DialogDescription>
-                        </DialogHeader>
-                        <div className="max-h-96 overflow-y-auto">
-                            <Table>
-                                <TableBody>
-                                    {(kapans || []).map(k => (
-                                        <TableRow key={k.id}>
-                                            <TableCell>
-                                                {editingKapanId === k.id ? (
-                                                    <Input value={editingKapanValue} onChange={e => setEditingKapanValue(e.target.value)} />
-                                                ) : (
-                                                    k.kapanNumber
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                {editingKapanId === k.id ? (
-                                                     <div className="flex gap-1 justify-end">
-                                                        <Button size="sm" onClick={handleSaveKapan}><Save className="h-4 w-4" /></Button>
-                                                        <Button size="sm" variant="ghost" onClick={() => setEditingKapanId(null)}><X className="h-4 w-4" /></Button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex gap-1 justify-end">
-                                                        <Button size="sm" variant="outline" onClick={() => handleEditKapan(k)}><Edit className="h-4 w-4" /></Button>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete Kapan "{k.kapanNumber}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDeleteKapan(k.id)}>Delete</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </div>
-                                                )}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-            <div className="lg:col-span-1">
-              <label className="text-sm font-medium">પેકેટ નંબર</label>
-              <Input 
-                value={packetNumber}
-                onChange={(e) => setPacketNumber(e.target.value)}
-                placeholder="પેકેટ નંબર ?."
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">ઓ.થાન</label>
-              <Input 
-                type="number"
-                value={originalPcs}
-                onChange={(e) => setOriginalPcs(e.target.value)}
-                placeholder="ઓરિજિનલ કેટલા ?"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">નુકશાની(+/-)</label>
-              <Input 
-                type="number" 
-                value={adjustment} 
-                onChange={(e) => setAdjustment(e.target.value)}
-                placeholder="e.g., -1 or 5"
-              />
-            </div>
-             <div>
-              <label className="text-sm font-medium">પ્લસ/માઈનસ</label>
-              <Input 
-                value={suffix} 
-                onChange={(e) => setSuffix(e.target.value)}
-                placeholder="Auto"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium">ટો.થાન</label>
-              <Input 
-                type="number"
-                value={currentPcs} 
-                onChange={(e) => setCurrentPcs(e.target.value)}
-                className="font-bold text-lg"
-              />
-            </div>
-             <div>
-              <label className="text-sm font-medium">વજન(Weight)</label>
-              <Input 
-                type="number"
-                value={vajan}
-                onChange={(e) => setVajan(e.target.value)}
-                placeholder="વજન લખો"
-              />
-            </div>
+    <div className="grid lg:grid-cols-[1fr,350px] gap-6 h-screen p-6">
+      <div className="flex flex-col gap-6">
+          <div className="flex justify-between items-start">
+            <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
+            <Button variant="ghost" size="icon" onClick={handleToggleFullscreen}>
+                {isFullscreen ? <Minimize/> : <Maximize />}
+            </Button>
           </div>
-          <Button onClick={() => handleSave(true)} className="mt-4">
-            <Save className="mr-2" /> Save
-          </Button>
-        </CardContent>
-      </Card>
-      
-      <Card>
-          <CardHeader>
-              <CardTitle>અત્યાર સુધી ની એન્ટ્રી</CardTitle>
-              <div className="flex justify-between items-center">
-                <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
-                <div className="flex gap-2 items-center">
-                    <Input
-                        placeholder="Filter by Kapan..."
-                        value={kapanFilter}
-                        onChange={(e) => setKapanFilter(e.target.value)}
-                        className="max-w-xs"
-                    />
-                     <Dialog open={isReportOpen} onOpenChange={setReportOpen}>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>ATIXE PRO</CardTitle>
+              <CardDescription>Select a lot and enter the number of packets completed or adjusted today.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 lg:grid-cols-7 gap-4 items-end">
+                <div className="lg:col-span-1">
+                  <label className="text-sm font-medium">કાપણ નંબર</label>
+                  <div className="flex gap-1">
+                    <Select value={kapanNumber} onValueChange={setKapanNumber}>
+                        <SelectTrigger><SelectValue placeholder="કાપણ ?" /></SelectTrigger>
+                        <SelectContent>
+                        {kapans?.sort((a, b) => a.kapanNumber.localeCompare(b.kapanNumber, undefined, { numeric: true })).map(k => (
+                            <SelectItem key={k.id} value={k.kapanNumber}>{k.kapanNumber}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <Dialog open={isKapanDialogOpen} onOpenChange={setKapanDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" disabled={!kapanFilter || !reportSummary}>
-                                <FileText className="mr-2 h-4 w-4" /> View Report
-                            </Button>
+                            <Button variant="outline" size="icon"><PlusCircle className="h-4 w-4"/></Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl">
+                        <DialogContent>
                             <DialogHeader>
-                                <DialogTitle>Full Report for Kapan: {kapanFilter}</DialogTitle>
-                                <DialogDescription>A detailed summary and list of all entries for this Kapan.</DialogDescription>
+                                <DialogTitle>Add New Kapan</DialogTitle>
+                                <DialogDescription>Create a new Kapan number that will be available in the dropdown.</DialogDescription>
                             </DialogHeader>
-                            {reportSummary && (
-                                <>
-                                    <div className="mb-4 border rounded-lg p-4 bg-muted/50">
-                                        <h3 className="font-semibold text-lg mb-2">Summary</h3>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <div className="text-center">
-                                                <p className="text-sm text-muted-foreground">Total Entries</p>
-                                                <p className="text-2xl font-bold">{reportSummary.totalEntries}</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm text-muted-foreground">Total Weight</p>
-                                                <p className="text-2xl font-bold">{reportSummary.totalVajan}</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm text-muted-foreground">Total Plus</p>
-                                                <p className="text-2xl font-bold text-green-600">+{reportSummary.totalPlus}</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-sm text-muted-foreground">Total Minus</p>
-                                                <p className="text-2xl font-bold text-destructive">{reportSummary.totalMinus}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="max-h-[50vh] overflow-y-auto">
-                                        <Table>
-                                          <TableHeader>
-                                              <TableRow>
-                                                  <TableHead>પેકેટ</TableHead>
-                                                  <TableHead>ઓરિજિનલ</TableHead>
-                                                  <TableHead>નુકશાની</TableHead>
-                                                  <TableHead>પ્લસ/માઈનસ</TableHead>
-                                                  <TableHead>ટોટલ</TableHead>
-                                                  <TableHead>વજન</TableHead>
-                                              </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                              {reportSummary.entries.map(entry => (
-                                                  <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
-                                                      <TableCell>{entry.packetNumber}</TableCell>
-                                                      <TableCell>{entry.originalPcs}</TableCell>
-                                                      <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
-                                                          {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
-                                                      </TableCell>
-                                                      <TableCell>{entry.suffix}</TableCell>
-                                                      <TableCell className="font-bold">{entry.currentPcs}</TableCell>
-                                                      <TableCell>{entry.vajan}</TableCell>
-                                                  </TableRow>
-                                              ))}
-                                          </TableBody>
-                                        </Table>
-                                    </div>
-                                </>
-                            )}
+                            <Input value={newKapanNumber} onChange={(e) => setNewKapanNumber(e.target.value)} placeholder="Enter new Kapan number"/>
+                            <DialogFooter>
+                                <Button variant="outline" onClick={() => setKapanDialogOpen(false)}>Cancel</Button>
+                                <Button onClick={handleAddKapan}>Save Kapan</Button>
+                            </DialogFooter>
                         </DialogContent>
-                     </Dialog>
+                    </Dialog>
+                     <Dialog open={isManageKapanOpen} onOpenChange={setManageKapanOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="icon"><Settings className="h-4 w-4"/></Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Manage Kapans</DialogTitle>
+                                <DialogDescription>Edit or delete existing Kapan numbers.</DialogDescription>
+                            </DialogHeader>
+                            <div className="max-h-96 overflow-y-auto">
+                                <Table>
+                                    <TableBody>
+                                        {(kapans || []).map(k => (
+                                            <TableRow key={k.id}>
+                                                <TableCell>
+                                                    {editingKapanId === k.id ? (
+                                                        <Input value={editingKapanValue} onChange={e => setEditingKapanValue(e.target.value)} />
+                                                    ) : (
+                                                        k.kapanNumber
+                                                    )}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {editingKapanId === k.id ? (
+                                                         <div className="flex gap-1 justify-end">
+                                                            <Button size="sm" onClick={handleSaveKapan}><Save className="h-4 w-4" /></Button>
+                                                            <Button size="sm" variant="ghost" onClick={() => setEditingKapanId(null)}><X className="h-4 w-4" /></Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex gap-1 justify-end">
+                                                            <Button size="sm" variant="outline" onClick={() => handleEditKapan(k)}><Edit className="h-4 w-4" /></Button>
+                                                            <AlertDialog>
+                                                                <AlertDialogTrigger asChild>
+                                                                    <Button variant="destructive" size="sm"><Trash2 className="h-4 w-4" /></Button>
+                                                                </AlertDialogTrigger>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete Kapan "{k.kapanNumber}". This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDeleteKapan(k.id)}>Delete</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                  </div>
+                </div>
+                <div className="lg:col-span-1">
+                  <label className="text-sm font-medium">પેકેટ નંબર</label>
+                  <Input 
+                    value={packetNumber}
+                    onChange={(e) => setPacketNumber(e.target.value)}
+                    placeholder="પેકેટ નંબર ?."
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">ઓ.થાન</label>
+                  <Input 
+                    type="number"
+                    value={originalPcs}
+                    onChange={(e) => setOriginalPcs(e.target.value)}
+                    placeholder="ઓરિજિનલ કેટલા ?"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">નુકશાની(+/-)</label>
+                  <Input 
+                    type="number" 
+                    value={adjustment} 
+                    onChange={(e) => setAdjustment(e.target.value)}
+                    placeholder="e.g., -1 or 5"
+                  />
+                </div>
+                 <div>
+                  <label className="text-sm font-medium">પ્લસ/માઈનસ</label>
+                  <Input 
+                    value={suffix} 
+                    onChange={(e) => setSuffix(e.target.value)}
+                    placeholder="Auto"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">ટો.થાન</label>
+                  <Input 
+                    type="number"
+                    value={currentPcs} 
+                    onChange={(e) => setCurrentPcs(e.target.value)}
+                    className="font-bold text-lg"
+                  />
+                </div>
+                 <div>
+                  <label className="text-sm font-medium">વજન(Weight)</label>
+                  <Input 
+                    type="number"
+                    value={vajan}
+                    onChange={(e) => setVajan(e.target.value)}
+                    placeholder="વજન લખો"
+                  />
                 </div>
               </div>
-          </CardHeader>
-          <CardContent>
-              <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead>કાપણ</TableHead>
-                          <TableHead>પેકેટ</TableHead>
-                          <TableHead>ઓરિજિનલ થાન</TableHead>
-                          <TableHead>નુકશાની(+/-)</TableHead>
-                          <TableHead>પ્લસ/માઈનસ</TableHead>
-                          <TableHead>ટો.થાન</TableHead>
-                          <TableHead>વજન</TableHead>
-                          <TableHead>સુધારો</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                      {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
-                      {!loadingEntries && filteredEntries.map(entry => (
-                      <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
-                        {editingId === entry.id ? (
-                            <>
-                                <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell><Input type="number" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
-                                <TableCell>
-                                    <Button size="sm" onClick={() => handleSaveEdit(entry.id, true)}><Save className="h-4 w-4" /></Button>
-                                    <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
-                                </TableCell>
-                            </>
-                        ) : (
-                             <>
-                                <TableCell>{entry.kapanNumber}</TableCell>
-                                <TableCell>{entry.packetNumber}</TableCell>
-                                <TableCell>{entry.originalPcs}</TableCell>
-                                <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
-                                  {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
-                                </TableCell>
-                                <TableCell>{entry.suffix}</TableCell>
-                                <TableCell className="font-bold">{entry.currentPcs}</TableCell>
-                                <TableCell>{entry.vajan}</TableCell>
-                                <TableCell className="flex gap-1">
-                                    <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
+              <Button onClick={() => handleSave(true)} className="mt-4">
+                <Save className="mr-2" /> Save
+              </Button>
+            </CardContent>
+          </Card>
+          
+          <Card className="flex-1 flex flex-col">
+              <CardHeader>
+                  <CardTitle>અત્યાર સુધી ની એન્ટ્રી</CardTitle>
+                  <div className="flex justify-between items-center">
+                    <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
+                    <div className="flex gap-2 items-center">
+                        <Input
+                            placeholder="Filter by Kapan..."
+                            value={kapanFilter}
+                            onChange={(e) => setKapanFilter(e.target.value)}
+                            className="max-w-xs"
+                        />
+                         <Dialog open={isReportOpen} onOpenChange={setReportOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" disabled={!kapanFilter || !reportSummary}>
+                                    <FileText className="mr-2 h-4 w-4" /> View Report
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl">
+                                <DialogHeader>
+                                    <DialogTitle>Full Report for Kapan: {kapanFilter}</DialogTitle>
+                                    <DialogDescription>A detailed summary and list of all entries for this Kapan.</DialogDescription>
+                                </DialogHeader>
+                                {reportSummary && (
+                                    <>
+                                        <div className="mb-4 border rounded-lg p-4 bg-muted/50">
+                                            <h3 className="font-semibold text-lg mb-2">Summary</h3>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div className="text-center">
+                                                    <p className="text-sm text-muted-foreground">Total Entries</p>
+                                                    <p className="text-2xl font-bold">{reportSummary.totalEntries}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm text-muted-foreground">Total Weight</p>
+                                                    <p className="text-2xl font-bold">{reportSummary.totalVajan}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm text-muted-foreground">Total Plus</p>
+                                                    <p className="text-2xl font-bold text-green-600">+{reportSummary.totalPlus}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm text-muted-foreground">Total Minus</p>
+                                                    <p className="text-2xl font-bold text-destructive">{reportSummary.totalMinus}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-[50vh] overflow-y-auto">
+                                            <Table>
+                                              <TableHeader>
+                                                  <TableRow>
+                                                      <TableHead>પેકેટ</TableHead>
+                                                      <TableHead>ઓરિજિનલ</TableHead>
+                                                      <TableHead>નુકશાની</TableHead>
+                                                      <TableHead>પ્લસ/માઈનસ</TableHead>
+                                                      <TableHead>ટોટલ</TableHead>
+                                                      <TableHead>વજન</TableHead>
+                                                  </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                  {reportSummary.entries.map(entry => (
+                                                      <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
+                                                          <TableCell>{entry.packetNumber}</TableCell>
+                                                          <TableCell>{entry.originalPcs}</TableCell>
+                                                          <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
+                                                              {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
+                                                          </TableCell>
+                                                          <TableCell>{entry.suffix}</TableCell>
+                                                          <TableCell className="font-bold">{entry.currentPcs}</TableCell>
+                                                          <TableCell>{entry.vajan}</TableCell>
+                                                      </TableRow>
+                                                  ))}
+                                              </TableBody>
+                                            </Table>
+                                        </div>
+                                    </>
+                                )}
+                            </DialogContent>
+                         </Dialog>
+                    </div>
+                  </div>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto">
+                  <Table>
+                      <TableHeader>
+                          <TableRow>
+                              <TableHead>કાપણ</TableHead>
+                              <TableHead>પેકેટ</TableHead>
+                              <TableHead>ઓરિજિનલ થાન</TableHead>
+                              <TableHead>નુકશાની(+/-)</TableHead>
+                              <TableHead>પ્લસ/માઈનસ</TableHead>
+                              <TableHead>ટો.થાન</TableHead>
+                              <TableHead>વજન</TableHead>
+                              <TableHead>સુધારો</TableHead>
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
+                          {!loadingEntries && filteredEntries.map(entry => (
+                          <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
+                            {editingId === entry.id ? (
+                                <>
+                                    <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell>
+                                        <Button size="sm" onClick={() => handleSaveEdit(entry.id, true)}><Save className="h-4 w-4" /></Button>
+                                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+                                    </TableCell>
+                                </>
+                            ) : (
+                                 <>
+                                    <TableCell>{entry.kapanNumber}</TableCell>
+                                    <TableCell>{entry.packetNumber}</TableCell>
+                                    <TableCell>{entry.originalPcs}</TableCell>
+                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
+                                      {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
+                                    </TableCell>
+                                    <TableCell>{entry.suffix}</TableCell>
+                                    <TableCell className="font-bold">{entry.currentPcs}</TableCell>
+                                    <TableCell>{entry.vajan}</TableCell>
+                                    <TableCell className="flex gap-1">
+                                        <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm" className="w-9 p-0">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </>
+                            )}
+                          </TableRow>
+                          ))}
+                          {!loadingEntries && filteredEntries.length === 0 && (
+                              <TableRow><TableCell colSpan={8} className="text-center">No entries found.</TableCell></TableRow>
+                          )}
+                      </TableBody>
+                  </Table>
+              </CardContent>
+          </Card>
+      </div>
+
+      <Card className="flex flex-col">
+         <CardHeader>
+             <CardTitle>Pending Jiram Scans</CardTitle>
+             <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
+         </CardHeader>
+         <CardContent className="flex-1 overflow-y-auto">
+             {loadingJiramEntries ? <p>Loading...</p> : (
+                 <Table>
+                     <TableHeader>
+                         <TableRow>
+                             <TableHead>Kapan</TableHead>
+                             <TableHead>Packet</TableHead>
+                             <TableHead>Action</TableHead>
+                         </TableRow>
+                     </TableHeader>
+                     <TableBody>
+                         {jiramEntries?.map(entry => (
+                             <TableRow key={entry.id} className={cn("cursor-pointer", pendingJiramId === entry.id && "bg-accent")}>
+                                 <TableCell onClick={() => handleJiramPacketClick(entry)}>{entry.kapanNumber}</TableCell>
+                                 <TableCell onClick={() => handleJiramPacketClick(entry)}>{entry.packetNumber}</TableCell>
+                                 <TableCell>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="destructive" size="sm" className="w-9 p-0">
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
+                                                <AlertDialogTitle>Delete Pending Scan?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will remove "{entry.barcode}" from the pending list. It won't affect the main Chalu entries.
+                                                </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id))}>Delete Scan</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
-                                </TableCell>
-                            </>
-                        )}
-                      </TableRow>
-                      ))}
-                      {!loadingEntries && filteredEntries.length === 0 && (
-                          <TableRow><TableCell colSpan={8} className="text-center">No entries found.</TableCell></TableRow>
-                      )}
-                  </TableBody>
-              </Table>
-          </CardContent>
+                                 </TableCell>
+                             </TableRow>
+                         ))}
+                         {jiramEntries?.length === 0 && (
+                             <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">No pending Jiram scans.</TableCell></TableRow>
+                         )}
+                     </TableBody>
+                 </Table>
+             )}
+         </CardContent>
       </Card>
     </div>
   );

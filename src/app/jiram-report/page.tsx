@@ -36,6 +36,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { deleteKapanData } from '@/lib/kapan-deleter';
+import { useFirestore } from '@/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 
 type KapanSummary = {
@@ -49,6 +51,7 @@ type KapanSummary = {
 
 export default function JiramReportPage() {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [jiramPackets, setJiramPackets] = useLocalStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
   const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   
@@ -118,17 +121,19 @@ export default function JiramReportPage() {
     }).sort((a,b) => parseInt(a.kapanNumber) - parseInt(b.kapanNumber));
   }, [sarinPackets, jiramPackets]);
 
-  const handleBarcodeScan = (e: React.FormEvent) => {
+  const handleBarcodeScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcode) return;
+    if (!barcode || !firestore) return;
 
-    const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
+    const match = barcode.match(/^(?:R)?(\d+)-(\d+(?:-[A-Z])?)$/);
     if (!match) {
         toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: 'Cannot extract Kapan number from barcode.' });
         setBarcode('');
         return;
     }
-    const [, kapanNumber] = match;
+    const [, kapanNumber, packetIdentifier] = match;
+    const [packetNumber, suffix] = packetIdentifier.split('-');
+
 
     if (jiramPackets.some(p => p.barcode === barcode)) {
         toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This packet has already been scanned.' });
@@ -141,15 +146,30 @@ export default function JiramReportPage() {
         toast({ variant: 'destructive', title: 'No Expected Jiram', description: `No Jiram entries found for Kapan ${kapanNumber} in the Sarin module.`});
     }
 
-    const newPacket: JiramReportPacket = {
+    // Save to local storage for this page's report
+    const newPacketLocal: JiramReportPacket = {
       id: uuidv4(),
       barcode,
       kapanNumber,
       scanTime: new Date().toISOString(),
     };
+    setJiramPackets(prev => [newPacketLocal, ...prev]);
 
-    setJiramPackets(prev => [newPacket, ...prev]);
-    toast({ title: 'Packet Scanned', description: `Added ${barcode} to Kapan ${kapanNumber}.` });
+    // Save to Firestore for Chalu Entry page
+    try {
+        await addDoc(collection(firestore, 'jiramEntries'), {
+            barcode: barcode,
+            kapanNumber: kapanNumber,
+            packetNumber: packetIdentifier,
+            suffix: suffix || '',
+            scanTime: serverTimestamp(),
+        });
+         toast({ title: 'Packet Scanned & Queued', description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
+    } catch(err) {
+        console.error("Failed to save Jiram scan to Firestore:", err);
+        toast({ variant: 'destructive', title: 'Cloud Save Failed', description: 'Packet saved locally, but failed to queue for Chalu entry.'})
+    }
+    
     setBarcode('');
     setHighlightedKapan(kapanNumber);
     setShowSuccessTick(true);

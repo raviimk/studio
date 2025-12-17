@@ -17,7 +17,10 @@ service cloud.firestore {
     match /kapans/{kapanId} {
       allow read, write: if true;
     }
+    
+    // Allow public access to the 'jiramEntries' collection for the queue
+    match /jiramEntries/{jiramEntryId} {
+        allow read, write: if true;
+    }
   }
 }
-
-    
