@@ -17,9 +17,9 @@ import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 
-type SarinDetail = { lotNumber: string, pcs: number };
-type LaserDetail = { lotNumber: string, pcs: number };
-type FourPDetail = { lotNumber: string, pcs: number };
+type SarinDetail = { lotNumber: string, pcs: number, kapanNumber: string };
+type LaserDetail = { lotNumber: string, pcs: number, kapanNumber: string };
+type FourPDetail = { lotNumber: string, pcs: number, kapanNumber: string };
 
 
 type OperatorSarinData = {
@@ -61,7 +61,7 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon }: { t
     </Card>
 );
 
-const DetailDialog = ({ operator, department, lots, trigger }: { operator: string, department: string, lots: { lotNumber: string, pcs: number }[], trigger: React.ReactNode }) => {
+const DetailDialog = ({ operator, department, lots, trigger }: { operator: string, department: string, lots: { lotNumber: string, pcs: number, kapanNumber: string }[], trigger: React.ReactNode }) => {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -76,6 +76,7 @@ const DetailDialog = ({ operator, department, lots, trigger }: { operator: strin
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Kapan</TableHead>
                 <TableHead>Lot Number</TableHead>
                 <TableHead className="text-right">PCS</TableHead>
               </TableRow>
@@ -83,12 +84,13 @@ const DetailDialog = ({ operator, department, lots, trigger }: { operator: strin
             <TableBody>
               {lots.map((lot, index) => (
                 <TableRow key={`${lot.lotNumber}-${index}`}>
+                  <TableCell>{lot.kapanNumber}</TableCell>
                   <TableCell>{lot.lotNumber}</TableCell>
                   <TableCell className="text-right font-mono">{lot.pcs}</TableCell>
                 </TableRow>
               ))}
                <TableRow className="bg-muted font-bold">
-                  <TableCell>Total</TableCell>
+                  <TableCell colSpan={2}>Total</TableCell>
                   <TableCell className="text-right font-mono">{lots.reduce((sum, lot) => sum + lot.pcs, 0)}</TableCell>
                 </TableRow>
             </TableBody>
@@ -126,7 +128,7 @@ export default function DatewiseProductionReport() {
         if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), dateFilter)) {
             ensureOperator(p.returnedBy);
             data[p.returnedBy].returned += p.packetCount;
-            data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount });
+            data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber });
         }
 
         // Chalu (running) on the selected date
@@ -138,7 +140,7 @@ export default function DatewiseProductionReport() {
         if (isCreatedOnOrBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
              ensureOperator(p.operator);
              data[p.operator].chalu += p.packetCount;
-             data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount });
+             data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber });
         }
     });
 
@@ -164,7 +166,7 @@ export default function DatewiseProductionReport() {
             }
             const pcs = l.subPacketCount ?? l.packetCount;
             data[l.returnedBy].pcs += pcs;
-            data[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs });
+            data[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs, kapanNumber: l.kapanNumber });
         }
     });
      return Object.entries(data)
@@ -184,13 +186,13 @@ export default function DatewiseProductionReport() {
                 l.fourPData.forEach(d => {
                     if (!data[d.operator]) data[d.operator] = { pcs: 0, lots: [] };
                     data[d.operator].pcs += d.pcs;
-                    data[d.operator].lots.push({ lotNumber: l.lot, pcs: d.pcs });
+                    data[d.operator].lots.push({ lotNumber: l.lot, pcs: d.pcs, kapanNumber: l.kapan });
                 });
             } else if (l.fourPOperator) { // Legacy single operator
                 if (!data[l.fourPOperator]) data[l.fourPOperator] = { pcs: 0, lots: [] };
                 const pcs = l.finalPcs || 0;
                 data[l.fourPOperator].pcs += pcs;
-                data[l.fourPOperator].lots.push({ lotNumber: l.lot, pcs });
+                data[l.fourPOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan });
             }
         }
     });
@@ -209,7 +211,7 @@ export default function DatewiseProductionReport() {
             if (!data[l.techingOperator]) data[l.techingOperator] = { pcs: 0, lots: [] };
             const pcs = l.finalPcs || 0;
             data[l.techingOperator].pcs += pcs;
-            data[l.techingOperator].lots.push({ lotNumber: l.lot, pcs });
+            data[l.techingOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan });
         }
     });
     return Object.entries(data)
@@ -245,8 +247,22 @@ export default function DatewiseProductionReport() {
                         {sarinData.map(d => (
                             <TableRow key={d.operator}>
                                 <TableCell>{d.operator}</TableCell>
-                                <TableCell>{d.returned || '-'}</TableCell>
-                                <TableCell>{d.chalu || '-'}</TableCell>
+                                <TableCell>
+                                  <DetailDialog
+                                    operator={d.operator}
+                                    department="Sarin (Returned)"
+                                    lots={d.returnedLots}
+                                    trigger={<span className="cursor-pointer underline">{d.returned || '-'}</span>}
+                                  />
+                                </TableCell>
+                                <TableCell>
+                                    <DetailDialog
+                                      operator={d.operator}
+                                      department="Sarin (Chalu)"
+                                      lots={d.chaluLots}
+                                      trigger={<span className="cursor-pointer underline">{d.chalu || '-'}</span>}
+                                    />
+                                </TableCell>
                                 <TableCell className="text-right font-bold text-orange-600">
                                    <DetailDialog 
                                         operator={d.operator}
