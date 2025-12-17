@@ -165,7 +165,15 @@ export default function ChaluEntryPage() {
     setSuffix('');
     setCurrentPcs('');
     setPendingJiramId(null);
-    // Do not reset kapan number
+    setKapanNumber('');
+    // Do not reset kapan number by default, handled by Esc
+  }
+  
+  const fullReset = () => {
+    resetForm();
+    setKapanFilter('');
+    setJiramSearchTerm('');
+    toast({ title: 'Form Reset', description: 'All fields and filters have been cleared.' });
   }
 
   const handleSave = async (showToast = true) => {
@@ -268,6 +276,19 @@ export default function ChaluEntryPage() {
         toast({ variant: 'destructive', title: 'Delete Failed' });
     }
   }
+
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        fullReset();
+      }
+    };
+    window.addEventListener('keydown', handleEscKey);
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     // Automatically enter fullscreen when component mounts
