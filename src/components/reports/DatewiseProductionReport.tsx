@@ -12,7 +12,7 @@ import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePicker } from '@/components/ui/date-picker';
-import { startOfDay, endOfDay, isWithinInterval, parseISO, format, isAfter } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, parseISO, format, isAfter, isBefore } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 
@@ -58,7 +58,8 @@ export default function DatewiseProductionReport() {
     
     const data: DepartmentData = {};
     const selectedDateStart = startOfDay(date);
-    const dateFilter = { start: selectedDateStart, end: endOfDay(date) };
+    const selectedDateEnd = endOfDay(date);
+    const dateFilter = { start: selectedDateStart, end: selectedDateEnd };
 
     const ensureOperator = (operator: string) => {
         if (!data[operator]) {
@@ -77,10 +78,11 @@ export default function DatewiseProductionReport() {
         }
 
         // Chalu (running) on the selected date
-        const isCreatedBeforeOrOnSelectedDate = !isAfter(entryDate, selectedDateStart);
-        const isReturnedAfterSelectedDate = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateStart);
+        const isCreatedBeforeSelectedDate = isBefore(entryDate, selectedDateStart);
+        const notYetReturned = !p.isReturned;
+        const returnedAfterSelectedDate = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateEnd);
         
-        if (isCreatedBeforeOrOnSelectedDate && (!p.isReturned || isReturnedAfterSelectedDate)) {
+        if (isCreatedBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
              ensureOperator(p.operator);
              data[p.operator].sarinChalu = (data[p.operator].sarinChalu || 0) + p.packetCount;
         }
@@ -121,7 +123,12 @@ export default function DatewiseProductionReport() {
 
   const sarinData = useMemo(() => Object.entries(departmentData)
         .filter(([,depts]) => depts.sarinReturned || depts.sarinChalu)
-        .map(([op, depts]) => ({ operator: op, returned: depts.sarinReturned || 0, chalu: depts.sarinChalu || 0, total: (depts.sarinReturned || 0) + (depts.sarinChalu || 0) }))
+        .map(([op, depts]) => ({ 
+            operator: op, 
+            returned: depts.sarinReturned || 0, 
+            chalu: depts.sarinChalu || 0, 
+            total: depts.sarinReturned || 0 
+        }))
         .sort((a,b) => b.total - a.total), [departmentData]);
 
   const laserData = useMemo(() => Object.entries(departmentData)
@@ -141,7 +148,7 @@ export default function DatewiseProductionReport() {
 
   const totals = useMemo(() => {
     return Object.values(departmentData).reduce((acc, operatorDepts) => {
-        acc.sarin += (operatorDepts.sarinReturned || 0) + (operatorDepts.sarinChalu || 0);
+        acc.sarin += (operatorDepts.sarinReturned || 0);
         acc.laser += operatorDepts.laserPcs || 0;
         acc.fourP += operatorDepts.fourPPcs || 0;
         acc.fourPTeching += operatorDepts.fourPTechingPcs || 0;
@@ -163,7 +170,7 @@ export default function DatewiseProductionReport() {
       <CardContent className="space-y-8">
             <DepartmentCard title="Sarin Department" total={totals.sarin} borderColor="border-orange-400" icon={Diamond}>
                 <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Returned</TableHead><TableHead>Chalu</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Returned</TableHead><TableHead>Chalu (For Info)</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {sarinData.map(d => (
                             <TableRow key={d.operator}>
