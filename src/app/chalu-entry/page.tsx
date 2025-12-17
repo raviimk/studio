@@ -472,7 +472,7 @@ export default function ChaluEntryPage() {
 
 
   return (
-    <div className="grid lg:grid-cols-[1fr,350px] gap-6 h-screen p-6">
+    <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6">
       <div className="flex flex-col gap-6">
           <div className="flex justify-between items-start">
             <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
