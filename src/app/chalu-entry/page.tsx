@@ -808,7 +808,7 @@ export default function ChaluEntryPage() {
                 />
             </div>
          </CardHeader>
-         <CardContent className="flex-1 overflow-y-auto">
+         <CardContent className="flex-1 overflow-auto">
              {loadingJiramEntries ? <p>Loading...</p> : (
                  <Table>
                      <TableHeader>
