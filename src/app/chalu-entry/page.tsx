@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs } from 'firebase/firestore';
@@ -106,6 +106,9 @@ export default function ChaluEntryPage() {
   const [editFormData, setEditFormData] = useState<any>({});
   
   const [lastClickedJiramId, setLastClickedJiramId] = useState<string | null>(null);
+
+  // New state for Jiram search
+  const [jiramSearchTerm, setJiramSearchTerm] = useState('');
 
 
   // Use refs to store the latest state for the cleanup function
@@ -403,9 +406,14 @@ export default function ChaluEntryPage() {
   }, [filteredEntries, kapanFilter]);
 
   const filteredJiramEntries = useMemo(() => {
-      if (!kapanNumber) return jiramEntries || [];
-      return (jiramEntries || []).filter(entry => entry.kapanNumber === kapanNumber);
-  }, [jiramEntries, kapanNumber]);
+    if (!jiramEntries) return [];
+    
+    return (jiramEntries || []).filter(entry => {
+        const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
+        const searchMatch = !jiramSearchTerm || entry.packetNumber.toLowerCase().includes(jiramSearchTerm.toLowerCase());
+        return kapanMatch && searchMatch;
+    });
+}, [jiramEntries, kapanNumber, jiramSearchTerm]);
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!firestore) return;
@@ -781,13 +789,23 @@ export default function ChaluEntryPage() {
          <CardHeader>
             <div className="flex justify-between items-center">
                 <div>
-                     <CardTitle>Pending Jiram Scans for Kapan: {kapanNumber || 'All'}</CardTitle>
+                     <CardTitle>Pending Jiram Scans</CardTitle>
                      <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
                     <Upload className="mr-2 h-4 w-4" /> Import Scans
                     <input type="file" ref={importFileRef} accept=".json" className="hidden" onChange={handleImport} />
                 </Button>
+            </div>
+             <div className="relative mt-4">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                    type="search" 
+                    placeholder="Search by packet number..." 
+                    className="pl-8 sm:w-[300px]"
+                    value={jiramSearchTerm}
+                    onChange={(e) => setJiramSearchTerm(e.target.value)}
+                />
             </div>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
@@ -836,7 +854,7 @@ export default function ChaluEntryPage() {
                          ))}
                          {filteredJiramEntries.length === 0 && (
                              <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">
-                                {kapanNumber ? `No pending scans for Kapan ${kapanNumber}.` : 'Select a Kapan to see pending scans.'}
+                                {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
                              </TableCell></TableRow>
                          )}
                      </TableBody>
