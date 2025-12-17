@@ -69,8 +69,6 @@ export default function DatewiseProductionReport() {
 
     // Sarin
     sarinPackets.forEach(p => {
-        const entryDate = parseISO(p.date);
-
         // Returned on the selected date
         if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), dateFilter)) {
             ensureOperator(p.returnedBy);
@@ -78,11 +76,12 @@ export default function DatewiseProductionReport() {
         }
 
         // Chalu (running) on the selected date
-        const isCreatedBeforeSelectedDate = isBefore(entryDate, selectedDateStart);
+        const entryDate = parseISO(p.date);
+        const isCreatedOnOrBeforeSelectedDate = isBefore(entryDate, selectedDateEnd);
         const notYetReturned = !p.isReturned;
         const returnedAfterSelectedDate = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateEnd);
         
-        if (isCreatedBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
+        if (isCreatedOnOrBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
              ensureOperator(p.operator);
              data[p.operator].sarinChalu = (data[p.operator].sarinChalu || 0) + p.packetCount;
         }
@@ -127,7 +126,7 @@ export default function DatewiseProductionReport() {
             operator: op, 
             returned: depts.sarinReturned || 0, 
             chalu: depts.sarinChalu || 0, 
-            total: depts.sarinReturned || 0
+            total: depts.sarinReturned || 0 // Only count returned in total
         }))
         .sort((a,b) => b.total - a.total), [departmentData]);
 
@@ -221,4 +220,3 @@ export default function DatewiseProductionReport() {
     </Card>
   );
 }
-
