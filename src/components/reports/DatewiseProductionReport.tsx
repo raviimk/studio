@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -11,7 +12,7 @@ import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePicker } from '@/components/ui/date-picker';
-import { startOfDay, endOfDay, isWithinInterval, parseISO, format } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, parseISO, format, isAfter } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 
@@ -56,7 +57,8 @@ export default function DatewiseProductionReport() {
     if (!date) return {};
     
     const data: DepartmentData = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
+    const selectedDateStart = startOfDay(date);
+    const dateFilter = { start: selectedDateStart, end: endOfDay(date) };
 
     const ensureOperator = (operator: string) => {
         if (!data[operator]) {
@@ -66,13 +68,21 @@ export default function DatewiseProductionReport() {
 
     // Sarin
     sarinPackets.forEach(p => {
+        const entryDate = parseISO(p.date);
+
+        // Returned on the selected date
         if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), dateFilter)) {
             ensureOperator(p.returnedBy);
             data[p.returnedBy].sarinReturned = (data[p.returnedBy].sarinReturned || 0) + p.packetCount;
         }
-        if (!p.isReturned && isWithinInterval(parseISO(p.date), dateFilter)) {
-            ensureOperator(p.operator);
-            data[p.operator].sarinChalu = (data[p.operator].sarinChalu || 0) + p.packetCount;
+
+        // Chalu (running) on the selected date
+        const isCreatedBeforeOrOnSelectedDate = !isAfter(entryDate, selectedDateStart);
+        const isReturnedAfterSelectedDate = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateStart);
+        
+        if (isCreatedBeforeOrOnSelectedDate && (!p.isReturned || isReturnedAfterSelectedDate)) {
+             ensureOperator(p.operator);
+             data[p.operator].sarinChalu = (data[p.operator].sarinChalu || 0) + p.packetCount;
         }
     });
 
