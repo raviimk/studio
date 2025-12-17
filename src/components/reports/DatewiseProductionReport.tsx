@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -11,11 +10,8 @@ import {
 import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DatePickerWithPresets } from '@/components/ui/date-picker-presets';
-import type { DateRange } from 'react-day-picker';
-import { startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO, format } from 'date-fns';
-import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
+import { DatePicker } from '@/components/ui/date-picker';
+import { startOfDay, endOfDay, isWithinInterval, parseISO, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 
@@ -38,7 +34,7 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon }: { t
                  {title}
             </CardTitle>
             <div className="text-right">
-                <p className="text-xs text-muted-foreground">Today's Production</p>
+                <p className="text-xs text-muted-foreground">Production</p>
                 <p className="text-2xl font-bold">{total}</p>
             </div>
         </CardHeader>
@@ -54,16 +50,13 @@ export default function DatewiseProductionReport() {
   const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
   const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
+  const [date, setDate] = useState<Date | undefined>(new Date());
 
   const departmentData = useMemo(() => {
-    if (!dateRange?.from) return {};
+    if (!date) return {};
     
     const data: DepartmentData = {};
-    const dateFilter = { start: startOfDay(dateRange.from!), end: endOfDay(dateRange.to || dateRange.from) };
+    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
 
     const ensureOperator = (operator: string) => {
         if (!data[operator]) {
@@ -113,7 +106,7 @@ export default function DatewiseProductionReport() {
 
     return data;
 
-  }, [sarinPackets, laserLots, fourPTechingLots, dateRange]);
+  }, [sarinPackets, laserLots, fourPTechingLots, date]);
 
 
   const sarinData = useMemo(() => Object.entries(departmentData)
@@ -151,10 +144,10 @@ export default function DatewiseProductionReport() {
     <Card>
       <CardHeader>
         <CardTitle>Date-wise All Departments Report</CardTitle>
-        <CardDescription>View production for all operators across Sarin, Laser, and 4P within a selected date range.</CardDescription>
+        <CardDescription>View production for all operators across Sarin, Laser, and 4P for a selected date.</CardDescription>
         <div className="pt-4">
-             <label className="text-sm font-medium">Date Range</label>
-             <DatePickerWithPresets date={dateRange} setDate={setDateRange} />
+             <label className="text-sm font-medium">Select Date</label>
+             <DatePicker date={date} setDate={setDate} />
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
@@ -211,4 +204,3 @@ export default function DatewiseProductionReport() {
     </Card>
   );
 }
-
