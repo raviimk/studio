@@ -252,6 +252,7 @@ export default function NewLaserLotPage() {
         title: 'Form Cleared',
         description: 'All fields have been reset.',
     });
+    kapanRef.current?.focus();
   };
 
   const createFinalLot = React.useCallback(() => {
@@ -344,9 +345,7 @@ export default function NewLaserLotPage() {
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if(formSubmitted){
-            handleResetForm();
-        }
+        handleResetForm();
       }
     };
     window.addEventListener('keydown', handleEscKey);
@@ -354,7 +353,7 @@ export default function NewLaserLotPage() {
       window.removeEventListener('keydown', handleEscKey);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formSubmitted]);
+  }, []);
 
 
   return (

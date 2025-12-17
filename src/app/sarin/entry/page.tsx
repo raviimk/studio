@@ -188,6 +188,7 @@ export default function SarinPacketEntryPage() {
       title: 'Form Cleared',
       description: 'All fields have been reset.',
     });
+    operatorRef.current?.focus();
   };
 
   useEffect(() => {
@@ -275,7 +276,7 @@ export default function SarinPacketEntryPage() {
                         <FormField control={control} name="operator" render={({ field }) => (
                         <FormItem>
                             <FormLabel>Operator Name</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger ref={operatorRef}><SelectValue placeholder="Select an operator" /></SelectTrigger></FormControl>
                             <SelectContent>{sarinOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
                             </Select>
@@ -336,37 +337,10 @@ export default function SarinPacketEntryPage() {
                                 )}
                             </div>
                         )}
-                        <button type="submit" disabled={!foundLaserLot} ref={submitRef} className="uiverse-button mt-6">
-                            <div className="state state--default">
-                                <span className="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24" width="24">
-                                        <path fill="currentColor" d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z"></path>
-                                    </svg>
-                                </span>
-                                <p>
-                                    <span style={{ '--i': 0 } as React.CSSProperties}>S</span>
-                                    <span style={{ '--i': 1 } as React.CSSProperties}>e</span>
-                                    <span style={{ '--i': 2 } as React.CSSProperties}>n</span>
-                                    <span style={{ '--i': 3 } as React.CSSProperties}>d</span>
-                                </p>
-                            </div>
-                            <div className="state state--sent">
-                                <span className="icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" height="24" width="24">
-                                        <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="1.5" fill="none" stroke="currentColor" d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z"></path>
-                                        <path strokeLinejoin="round" strokeLinecap="round" strokeWidth="1.5" fill="none" stroke="currentColor" d="M8 12L11 15L16 10"></path>
-                                    </svg>
-                                </span>
-                                <p>
-                                    <span style={{ '--i': 0 } as React.CSSProperties}>E</span>
-                                    <span style={{ '--i': 1 } as React.CSSProperties}>n</span>
-                                    <span style={{ '--i': 2 } as React.CSSProperties}>t</span>
-                                    <span style={{ '--i': 3 } as React.CSSProperties}>r</span>
-                                    <span style={{ '--i': 4 } as React.CSSProperties}>y</span>
-                                </p>
-                            </div>
-                            <div className="outline"></div>
-                        </button>
+                        <Button type="submit" disabled={!foundLaserLot} ref={submitRef} className="mt-4">
+                            <PackagePlus className="mr-2 h-4 w-4" />
+                            Create Entry
+                        </Button>
                     </form>
                 </Form>
                 </CardContent>
