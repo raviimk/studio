@@ -12,14 +12,17 @@ import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePicker } from '@/components/ui/date-picker';
-import { startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 
-type SarinDetail = { lotNumber: string, pcs: number, kapanNumber: string };
-type LaserDetail = { lotNumber: string, pcs: number, kapanNumber: string };
-type FourPDetail = { lotNumber: string, pcs: number, kapanNumber: string };
+type LotDetail = {
+    lotNumber: string;
+    pcs: number;
+    kapanNumber: string;
+    returnDate?: string;
+};
 
 
 type OperatorSarinData = {
@@ -27,23 +30,23 @@ type OperatorSarinData = {
     returned: number;
     chalu: number;
     total: number;
-    returnedLots: SarinDetail[];
-    chaluLots: SarinDetail[];
+    returnedLots: LotDetail[];
+    chaluLots: LotDetail[];
 }
 type OperatorLaserData = {
     operator: string;
     pcs: number;
-    lots: LaserDetail[];
+    lots: LotDetail[];
 }
 
 type OperatorFourPData = {
     operator: string;
     pcs: number;
-    lots: FourPDetail[];
+    lots: LotDetail[];
 }
 
 
-const DepartmentCard = ({ title, total, borderColor, children, icon: Icon }: { title: string, total: number | string, borderColor: string, children: React.ReactNode, icon: React.ElementType }) => (
+const DepartmentCard = ({ title, total, borderColor, children, icon: Icon, totalBreakdown }: { title: string, total: number | string, borderColor: string, children: React.ReactNode, icon: React.ElementType, totalBreakdown?: string }) => (
     <Card className={cn("overflow-hidden border-t-4", borderColor)}>
         <CardHeader className="flex flex-row items-start justify-between pb-4">
             <CardTitle className="text-lg font-medium flex items-center gap-2">
@@ -51,8 +54,9 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon }: { t
                  {title}
             </CardTitle>
             <div className="text-right">
-                <p className="text-xs text-muted-foreground">Production</p>
+                <p className="text-xs text-muted-foreground">Today's Production</p>
                 <p className="text-2xl font-bold">{total}</p>
+                {totalBreakdown && <p className="text-xs text-muted-foreground">{totalBreakdown}</p>}
             </div>
         </CardHeader>
         <CardContent>
@@ -61,7 +65,14 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon }: { t
     </Card>
 );
 
-const DetailDialog = ({ operator, department, lots, trigger }: { operator: string, department: string, lots: { lotNumber: string, pcs: number, kapanNumber: string }[], trigger: React.ReactNode }) => {
+const DetailDialog = ({ operator, department, lots, trigger }: { operator: string, department: string, lots: LotDetail[], trigger: React.ReactNode }) => {
+  const sortedLots = useMemo(() => {
+    return lots.sort((a, b) => {
+        if (!a.returnDate || !b.returnDate) return 0;
+        return parseISO(b.returnDate).getTime() - parseISO(a.returnDate).getTime();
+    })
+  }, [lots]);
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -78,19 +89,21 @@ const DetailDialog = ({ operator, department, lots, trigger }: { operator: strin
               <TableRow>
                 <TableHead>Kapan</TableHead>
                 <TableHead>Lot Number</TableHead>
+                <TableHead>Return Time</TableHead>
                 <TableHead className="text-right">PCS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lots.map((lot, index) => (
+              {sortedLots.map((lot, index) => (
                 <TableRow key={`${lot.lotNumber}-${index}`}>
                   <TableCell>{lot.kapanNumber}</TableCell>
                   <TableCell>{lot.lotNumber}</TableCell>
+                  <TableCell>{lot.returnDate ? format(parseISO(lot.returnDate), 'p') : 'N/A'}</TableCell>
                   <TableCell className="text-right font-mono">{lot.pcs}</TableCell>
                 </TableRow>
               ))}
                <TableRow className="bg-muted font-bold">
-                  <TableCell colSpan={2}>Total</TableCell>
+                  <TableCell colSpan={3}>Total</TableCell>
                   <TableCell className="text-right font-mono">{lots.reduce((sum, lot) => sum + lot.pcs, 0)}</TableCell>
                 </TableRow>
             </TableBody>
@@ -112,7 +125,7 @@ export default function DatewiseProductionReport() {
   const sarinData = useMemo((): OperatorSarinData[] => {
     if (!date) return [];
     
-    const data: Record<string, { returned: number; chalu: number; returnedLots: SarinDetail[]; chaluLots: SarinDetail[] }> = {};
+    const data: Record<string, { returned: number; chalu: number; returnedLots: LotDetail[]; chaluLots: LotDetail[] }> = {};
     const selectedDateStart = startOfDay(date);
     const selectedDateEnd = endOfDay(date);
     const dateFilter = { start: selectedDateStart, end: selectedDateEnd };
@@ -128,7 +141,7 @@ export default function DatewiseProductionReport() {
         if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), dateFilter)) {
             ensureOperator(p.returnedBy);
             data[p.returnedBy].returned += p.packetCount;
-            data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber });
+            data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
         }
 
         // Chalu (running) on the selected date
@@ -140,7 +153,7 @@ export default function DatewiseProductionReport() {
         if (isCreatedOnOrBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
              ensureOperator(p.operator);
              data[p.operator].chalu += p.packetCount;
-             data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber });
+             data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
         }
     });
 
@@ -156,7 +169,7 @@ export default function DatewiseProductionReport() {
 
   const laserData = useMemo((): OperatorLaserData[] => {
     if (!date) return [];
-    const data: Record<string, { pcs: number; lots: LaserDetail[] }> = {};
+    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
     const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
 
     laserLots.forEach(l => {
@@ -166,7 +179,7 @@ export default function DatewiseProductionReport() {
             }
             const pcs = l.subPacketCount ?? l.packetCount;
             data[l.returnedBy].pcs += pcs;
-            data[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs, kapanNumber: l.kapanNumber });
+            data[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs, kapanNumber: l.kapanNumber, returnDate: l.returnDate });
         }
     });
      return Object.entries(data)
@@ -177,7 +190,7 @@ export default function DatewiseProductionReport() {
 
   const fourPData = useMemo((): OperatorFourPData[] => {
     if (!date) return [];
-    const data: Record<string, { pcs: number; lots: FourPDetail[] }> = {};
+    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
     const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
 
     fourPTechingLots.forEach(l => {
@@ -186,13 +199,13 @@ export default function DatewiseProductionReport() {
                 l.fourPData.forEach(d => {
                     if (!data[d.operator]) data[d.operator] = { pcs: 0, lots: [] };
                     data[d.operator].pcs += d.pcs;
-                    data[d.operator].lots.push({ lotNumber: l.lot, pcs: d.pcs, kapanNumber: l.kapan });
+                    data[d.operator].lots.push({ lotNumber: l.lot, pcs: d.pcs, kapanNumber: l.kapan, returnDate: l.returnDate });
                 });
             } else if (l.fourPOperator) { // Legacy single operator
                 if (!data[l.fourPOperator]) data[l.fourPOperator] = { pcs: 0, lots: [] };
                 const pcs = l.finalPcs || 0;
                 data[l.fourPOperator].pcs += pcs;
-                data[l.fourPOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan });
+                data[l.fourPOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan, returnDate: l.returnDate });
             }
         }
     });
@@ -203,7 +216,7 @@ export default function DatewiseProductionReport() {
   
   const fourPTechingData = useMemo((): OperatorFourPData[] => {
     if (!date) return [];
-    const data: Record<string, { pcs: number; lots: FourPDetail[] }> = {};
+    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
     const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
 
      fourPTechingLots.forEach(l => {
@@ -211,7 +224,7 @@ export default function DatewiseProductionReport() {
             if (!data[l.techingOperator]) data[l.techingOperator] = { pcs: 0, lots: [] };
             const pcs = l.finalPcs || 0;
             data[l.techingOperator].pcs += pcs;
-            data[l.techingOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan });
+            data[l.techingOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan, returnDate: l.entryDate });
         }
     });
     return Object.entries(data)
