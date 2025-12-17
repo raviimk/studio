@@ -472,7 +472,7 @@ export default function ChaluEntryPage() {
 
 
   return (
-    <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6">
+    <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6 h-screen">
       <div className="flex flex-col gap-6">
           <div className="flex justify-between items-start">
             <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
@@ -785,7 +785,7 @@ export default function ChaluEntryPage() {
           </Card>
       </div>
 
-      <Card className="flex flex-col">
+      <Card className="flex flex-col h-full lg:max-h-full overflow-hidden">
          <CardHeader>
             <div className="flex justify-between items-center">
                 <div>
@@ -808,7 +808,7 @@ export default function ChaluEntryPage() {
                 />
             </div>
          </CardHeader>
-         <CardContent className="flex-1 overflow-auto">
+         <CardContent className="flex-1 overflow-y-auto">
              {loadingJiramEntries ? <p>Loading...</p> : (
                  <Table>
                      <TableHeader>
