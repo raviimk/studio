@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash, AlertCircle } from 'lucide-react';
+import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash, AlertCircle, Upload, Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -193,6 +193,25 @@ export default function JiramReportPage() {
     setTimeout(() => window.location.reload(), 1000);
   };
 
+  const handleExport = () => {
+    if (jiramPackets.length === 0) {
+      toast({ variant: 'destructive', title: 'No Data', description: 'There are no scanned packets to export.' });
+      return;
+    }
+    const dataStr = JSON.stringify(jiramPackets.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber})), null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'jiram-scans.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: 'Export Successful', description: `${jiramPackets.length} scans exported.` });
+  };
+
+
   const detailedScans = useMemo(() => {
     if (!selectedKapan) return [];
     return jiramPackets.filter(p => p.kapanNumber === selectedKapan).sort((a,b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime());
@@ -262,7 +281,15 @@ export default function JiramReportPage() {
       
       <div className="grid lg:grid-cols-2 gap-8">
         <Card>
-          <CardHeader><CardTitle>Kapan-wise Summary</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+                <CardTitle>Kapan-wise Summary</CardTitle>
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Scans
+                </Button>
+            </div>
+          </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <Table>

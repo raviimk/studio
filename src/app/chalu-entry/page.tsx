@@ -10,10 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import {
@@ -46,12 +46,18 @@ type JiramEntry = {
     }
 }
 
+type JiramImportPacket = {
+    barcode: string;
+    kapanNumber: string;
+}
+
 export default function ChaluEntryPage() {
   const { toast } = useToast();
   const { isFullscreen, setFullscreen } = useLayout();
   const router = useRouter();
 
   const firestore = useFirestore();
+  const importFileRef = useRef<HTMLInputElement>(null);
   
   const chaluEntriesQuery = useMemo(() => {
     if (!firestore) return null;
@@ -71,7 +77,7 @@ export default function ChaluEntryPage() {
 
   const { data: chaluEntries, loading: loadingEntries } = useCollection(chaluEntriesQuery);
   const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
-  const { data: jiramEntries, loading: loadingJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
+  const { data: jiramEntries, loading: loadingJiramEntries, refetch: refetchJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -401,6 +407,61 @@ export default function ChaluEntryPage() {
       return (jiramEntries || []).filter(entry => entry.kapanNumber === kapanNumber);
   }, [jiramEntries, kapanNumber]);
 
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!firestore) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const text = e.target?.result as string;
+            const data: JiramImportPacket[] = JSON.parse(text);
+
+            if (!Array.isArray(data) || data.length === 0) {
+                toast({ variant: 'destructive', title: 'Import Error', description: 'File is empty or not in the correct format.' });
+                return;
+            }
+            
+            toast({ title: 'Importing...', description: `Processing ${data.length} packets. This may take a moment.` });
+
+            // 1. Delete all existing documents in jiramEntries
+            const allJiramDocs = await getDocs(collection(firestore, 'jiramEntries'));
+            const deleteBatch = writeBatch(firestore);
+            allJiramDocs.forEach(doc => deleteBatch.delete(doc.ref));
+            await deleteBatch.commit();
+            
+            // 2. Add new documents from file
+            const addBatch = writeBatch(firestore);
+            data.forEach(item => {
+                const match = item.barcode.match(/^(?:R)?(\d+)-(\d+(?:-[A-Z])?)$/);
+                if (match) {
+                    const [, , packetIdentifier] = match;
+                    const [, suffix] = packetIdentifier.split('-');
+                     const newDocRef = doc(collection(firestore, 'jiramEntries'));
+                     addBatch.set(newDocRef, {
+                        barcode: item.barcode,
+                        kapanNumber: item.kapanNumber,
+                        packetNumber: packetIdentifier,
+                        suffix: suffix || '',
+                        scanTime: serverTimestamp(),
+                     });
+                }
+            });
+            await addBatch.commit();
+            
+            toast({ title: 'Import Successful', description: `Successfully imported ${data.length} Jiram scans.` });
+            if (refetchJiramEntries) refetchJiramEntries(); // Refresh the data
+        } catch (error) {
+            console.error("Import failed:", error);
+            toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not read or process the file.' });
+        } finally {
+            if(importFileRef.current) importFileRef.current.value = '';
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   return (
     <div className="grid lg:grid-cols-[1fr,350px] gap-6 h-screen p-6">
@@ -612,7 +673,7 @@ export default function ChaluEntryPage() {
                                                       <TableHead>પેકેટ</TableHead>
                                                       <TableHead>ઓરિજિનલ</TableHead>
                                                       <TableHead>નુકશાની</TableHead>
-                                                      <TableHead>પ્લસ/માઈનસ</TableHead>
+                                                      <TableHead>પ્లસ/માઈનસ</TableHead>
                                                       <TableHead>ટોટલ</TableHead>
                                                       <TableHead>વજન</TableHead>
                                                   </TableRow>
@@ -718,8 +779,16 @@ export default function ChaluEntryPage() {
 
       <Card className="flex flex-col">
          <CardHeader>
-             <CardTitle>Pending Jiram Scans for Kapan: {kapanNumber || 'All'}</CardTitle>
-             <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
+            <div className="flex justify-between items-center">
+                <div>
+                     <CardTitle>Pending Jiram Scans for Kapan: {kapanNumber || 'All'}</CardTitle>
+                     <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" /> Import Scans
+                    <input type="file" ref={importFileRef} accept=".json" className="hidden" onChange={handleImport} />
+                </Button>
+            </div>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
              {loadingJiramEntries ? <p>Loading...</p> : (
