@@ -69,7 +69,7 @@ const DetailDialog = ({ operator, department, lots, trigger }: { operator: strin
   const sortedLots = useMemo(() => {
     return lots.sort((a, b) => {
         if (!a.returnDate || !b.returnDate) return 0;
-        return parseISO(b.returnDate).getTime() - parseISO(a.returnDate).getTime();
+        return parseISO(a.returnDate).getTime() - parseISO(b.returnDate).getTime();
     })
   }, [lots]);
 
@@ -253,7 +253,7 @@ export default function DatewiseProductionReport() {
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
-            <DepartmentCard title="Sarin Department" total={totals.sarin} borderColor="border-orange-400" icon={Diamond}>
+            <DepartmentCard title="Sarin Department" total={totals.sarin} borderColor="border-orange-400" icon={Diamond} totalBreakdown={`Returned lots only`}>
                 <Table>
                     <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Returned</TableHead><TableHead>Chalu (For Info)</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
