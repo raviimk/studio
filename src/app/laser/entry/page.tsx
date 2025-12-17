@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef, useMemo } from 'react';
@@ -239,6 +240,19 @@ export default function NewLaserLotPage() {
       setBarcode('');
       barcodeInputRef.current?.focus();
   }
+  
+  const handleResetForm = () => {
+    form.reset();
+    setFormSubmitted(false);
+    setCurrentLotDetails(null);
+    setScannedPackets([]);
+    setBarcode('');
+    setCountdown(null);
+    toast({
+        title: 'Form Cleared',
+        description: 'All fields have been reset.',
+    });
+  };
 
   const createFinalLot = React.useCallback(() => {
      if (!currentLotDetails) return;
@@ -260,13 +274,9 @@ export default function NewLaserLotPage() {
     setLastCompletedLot(parseInt(newLot.lotNumber, 10)); // Trigger animation
     toast({ title: 'Success', description: 'New laser lot has been created.' });
     
-    form.reset();
-    setFormSubmitted(false);
-    setScannedPackets([]);
-    setBarcode('');
-    setCurrentLotDetails(null);
-    setCountdown(null);
-  }, [currentLotDetails, form, laserLots, setLaserLots, scannedPackets, toast]);
+    handleResetForm();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLotDetails, setLaserLots, scannedPackets, toast]);
 
   useEffect(() => {
     if (scannedPackets.length > 0 && currentPacketCount > 0 && scannedPackets.length === currentPacketCount) {
@@ -330,6 +340,21 @@ export default function NewLaserLotPage() {
         nextFieldRef.current?.focus();
     }
   };
+
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if(formSubmitted){
+            handleResetForm();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleEscKey);
+    return () => {
+      window.removeEventListener('keydown', handleEscKey);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formSubmitted]);
 
 
   return (

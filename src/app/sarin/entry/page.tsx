@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -85,7 +86,7 @@ export default function SarinPacketEntryPage() {
     },
   });
   
-  const { control, watch, setValue, getValues } = form;
+  const { control, watch, setValue, getValues, reset } = form;
   const watchKapan = watch('kapanNumber');
   const watchLot = watch('lotNumber');
   const selectedOperatorName = watch('operator');
@@ -178,6 +179,29 @@ export default function SarinPacketEntryPage() {
         setValue('packetCount', initialPacketCount);
     }
   }, [hasJiram, jiramCount, initialPacketCount, setValue]);
+  
+  const handleResetForm = () => {
+    reset();
+    setFoundLaserLot(false);
+    setInitialPacketCount(0);
+    toast({
+      title: 'Form Cleared',
+      description: 'All fields have been reset.',
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleResetForm();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   function onSubmit(values: z.infer<typeof formSchema>) {
