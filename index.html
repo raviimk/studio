@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gem Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Gem Tracker</h1>
+            <p>Sarin & Laser Diamond Production Management</p>
+        </header>
+
+        <main class="app-main">
+            <div id="auth-container">
+                <h2>Login</h2>
+                <button id="login-btn">Login with Google</button>
+            </div>
+
+            <div id="app-content" class="hidden">
+                <div class="control-panel">
+                    <h2>Sarin Packet Entry</h2>
+                    <form id="sarin-form">
+                        <input type="text" id="sarin-kapan" placeholder="Kapan Number" required>
+                        <input type="text" id="sarin-lot" placeholder="Lot Number" required>
+                        <input type="number" id="sarin-packets" placeholder="Packet Count" required>
+                        <button type="submit">Add Sarin Entry</button>
+                    </form>
+                </div>
+
+                <div class="data-display">
+                    <h2>Recent Entries</h2>
+                    <ul id="entries-list">
+                        <!-- Entries will be dynamically added here -->
+                    </ul>
+                </div>
+
+                <div class="actions">
+                    <button id="clear-data-btn">Clear All Data</button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <p>Gem Tracker &copy; 2024</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="dataStore.js"></script>
+    <script src="app.js"></script>
+    <!-- Firebase SDKs will be added here when needed -->
+
+</body>
+</html>

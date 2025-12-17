@@ -1,0 +1,118 @@
+/* --- Base Styles & Variables --- */
+:root {
+    --primary-color: #2E4765; /* Deep Blue */
+    --background-color: #EAEAEA; /* Light Gray */
+    --accent-color: #D4A276; /* Soft Gold */
+    --text-color: #333;
+    --card-bg: #FFFFFF;
+    --border-color: #D1D1D1;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.app-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+/* --- Header & Footer --- */
+.app-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--primary-color);
+}
+
+.app-header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.5rem;
+    margin: 0;
+}
+
+.app-footer {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.9rem;
+    color: #888;
+}
+
+/* --- Main Content & Cards --- */
+.app-main {
+    background-color: var(--card-bg);
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+.control-panel, .data-display, .actions {
+    margin-bottom: 2rem;
+}
+
+h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* --- Forms & Buttons --- */
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #1a2b41;
+}
+
+#login-btn, #clear-data-btn {
+    background-color: var(--accent-color);
+}
+
+#login-btn:hover, #clear-data-btn:hover {
+    background-color: #b88a5f;
+}
+
+/* --- Data Display --- */
+#entries-list {
+    list-style: none;
+    padding: 0;
+}
+
+#entries-list li {
+    background-color: #f9f9f9;
+    padding: 1rem;
+    border-left: 4px solid var(--accent-color);
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+}
+
+/* --- Utility --- */
+.hidden {
+    display: none;
+}
