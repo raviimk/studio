@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -102,6 +103,10 @@ export default function RecentSarinEntriesPage() {
     return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sarinPackets, searchTerm]);
 
+  const rescanPendingCount = useMemo(() => {
+    return sarinPackets.filter(p => p.isReturned && (!p.scannedReturnPackets || p.scannedReturnPackets.length === 0)).length;
+  }, [sarinPackets]);
+
   // Rescan Dialog Logic
   const handleOpenRescanDialog = (lot: SarinPacket) => {
     setLotToRescan(lot);
@@ -183,7 +188,14 @@ export default function RecentSarinEntriesPage() {
                     <TableHead>Jiram</TableHead>
                     <TableHead>Date/Time</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>
+                        <div className="flex flex-col">
+                            Actions
+                            {rescanPendingCount > 0 && (
+                                <span className="text-xs font-normal text-yellow-600">({rescanPendingCount} Rescan Pending)</span>
+                            )}
+                        </div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
