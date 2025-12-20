@@ -1,46 +1,25 @@
-'use client';
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AppShell } from '@/components/AppShell';
-import IntroAnimation from '@/components/IntroAnimation';
-import { useState, useEffect } from 'react';
 import { SystemStateProvider } from '@/hooks/useSystemState';
 import { LayoutProvider } from '@/hooks/useLayout';
 import { FirebaseProvider } from '@/firebase/provider';
+import { ClientLayout } from './client-layout';
 
-
-const SHOW_INTRO = true; // Master switch for the intro animation
-const INTRO_SESSION_KEY = 'introPlayed';
+export const metadata = {
+  title: 'ATIXE Diamond',
+  description: 'Diamond Production Manager – Sarin + Laser Unified Tracker',
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [introFinished, setIntroFinished] = useState(!SHOW_INTRO);
-
-  useEffect(() => {
-    if (SHOW_INTRO) {
-      const introHasPlayed = sessionStorage.getItem(INTRO_SESSION_KEY);
-      if (introHasPlayed) {
-        setIntroFinished(true);
-      } else {
-        sessionStorage.setItem(INTRO_SESSION_KEY, 'true');
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    document.title = 'ATIXE Diamond';
-  }, []);
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>ATIXE Diamond</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💠</text></svg>" />
-        <meta name="description" content="Diamond Production Manager – Sarin + Laser Unified Tracker" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -52,14 +31,8 @@ export default function RootLayout({
         <FirebaseProvider>
             <SystemStateProvider>
                 <LayoutProvider>
-                  {!introFinished ? (
-                    <IntroAnimation onFinished={() => setIntroFinished(true)} />
-                  ) : (
-                    <div className="animate-simple-fade-in">
-                      <AppShell>{children}</AppShell>
-                      <Toaster />
-                    </div>
-                  )}
+                    <ClientLayout>{children}</ClientLayout>
+                    <Toaster />
                 </LayoutProvider>
             </SystemStateProvider>
         </FirebaseProvider>
