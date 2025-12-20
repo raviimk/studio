@@ -10,9 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import PageHeader from '@/components/PageHeader';
 import { v4 as uuidv4 } from 'uuid';
-import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash, AlertCircle, Upload, Download } from 'lucide-react';
+import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash, AlertCircle, Upload, Download, ChevronDown } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, parseISO, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
   BarChart,
@@ -38,6 +38,8 @@ import {
 import { deleteKapanData } from '@/lib/kapan-deleter';
 import { useCollection, useFirestore } from '@/firebase';
 import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 
 type KapanSummary = {
@@ -49,6 +51,12 @@ type KapanSummary = {
   missing: number;
 };
 
+type GroupedScans = {
+    date: string;
+    count: number;
+    packets: JiramReportPacket[];
+};
+
 export default function JiramReportPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -57,6 +65,8 @@ export default function JiramReportPage() {
   
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
 
   const kapansQuery = useMemo(() => {
       if (!firestore) return null;
@@ -64,17 +74,14 @@ export default function JiramReportPage() {
   }, [firestore]);
   const { data: kapans } = useCollection(kapansQuery);
 
-  // New state for enhanced UX
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [highlightedKapan, setHighlightedKapan] = useState<string | null>(null);
   const [showSuccessTick, setShowSuccessTick] = useState(false);
 
-  // Auto-focus on mount
   useEffect(() => {
     barcodeInputRef.current?.focus();
   }, []);
 
-  // Effect to clear highlight after a delay
   useEffect(() => {
     if (highlightedKapan) {
       const timer = setTimeout(() => setHighlightedKapan(null), 2000);
@@ -82,7 +89,6 @@ export default function JiramReportPage() {
     }
   }, [highlightedKapan]);
   
-  // Effect to clear success tick after a delay
   useEffect(() => {
     if (showSuccessTick) {
       const timer = setTimeout(() => setShowSuccessTick(false), 2000);
@@ -93,7 +99,6 @@ export default function JiramReportPage() {
   const kapanSummary = useMemo((): KapanSummary[] => {
     const kapanData: Record<string, { expected: number; scanned: number }> = {};
 
-    // Calculate expected jiram from Sarin entries
     sarinPackets.forEach(p => {
       if (p.jiramCount && p.jiramCount > 0) {
         if (!kapanData[p.kapanNumber]) {
@@ -103,7 +108,6 @@ export default function JiramReportPage() {
       }
     });
 
-    // Calculate scanned jiram from this module's entries
     jiramPackets.forEach(p => {
       if (!kapanData[p.kapanNumber]) {
         kapanData[p.kapanNumber] = { expected: 0, scanned: 0 };
@@ -152,7 +156,6 @@ export default function JiramReportPage() {
         toast({ variant: 'destructive', title: 'No Expected Jiram', description: `No Jiram entries found for Kapan ${kapanNumber} in the Sarin module.`});
     }
 
-    // Save to local storage for this page's report
     const newPacketLocal: JiramReportPacket = {
       id: uuidv4(),
       barcode,
@@ -161,11 +164,9 @@ export default function JiramReportPage() {
     };
     setJiramPackets(prev => [newPacketLocal, ...prev]);
 
-    // Save to Firestore for Chalu Entry page
     try {
         const batch = writeBatch(firestore);
 
-        // Add to jiramEntries
         const jiramDocRef = doc(collection(firestore, 'jiramEntries'));
         batch.set(jiramDocRef, {
             barcode: barcode,
@@ -175,7 +176,6 @@ export default function JiramReportPage() {
             scanTime: serverTimestamp(),
         });
         
-        // Check if Kapan exists, if not, add it
         const kapanExists = kapans?.some(k => k.kapanNumber === kapanNumber);
         if (!kapanExists) {
             const kapanDocRef = doc(collection(firestore, 'kapans'));
@@ -208,8 +208,6 @@ export default function JiramReportPage() {
     }
     toast({ title: 'Kapan Completed', description: `All associated data for Kapan ${kapanNumber} has been permanently deleted.`});
     
-    // Force a reload of data for all components that use these hooks by triggering a re-render.
-    // A simple way is to reload the page, which is acceptable for a destructive action.
     setTimeout(() => window.location.reload(), 1000);
   };
 
@@ -232,14 +230,29 @@ export default function JiramReportPage() {
   };
 
 
-  const detailedScans = useMemo(() => {
-    if (!selectedKapan) return [];
-    return jiramPackets.filter(p => p.kapanNumber === selectedKapan).sort((a,b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime());
-  }, [jiramPackets, selectedKapan]);
+  const groupedScans: GroupedScans[] = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    const filteredPackets = jiramPackets.filter(p => !searchLower || p.barcode.toLowerCase().includes(searchLower));
 
-  const recentScans = useMemo(() => {
-    return jiramPackets.slice(0, 5);
-  }, [jiramPackets]);
+    const groups: Record<string, JiramReportPacket[]> = {};
+    filteredPackets.forEach(p => {
+        const date = format(startOfDay(parseISO(p.scanTime)), 'yyyy-MM-dd');
+        if (!groups[date]) {
+            groups[date] = [];
+        }
+        groups[date].push(p);
+    });
+
+    return Object.entries(groups)
+        .map(([date, packets]) => ({
+            date,
+            count: packets.length,
+            packets: packets.sort((a,b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime())
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  }, [jiramPackets, searchTerm]);
+
   
   const getStatusIcon = (status: KapanSummary['status']) => {
     switch (status) {
@@ -253,7 +266,7 @@ export default function JiramReportPage() {
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <PageHeader title="Jiram Verification Report" description="Verify if created Jiram packets match the expected counts from Sarin entries." />
 
-      <div className="grid lg:grid-cols-[1fr,350px] gap-8">
+      <div className="grid lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
             <CardTitle>Scan Jiram Packet</CardTitle>
@@ -280,21 +293,20 @@ export default function JiramReportPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Recent Scans</CardTitle>
+            <CardTitle>Performance Chart</CardTitle>
           </CardHeader>
-          <CardContent>
-            {recentScans.length > 0 ? (
-              <ul className="space-y-2">
-                {recentScans.map(p => (
-                  <li key={p.id} className="text-sm font-mono flex justify-between items-center text-muted-foreground animate-in fade-in-50">
-                    <span>{p.barcode}</span>
-                    <span>K:{p.kapanNumber}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-center text-muted-foreground py-4">No scans yet.</p>
-            )}
+          <CardContent className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={kapanSummary} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="kapanNumber" />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="expected" fill="hsl(var(--primary))" name="Expected Jiram" />
+                <Bar dataKey="scanned" fill="hsl(var(--accent))" name="Actual Scanned" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
@@ -317,7 +329,7 @@ export default function JiramReportPage() {
                 <TableBody>
                   {kapanSummary.map(k => (
                     <TableRow key={k.kapanNumber} className={cn("group transition-colors", highlightedKapan === k.kapanNumber && 'bg-yellow-100 dark:bg-yellow-900/30')}>
-                      <TableCell className="font-bold cursor-pointer" onClick={() => setSelectedKapan(k.kapanNumber)}>{k.kapanNumber}</TableCell>
+                      <TableCell className="font-bold">{k.kapanNumber}</TableCell>
                       <TableCell>{k.expected}</TableCell>
                       <TableCell>{k.scanned}</TableCell>
                       <TableCell className="flex items-center gap-2">{getStatusIcon(k.status)} {k.status.charAt(0).toUpperCase() + k.status.slice(1)}</TableCell>
@@ -354,52 +366,60 @@ export default function JiramReportPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Performance Chart</CardTitle></CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={kapanSummary} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="kapanNumber" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="expected" fill="hsl(var(--primary))" name="Expected Jiram" />
-                <Bar dataKey="scanned" fill="hsl(var(--accent))" name="Actual Scanned" />
-              </BarChart>
-            </ResponsiveContainer>
+          <CardHeader>
+            <CardTitle>Date-wise Scanned Packets</CardTitle>
+             <div className="pt-4">
+              <Input
+                placeholder="Search by packet barcode..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="max-h-[400px] overflow-y-auto pr-2">
+             <div className="space-y-4">
+                {groupedScans.map(group => (
+                  <Collapsible key={group.date} className="border-b">
+                    <CollapsibleTrigger className="flex justify-between items-center w-full py-2 font-semibold">
+                       <div className="flex items-center gap-2">
+                            {format(parseISO(group.date), 'PPP')}
+                            <Badge>{group.count}</Badge>
+                       </div>
+                       <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]>svg]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                       <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Barcode</TableHead>
+                              <TableHead>Kapan</TableHead>
+                              <TableHead>Scan Time</TableHead>
+                              <TableHead>Action</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {group.packets.map(p => (
+                              <TableRow key={p.id}>
+                                <TableCell className="font-mono">{p.barcode}</TableCell>
+                                <TableCell>{p.kapanNumber}</TableCell>
+                                <TableCell>{format(new Date(p.scanTime), 'p')}</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+                {groupedScans.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No packets match your search.</p>
+                )}
+             </div>
           </CardContent>
         </Card>
       </div>
-      
-      {selectedKapan && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Scanned Packets for Kapan: {selectedKapan}</CardTitle>
-              <Button variant="ghost" size="icon" onClick={() => setSelectedKapan(null)}><XCircle /></Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-             <Table>
-                <TableHeader><TableRow><TableHead>Barcode</TableHead><TableHead>Scan Time</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
-                <TableBody>
-                  {detailedScans.map(p => (
-                    <TableRow key={p.id}>
-                      <TableCell className="font-mono">{p.barcode}</TableCell>
-                      <TableCell>{format(new Date(p.scanTime), 'PPp')}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(p.id)}><Trash2 className="h-4 w-4" /></Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-          </CardContent>
-        </Card>
-      )}
-
     </div>
   );
 }
-
-    
