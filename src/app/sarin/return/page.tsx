@@ -236,43 +236,45 @@ export default function ReturnSarinLotPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Lot</TableHead>
-                            <TableHead>Kapan</TableHead>
-                            <TableHead>Operator</TableHead>
-                            <TableHead>M / P / J</TableHead>
-                            <TableHead>Entry Date</TableHead>
-                            <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {unreturnedEntries.map(entry => {
-                        const timeDiff = differenceInMinutes(now, parseISO(entry.date));
-                        const isOverdue = timeDiff > 10;
-                        return (
-                        <TableRow key={entry.id}>
-                            <TableCell>{entry.lotNumber}</TableCell>
-                            <TableCell>{entry.kapanNumber}</TableCell>
-                            <TableCell>{entry.operator}</TableCell>
-                            <TableCell className="font-mono">{entry.mainPacketNumber} / {entry.packetCount} / {entry.jiramCount || 0}</TableCell>
-                            <TableCell>{format(new Date(entry.date), 'PPp')}</TableCell>
-                            <TableCell>
-                                <Button 
-                                  onClick={() => handleLegacyReturn(entry.id)} 
-                                  disabled={!returningOperator || returningOperator !== entry.operator}
-                                  variant={isOverdue ? 'destructive' : 'default'}
-                                  className={cn(isOverdue && 'animate-pulse')}
-                                >
-                                    Return Entry
-                                </Button>
-                            </TableCell>
-                        </TableRow>
-                    )})}
-                    </TableBody>
-                </Table>
-                {unreturnedEntries.length === 0 && <p className="text-center text-muted-foreground p-4">No unreturned entries found.</p>}
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Lot</TableHead>
+                                    <TableHead>Kapan</TableHead>
+                                    <TableHead>Operator</TableHead>
+                                    <TableHead>M / P / J</TableHead>
+                                    <TableHead>Entry Date</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {unreturnedEntries.map(entry => {
+                                const timeDiff = differenceInMinutes(now, parseISO(entry.date));
+                                const isOverdue = timeDiff > 10;
+                                return (
+                                <TableRow key={entry.id}>
+                                    <TableCell>{entry.lotNumber}</TableCell>
+                                    <TableCell>{entry.kapanNumber}</TableCell>
+                                    <TableCell>{entry.operator}</TableCell>
+                                    <TableCell className="font-mono">{entry.mainPacketNumber} / {entry.packetCount} / {entry.jiramCount || 0}</TableCell>
+                                    <TableCell>{format(new Date(entry.date), 'PPp')}</TableCell>
+                                    <TableCell>
+                                        <Button 
+                                        onClick={() => handleLegacyReturn(entry.id)} 
+                                        disabled={!returningOperator || returningOperator !== entry.operator}
+                                        variant={isOverdue ? 'destructive' : 'default'}
+                                        className={cn(isOverdue && 'animate-pulse')}
+                                        >
+                                            Return Entry
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )})}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    {unreturnedEntries.length === 0 && <p className="text-center text-muted-foreground p-4">No unreturned entries found.</p>}
                 </CardContent>
             </Card>
         </div>
@@ -344,7 +346,7 @@ export default function ReturnSarinLotPage() {
                   <DialogTitle>Verify Sarin Lot: {selectedLot?.lotNumber}</DialogTitle>
                   <DialogDescription>Scan all {selectedLot?.packetCount} packets to complete the return. Returned by <span className="font-semibold">{returningOperator}</span>.</DialogDescription>
               </DialogHeader>
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                    <form onSubmit={handleDialogScan}><Input ref={scanInputRef} placeholder="Scan packet barcode..." value={scanInput} onChange={e => setScanInput(e.target.value)} autoFocus disabled={allPacketsScanned} className={cn(shake && 'animate-shake')} /></form>
                    <div className="mt-4"><Progress value={(scannedInDialog.size / (selectedLot?.packetCount || 1)) * 100} /><p className="text-sm text-center mt-2 text-muted-foreground">Verified: {scannedInDialog.size} / {selectedLot?.packetCount}</p></div>

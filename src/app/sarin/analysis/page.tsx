@@ -74,7 +74,7 @@ export default function LotAnalysisPage() {
         <div className="space-y-6">
             <Card id="lot-analysis-card">
               <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
                   <div>
                     <CardTitle>Analysis for Lot: {searchTerm}</CardTitle>
                     <CardDescription>
@@ -83,7 +83,7 @@ export default function LotAnalysisPage() {
                       </Badge>
                     </CardDescription>
                   </div>
-                  <Button onClick={handlePrint} variant="outline">Print / Export</Button>
+                  <Button onClick={handlePrint} variant="outline" className="mt-4 md:mt-0">Print / Export</Button>
                 </div>
               </CardHeader>
               <CardContent>
@@ -127,14 +127,16 @@ export default function LotAnalysisPage() {
                     <CardTitle>Scanned Return Packets</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Full Barcode</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {lotData.scannedReturnPackets.map((p, i) => (
-                                <TableRow key={p.id}><TableCell>{i + 1}</TableCell><TableCell>{p.fullBarcode}</TableCell></TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Full Barcode</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {lotData.scannedReturnPackets.map((p, i) => (
+                                    <TableRow key={p.id}><TableCell>{i + 1}</TableCell><TableCell>{p.fullBarcode}</TableCell></TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
             )}
@@ -145,19 +147,21 @@ export default function LotAnalysisPage() {
                         <CardTitle>Reassignment History</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <Table>
-                            <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Packets Transferred</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
-                            <TableBody>
-                                {lotData.reassignmentHistory.map((log) => (
-                                    <TableRow key={log.id}>
-                                        <TableCell>{log.fromOperator}</TableCell>
-                                        <TableCell><div className="flex items-center gap-2"><ArrowRight className="h-4 w-4 text-muted-foreground" /><span>{log.toOperator}</span></div></TableCell>
-                                        <TableCell>{log.packets.find(p => p.lotNumber === searchTerm)?.quantityTransferred}</TableCell>
-                                        <TableCell>{format(new Date(log.date), 'PPp')}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                         <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader><TableRow><TableHead>From</TableHead><TableHead>To</TableHead><TableHead>Packets Transferred</TableHead><TableHead>Date & Time</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {lotData.reassignmentHistory.map((log) => (
+                                        <TableRow key={log.id}>
+                                            <TableCell>{log.fromOperator}</TableCell>
+                                            <TableCell><div className="flex items-center gap-2"><ArrowRight className="h-4 w-4 text-muted-foreground" /><span>{log.toOperator}</span></div></TableCell>
+                                            <TableCell>{log.packets.find(p => p.lotNumber === searchTerm)?.quantityTransferred}</TableCell>
+                                            <TableCell>{format(new Date(log.date), 'PPp')}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     </CardContent>
                 </Card>
             )}

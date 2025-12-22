@@ -282,7 +282,7 @@ export default function RecentSarinEntriesPage() {
               Scan all {lotToRescan?.packetCount} packets for this returned lot to attach them.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-6 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
             <div>
               <form onSubmit={handleDialogScan} className="flex flex-col gap-2">
                 <Input

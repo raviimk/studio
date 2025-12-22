@@ -156,12 +156,12 @@ export default function ReassignmentPage() {
         </CardHeader>
         <CardContent>
           <h3 className="font-semibold mb-2">Available Packets for {fromOperator || '...'}</h3>
-          <div className="border rounded-md">
+          <div className="border rounded-md overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Packet Details</TableHead>
-                  <TableHead className="w-[400px]">Transfer Option</TableHead>
+                  <TableHead className="w-full md:w-[400px]">Transfer Option</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
