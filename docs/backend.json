@@ -38,6 +38,17 @@
           "type": "string",
           "format": "date-time",
           "description": "Timestamp when the entry was created."
+        },
+        "isReturned": {
+            "type": "boolean",
+            "description": "Whether the entry has been returned."
+        },
+        "returnedPackets": {
+            "type": "array",
+            "description": "List of barcodes scanned during the return process.",
+            "items": {
+                "type": "string"
+            }
         }
       },
       "required": [

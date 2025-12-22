@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2 } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs } from 'firebase/firestore';
@@ -46,6 +46,21 @@ type JiramEntry = {
     }
 }
 
+type ChaluEntry = {
+    id: string;
+    kapanNumber: string;
+    packetNumber: string;
+    vajan: number;
+    originalPcs: number;
+    adjustment: number;
+    suffix: string;
+    currentPcs: number;
+    isReturned?: boolean;
+    returnedPackets?: string[];
+    createdAt: any;
+};
+
+
 type JiramImportPacket = {
     barcode: string;
     kapanNumber: string;
@@ -58,10 +73,11 @@ export default function ChaluEntryPage() {
 
   const firestore = useFirestore();
   const importFileRef = useRef<HTMLInputElement>(null);
+  const returnScanInputRef = useRef<HTMLInputElement>(null);
   
   const chaluEntriesQuery = useMemo(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'chaluEntries'));
+    return query(collection(firestore, 'chaluEntries'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
   const kapansQuery = useMemo(() => {
@@ -75,7 +91,7 @@ export default function ChaluEntryPage() {
   }, [firestore]);
 
 
-  const { data: chaluEntries, loading: loadingEntries } = useCollection(chaluEntriesQuery);
+  const { data: chaluEntries, loading: loadingEntries } = useCollection<ChaluEntry>(chaluEntriesQuery);
   const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
   const { data: jiramEntries, loading: loadingJiramEntries, refetch: refetchJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
   
@@ -99,6 +115,12 @@ export default function ChaluEntryPage() {
 
   // New state for Jiram search
   const [jiramSearchTerm, setJiramSearchTerm] = useState('');
+
+  // State for return dialog
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [entryToReturn, setEntryToReturn] = useState<ChaluEntry | null>(null);
+  const [returnScanInput, setReturnScanInput] = useState('');
+  const [scannedReturnPackets, setScannedReturnPackets] = useState<string[]>([]);
 
 
   // Use refs to store the latest state for the cleanup function
@@ -198,6 +220,8 @@ export default function ChaluEntryPage() {
             suffix,
             currentPcs: parseInt(currentPcs, 10) || 0,
             createdAt: serverTimestamp(),
+            isReturned: false,
+            returnedPackets: [],
         });
         
         // If this entry came from a pending Jiram scan, delete it from the queue
@@ -276,6 +300,42 @@ export default function ChaluEntryPage() {
         toast({ variant: 'destructive', title: 'Delete Failed' });
     }
   }
+
+  const handleOpenReturnDialog = (entry: ChaluEntry) => {
+      setEntryToReturn(entry);
+      setScannedReturnPackets([]);
+      setReturnScanInput('');
+      setReturnDialogOpen(true);
+      setTimeout(() => returnScanInputRef.current?.focus(), 100);
+  };
+  
+  const handleReturnScanSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!returnScanInput) return;
+      setScannedReturnPackets(prev => [...prev, returnScanInput]);
+      setReturnScanInput('');
+  }
+
+  const handleRemoveScannedReturn = (barcode: string) => {
+      setScannedReturnPackets(prev => prev.filter(b => b !== barcode));
+  }
+
+  const handleConfirmReturn = async () => {
+    if (!firestore || !entryToReturn) return;
+    const docRef = doc(firestore, 'chaluEntries', entryToReturn.id);
+    try {
+        await updateDoc(docRef, {
+            isReturned: true,
+            returnedPackets: scannedReturnPackets,
+        });
+        toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
+        setReturnDialogOpen(false);
+    } catch(e) {
+        console.error('Error returning entry:', e);
+        toast({ variant: 'destructive', title: 'Return Failed' });
+    }
+  };
+
 
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
@@ -621,7 +681,7 @@ export default function ChaluEntryPage() {
                       <TableBody>
                           {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
-                          <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
+                          <TableRow key={entry.id} className={cn(entry.isReturned && 'bg-destructive/10 text-destructive-foreground line-through', entry.adjustment < 0 && !entry.isReturned && 'bg-destructive/10')}>
                             {editingId === entry.id ? (
                                 <>
                                     <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
@@ -648,24 +708,33 @@ export default function ChaluEntryPage() {
                                     <TableCell className="font-bold">{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.vajan}</TableCell>
                                     <TableCell className="flex gap-1">
-                                        <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="destructive" size="sm" className="w-9 p-0">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                        {entry.isReturned ? (
+                                             <div className="flex items-center gap-1 font-semibold text-green-700">
+                                                <CheckCircle2 className="h-4 w-4" /> Returned
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Button size="sm" variant="outline" onClick={() => handleOpenReturnDialog(entry)}><Undo2 className="h-4 w-4" /></Button>
+                                                <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="destructive" size="sm" className="w-9 p-0">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                            <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </>
+                                        )}
                                     </TableCell>
                                 </>
                             )}
@@ -757,6 +826,42 @@ export default function ChaluEntryPage() {
              )}
          </CardContent>
       </Card>
+
+      <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Return Entry: {entryToReturn?.kapanNumber} - {entryToReturn?.packetNumber}</DialogTitle>
+                <DialogDescription>Scan all physical packets that are being returned to close this entry.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+                 <form onSubmit={handleReturnScanSubmit} className="flex gap-2">
+                    <Input
+                        ref={returnScanInputRef}
+                        placeholder="Scan barcode..."
+                        value={returnScanInput}
+                        onChange={e => setReturnScanInput(e.target.value)}
+                    />
+                    <Button type="submit">Add</Button>
+                </form>
+                {scannedReturnPackets.length > 0 && (
+                    <div className="border rounded-md p-2 space-y-1 max-h-40 overflow-y-auto">
+                        {scannedReturnPackets.map(p => (
+                            <div key={p} className="flex justify-between items-center bg-muted/50 p-1.5 rounded-sm">
+                                <span className="font-mono text-sm">{p}</span>
+                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveScannedReturn(p)}>
+                                    <X className="h-4 w-4"/>
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setReturnDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleConfirmReturn}>Confirm Return</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
