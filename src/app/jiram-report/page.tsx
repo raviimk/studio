@@ -82,6 +82,8 @@ export default function JiramReportPage() {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [highlightedKapan, setHighlightedKapan] = useState<string | null>(null);
   const [showSuccessTick, setShowSuccessTick] = useState(false);
+  const [lastScannedBarcode, setLastScannedBarcode] = useState<string | null>(null);
+
 
   useEffect(() => {
     barcodeInputRef.current?.focus();
@@ -199,6 +201,7 @@ export default function JiramReportPage() {
         toast({ variant: 'destructive', title: 'Cloud Save Failed', description: 'Packet saved locally, but failed to queue for Chalu entry.'})
     }
     
+    setLastScannedBarcode(barcode);
     setBarcode('');
     setHighlightedKapan(kapanNumber);
     setShowSuccessTick(true);
@@ -299,6 +302,11 @@ export default function JiramReportPage() {
                   </div>
                 )}
               </form>
+               {lastScannedBarcode && (
+                <div className="mt-4 text-sm text-muted-foreground">
+                  Last scan: <span className="font-mono font-semibold text-foreground">{lastScannedBarcode}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card>
