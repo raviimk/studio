@@ -681,7 +681,7 @@ export default function ChaluEntryPage() {
                       <TableBody>
                           {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
-                          <TableRow key={entry.id} className={cn(entry.isReturned && 'bg-destructive/10 text-destructive-foreground line-through', entry.adjustment < 0 && !entry.isReturned && 'bg-destructive/10')}>
+                          <TableRow key={entry.id} className={cn(entry.isReturned && 'bg-destructive/10 text-destructive', entry.adjustment < 0 && !entry.isReturned && 'bg-destructive/10')}>
                             {editingId === entry.id ? (
                                 <>
                                     <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
