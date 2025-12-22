@@ -82,7 +82,7 @@ export default function JiramReportPage() {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [highlightedKapan, setHighlightedKapan] = useState<string | null>(null);
   const [showSuccessTick, setShowSuccessTick] = useState(false);
-  const [lastScannedBarcode, setLastScannedBarcode] = useState<string | null>(null);
+  const [lastScannedBarcodes, setLastScannedBarcodes] = useState<string[]>([]);
 
 
   useEffect(() => {
@@ -201,7 +201,7 @@ export default function JiramReportPage() {
         toast({ variant: 'destructive', title: 'Cloud Save Failed', description: 'Packet saved locally, but failed to queue for Chalu entry.'})
     }
     
-    setLastScannedBarcode(barcode);
+    setLastScannedBarcodes(prev => [barcode, ...prev].slice(0, 10));
     setBarcode('');
     setHighlightedKapan(kapanNumber);
     setShowSuccessTick(true);
@@ -302,9 +302,14 @@ export default function JiramReportPage() {
                   </div>
                 )}
               </form>
-               {lastScannedBarcode && (
-                <div className="mt-4 text-sm text-muted-foreground">
-                  Last scan: <span className="font-mono font-semibold text-foreground">{lastScannedBarcode}</span>
+               {lastScannedBarcodes.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">Recent Scans:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {lastScannedBarcodes.map((b, i) => (
+                       <Badge key={i} variant={i === 0 ? 'default' : 'secondary'} className="font-mono">{b}</Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
