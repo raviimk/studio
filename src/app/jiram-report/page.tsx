@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteKapanData } from '@/lib/kapan-deleter';
 import { useCollection, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -180,24 +180,18 @@ export default function JiramReportPage() {
     setJiramPackets(prev => [newPacketLocal, ...prev]);
 
     try {
-        const batch = writeBatch(firestore);
-
-        const jiramDocRef = doc(collection(firestore, 'jiramEntries'));
-        batch.set(jiramDocRef, {
+        await addDoc(collection(firestore, 'jiramEntries'), {
             barcode: barcode,
             kapanNumber: kapanNumber,
             packetNumber: packetIdentifier,
             suffix: suffix || '',
             scanTime: serverTimestamp(),
         });
-        
+
         const kapanExists = kapans?.some(k => k.kapanNumber === kapanNumber);
         if (!kapanExists) {
-            const kapanDocRef = doc(collection(firestore, 'kapans'));
-            batch.set(kapanDocRef, { kapanNumber });
+            await addDoc(collection(firestore, 'kapans'), { kapanNumber });
         }
-        
-        await batch.commit();
         
          toast({ title: 'Packet Scanned & Queued', description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
     } catch(err) {
