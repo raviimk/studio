@@ -117,9 +117,19 @@ export default function ReturnSarinLotPage() {
     const isValid = mainPacketBases.has(normalizedScanned);
 
     if (isValid) {
-        setScannedInDialog(prev => new Set(prev).add(scanInput));
+        const newScannedSet = new Set(scannedInDialog).add(scanInput);
+        setScannedInDialog(newScannedSet);
+        
+        // Immediately persist the scan
+        const scannedReturnPackets: ScannedPacket[] = [...newScannedSet].map(barcode => {
+            const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
+            const [, kapanNumber, packetNumber, suffix] = match || [];
+            return { id: uuidv4(), fullBarcode: barcode, kapanNumber, packetNumber, suffix: suffix || '' };
+        });
+        setSarinPackets(prev => prev.map(p => p.id === selectedLot.id ? { ...p, scannedReturnPackets } : p));
+        
         setLastScanned({ barcode: scanInput, isValid: true });
-        toast({ title: 'Packet Verified', description: scanInput });
+        toast({ title: 'Packet Verified & Saved', description: scanInput });
     } else {
         setLastScanned({ barcode: scanInput, isValid: false });
         setShake(true);
@@ -201,12 +211,20 @@ export default function ReturnSarinLotPage() {
     }
   };
 
-  const handleRemoveFromScan = (barcode: string) => {
-    setScannedInDialog(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(barcode);
-        return newSet;
-    })
+  const handleRemoveFromScan = (barcodeToRemove: string) => {
+    const newScannedSet = new Set(scannedInDialog);
+    newScannedSet.delete(barcodeToRemove);
+    setScannedInDialog(newScannedSet);
+
+    if (selectedLot) {
+        const scannedReturnPackets: ScannedPacket[] = [...newScannedSet].map(barcode => {
+            const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
+            const [, kapanNumber, packetNumber, suffix] = match || [];
+            return { id: uuidv4(), fullBarcode: barcode, kapanNumber, packetNumber, suffix: suffix || '' };
+        });
+        setSarinPackets(prev => prev.map(p => p.id === selectedLot.id ? { ...p, scannedReturnPackets } : p));
+        toast({title: "Scan Removed", description: `Removed ${barcodeToRemove} from the lot.`});
+    }
   };
 
   if (!scanSettings.sarin) {
