@@ -104,13 +104,15 @@ export default function RecentSarinEntriesPage() {
   }, [sarinPackets, searchTerm]);
 
   const rescanPendingCount = useMemo(() => {
-    return sarinPackets.filter(p => p.isReturned && (!p.scannedReturnPackets || p.scannedReturnPackets.length === 0)).length;
+    return sarinPackets.filter(p => p.isReturned && (!p.scannedReturnPackets || p.scannedReturnPackets.length < p.packetCount)).length;
   }, [sarinPackets]);
 
   // Rescan Dialog Logic
   const handleOpenRescanDialog = (lot: SarinPacket) => {
     setLotToRescan(lot);
-    setScannedInDialog(new Set());
+    // Initialize with already scanned packets
+    const previouslyScanned = new Set(lot.scannedReturnPackets?.map(p => p.fullBarcode) || []);
+    setScannedInDialog(previouslyScanned);
     setScanInput('');
     setIsRescanOpen(true);
   };
@@ -127,6 +129,14 @@ export default function RecentSarinEntriesPage() {
     }
     setScanInput('');
   };
+  
+  const handleRemoveFromScan = (barcode: string) => {
+    setScannedInDialog(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(barcode);
+        return newSet;
+    })
+  }
 
   const allPacketsScannedForRescan = useMemo(() => {
     if (!lotToRescan) return false;
@@ -200,7 +210,7 @@ export default function RecentSarinEntriesPage() {
                 </TableHeader>
                 <TableBody>
                   {sortedPackets.map(p => {
-                    const needsRescan = p.isReturned && (!p.scannedReturnPackets || p.scannedReturnPackets.length === 0);
+                    const needsRescan = p.isReturned && (!p.scannedReturnPackets || p.scannedReturnPackets.length < p.packetCount);
                     return (
                     <TableRow key={p.id}>
                       <TableCell>{p.operator}</TableCell>
@@ -294,12 +304,17 @@ export default function RecentSarinEntriesPage() {
             <div className="border rounded-md max-h-64 overflow-y-auto">
               <Table>
                 <TableHeader>
-                  <TableRow><TableHead>Scanned Packet</TableHead></TableRow>
+                  <TableRow><TableHead>Scanned Packet</TableHead><TableHead>Action</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {[...scannedInDialog].map(barcode => (
                     <TableRow key={barcode} className="bg-green-100 dark:bg-green-900/30">
                       <TableCell className="font-mono">{barcode}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFromScan(barcode)}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -307,7 +322,7 @@ export default function RecentSarinEntriesPage() {
             </div>
           </div>
           <div className="flex justify-end mt-4">
-            <Button onClick={handleConfirmRescan} disabled={!allPacketsScannedForRescan}>
+            <Button onClick={handleConfirmRescan} disabled={!lotToRescan}>
               <Check className="mr-2 h-4 w-4" /> Confirm & Attach Scans
             </Button>
           </div>

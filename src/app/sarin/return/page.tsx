@@ -12,7 +12,7 @@ import PageHeader from '@/components/PageHeader';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Check, ThumbsUp, X } from 'lucide-react';
+import { Check, ThumbsUp, Trash2, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -94,7 +94,9 @@ export default function ReturnSarinLotPage() {
         return;
     }
     setSelectedLot(lot);
-    setScannedInDialog(new Set());
+    // Initialize with already scanned packets from a previous partial return/scan session
+    const previouslyScanned = new Set(lot.scannedReturnPackets?.map(p => p.fullBarcode) || []);
+    setScannedInDialog(previouslyScanned);
     setScanInput('');
     setLastScanned(null);
     setIsDialogOpen(true);
@@ -197,6 +199,14 @@ export default function ReturnSarinLotPage() {
       toast({ title: 'Success', description: `Lot entry has been marked as returned.` });
       setReturningOperator('');
     }
+  };
+
+  const handleRemoveFromScan = (barcode: string) => {
+    setScannedInDialog(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(barcode);
+        return newSet;
+    })
   };
 
   if (!scanSettings.sarin) {
@@ -341,18 +351,24 @@ export default function ReturnSarinLotPage() {
                 </div>
                 <div className="border rounded-md max-h-64 overflow-y-auto">
                    <Table>
-                       <TableHeader><TableRow><TableHead>Scanned Packet</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                       <TableHeader><TableRow><TableHead>Scanned Packet</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                        <TableBody>
                            {[...scannedInDialog].map(barcode => (
                                <TableRow key={barcode} ref={lastScanned?.barcode === barcode ? lastScannedRef : null} className="bg-green-100 dark:bg-green-900/30">
                                    <TableCell className="font-mono">{barcode}</TableCell>
                                    <TableCell><Check className="h-5 w-5 text-green-500" /></TableCell>
+                                   <TableCell>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFromScan(barcode)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                   </TableCell>
                                </TableRow>
                            ))}
                            {lastScanned && !lastScanned.isValid && (
                                 <TableRow ref={lastScannedRef} className="bg-destructive/10">
                                     <TableCell className="font-mono text-destructive">{lastScanned.barcode}</TableCell>
                                     <TableCell><X className="h-5 w-5 text-destructive" /></TableCell>
+                                    <TableCell></TableCell>
                                 </TableRow>
                            )}
                        </TableBody>
@@ -360,7 +376,7 @@ export default function ReturnSarinLotPage() {
                 </div>
               </div>
               <div className="flex justify-end mt-4">
-                  <Button onClick={handleConfirmReturn} disabled={!allPacketsScanned}>
+                  <Button onClick={handleConfirmReturn}>
                     Confirm Return
                   </Button>
               </div>
@@ -369,4 +385,3 @@ export default function ReturnSarinLotPage() {
     </div>
   );
 }
-
