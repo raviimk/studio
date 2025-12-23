@@ -105,7 +105,7 @@ export default function ChaluEntryPage() {
   const [kapanFilter, setKapanFilter] = useState('');
   const [isReportOpen, setReportOpen] = useState(false);
   
-  const [pendingJiramId, setPendingJiramId = useState<string | null>(null);
+  const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
 
   // State for inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -118,7 +118,7 @@ export default function ChaluEntryPage() {
 
   // State for return dialog
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
-  const [entryToReturn, setEntryToReturn = useState<ChaluEntry | null>(null);
+  const [entryToReturn, setEntryToReturn] = useState<ChaluEntry | null>(null);
   const [returnScanInput, setReturnScanInput] = useState('');
   const [scannedReturnPackets, setScannedReturnPackets] = useState<Set<string>>(new Set());
 
@@ -740,15 +740,15 @@ export default function ChaluEntryPage() {
                                 </>
                             ) : (
                                  <>
-                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.kapanNumber}</TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.packetNumber}</TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.originalPcs}</TableCell>
-                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold", entry.isReturned && 'line-through')}>
+                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.kapanNumber}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.packetNumber}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.originalPcs}</TableCell>
+                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold", entry.isReturned && 'line-through decoration-black decoration-2')}>
                                       {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
                                     </TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.suffix}</TableCell>
-                                    <TableCell className={cn("font-bold", entry.isReturned && 'line-through')}>{entry.currentPcs}</TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.vajan}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.suffix}</TableCell>
+                                    <TableCell className={cn("font-bold", entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.currentPcs}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.vajan}</TableCell>
                                     <TableCell className="flex gap-1">
                                         {entry.isReturned ? (
                                              <div className="flex items-center gap-1 font-semibold text-green-700 dark:text-green-300">
@@ -921,5 +921,3 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
-
-    
