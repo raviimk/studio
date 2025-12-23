@@ -102,9 +102,35 @@ export default function ReturnSarinLotPage() {
     setIsDialogOpen(true);
   };
   
+   const expectedPacketsForLot = useMemo(() => {
+    if (!selectedLot) return [];
+    const mainPackets = selectedLot.sarinMainPackets?.map(p => p.fullBarcode) || [];
+    
+    // Logic to generate 'plus' packets, assuming main packet is like 'R1-965-A'
+    const plusPackets: string[] = [];
+    const mainPacket = selectedLot.sarinMainPackets?.[0];
+    if (mainPacket && (selectedLot.jiramCount || 0) > 0) {
+        const base = `R${mainPacket.kapanNumber}-${mainPacket.packetNumber}`;
+        const mainPacketSuffixCode = 'A'.charCodeAt(0);
+        
+        for (let i = 0; i < (selectedLot.jiramCount || 0); i++) {
+            const suffix = String.fromCharCode(mainPacketSuffixCode + mainPackets.length + i);
+            plusPackets.push(`${base}-${suffix}`);
+        }
+    }
+    
+    // For older lots, we might need a fallback. Let's assume packetCount is total required.
+    if (mainPackets.length === 0 && selectedLot.packetCount > 0) {
+        return Array.from({ length: selectedLot.packetCount }, (_, i) => `Packet ${i + 1}`);
+    }
+
+    return [...mainPackets, ...plusPackets];
+   }, [selectedLot]);
+
+
    const handleDialogScan = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!scanInput || !selectedLot || !selectedLot.sarinMainPackets) return;
+    if (!scanInput || !selectedLot) return;
 
     if (scannedInDialog.has(scanInput)) {
         toast({ variant: 'destructive', title: 'Already Scanned', description: 'This packet has already been verified for this lot.' });
@@ -112,9 +138,7 @@ export default function ReturnSarinLotPage() {
         return;
     }
     
-    const normalizedScanned = normalizeBarcodeForSarin(scanInput);
-    const mainPacketBases = new Set(selectedLot.sarinMainPackets.map(p => normalizeBarcodeForSarin(p.fullBarcode)));
-    const isValid = mainPacketBases.has(normalizedScanned);
+    const isValid = expectedPacketsForLot.includes(scanInput);
 
     if (isValid) {
         const newScannedSet = new Set(scannedInDialog).add(scanInput);
@@ -146,14 +170,18 @@ export default function ReturnSarinLotPage() {
   const allPacketsScanned = useMemo(() => {
     if (!selectedLot) return false;
     // For lots created before scanning was mandatory
-    if (!selectedLot.sarinMainPackets || selectedLot.sarinMainPackets.length === 0) {
-        return true;
-    }
-    return selectedLot.packetCount === scannedInDialog.size;
-  }, [selectedLot, scannedInDialog]);
+    if (expectedPacketsForLot.length === 0) return true;
+    
+    return expectedPacketsForLot.length === scannedInDialog.size;
+  }, [selectedLot, scannedInDialog, expectedPacketsForLot]);
   
   const handleConfirmReturn = useCallback(() => {
     if (!selectedLot || !returningOperator) return;
+
+    if (!allPacketsScanned) {
+        toast({ variant: 'destructive', title: 'Scan Incomplete', description: `Please scan all ${expectedPacketsForLot.length} required packets.`});
+        return;
+    }
 
     const scannedReturnPackets: ScannedPacket[] = [...scannedInDialog].map(barcode => {
         const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
@@ -177,7 +205,7 @@ export default function ReturnSarinLotPage() {
     setSelectedLot(null);
     setScannedInDialog(new Set());
     setReturningOperator('');
-  }, [selectedLot, returningOperator, scannedInDialog, sarinPackets, setSarinPackets, toast]);
+  }, [selectedLot, returningOperator, scannedInDialog, sarinPackets, setSarinPackets, toast, allPacketsScanned, expectedPacketsForLot.length]);
 
   useEffect(() => {
     if (allPacketsScanned) {
@@ -362,41 +390,40 @@ export default function ReturnSarinLotPage() {
           <DialogContent className="max-w-2xl">
               <DialogHeader>
                   <DialogTitle>Verify Sarin Lot: {selectedLot?.lotNumber}</DialogTitle>
-                  <DialogDescription>Scan all {selectedLot?.packetCount} packets to complete the return. Returned by <span className="font-semibold">{returningOperator}</span>.</DialogDescription>
+                  <DialogDescription>Scan all {expectedPacketsForLot.length} required packets to complete the return. Returned by <span className="font-semibold">{returningOperator}</span>.</DialogDescription>
               </DialogHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                    <form onSubmit={handleDialogScan}><Input ref={scanInputRef} placeholder="Scan packet barcode..." value={scanInput} onChange={e => setScanInput(e.target.value)} autoFocus disabled={allPacketsScanned} className={cn(shake && 'animate-shake')} /></form>
-                   <div className="mt-4"><Progress value={(scannedInDialog.size / (selectedLot?.packetCount || 1)) * 100} /><p className="text-sm text-center mt-2 text-muted-foreground">Verified: {scannedInDialog.size} / {selectedLot?.packetCount}</p></div>
+                   <div className="mt-4"><Progress value={(scannedInDialog.size / (expectedPacketsForLot.length || 1)) * 100} /><p className="text-sm text-center mt-2 text-muted-foreground">Verified: {scannedInDialog.size} / {expectedPacketsForLot.length}</p></div>
                 </div>
                 <div className="border rounded-md max-h-64 overflow-y-auto">
                    <Table>
-                       <TableHeader><TableRow><TableHead>Scanned Packet</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+                       <TableHeader><TableRow><TableHead>Expected Packet</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                        <TableBody>
-                           {[...scannedInDialog].map(barcode => (
-                               <TableRow key={barcode} ref={lastScanned?.barcode === barcode ? lastScannedRef : null} className="bg-green-100 dark:bg-green-900/30">
+                           {expectedPacketsForLot.map(barcode => (
+                               <TableRow key={barcode} ref={lastScanned?.barcode === barcode ? lastScannedRef : null} className={cn(scannedInDialog.has(barcode) && "bg-green-100 dark:bg-green-900/30")}>
                                    <TableCell className="font-mono">{barcode}</TableCell>
-                                   <TableCell><Check className="h-5 w-5 text-green-500" /></TableCell>
                                    <TableCell>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFromScan(barcode)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                    {scannedInDialog.has(barcode) ? 
+                                        <Check className="h-5 w-5 text-green-500" /> : 
+                                        <X className="h-5 w-5 text-destructive" />}
+                                   </TableCell>
+                                    <TableCell>
+                                        {scannedInDialog.has(barcode) && (
+                                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveFromScan(barcode)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                    </TableCell>
                                </TableRow>
                            ))}
-                           {lastScanned && !lastScanned.isValid && (
-                                <TableRow ref={lastScannedRef} className="bg-destructive/10">
-                                    <TableCell className="font-mono text-destructive">{lastScanned.barcode}</TableCell>
-                                    <TableCell><X className="h-5 w-5 text-destructive" /></TableCell>
-                                    <TableCell></TableCell>
-                                </TableRow>
-                           )}
                        </TableBody>
                    </Table>
                 </div>
               </div>
               <div className="flex justify-end mt-4">
-                  <Button onClick={handleConfirmReturn}>
+                  <Button onClick={handleConfirmReturn} disabled={!allPacketsScanned}>
                     Confirm Return
                   </Button>
               </div>
