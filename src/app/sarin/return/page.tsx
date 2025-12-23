@@ -94,13 +94,15 @@ export default function ReturnSarinLotPage() {
         return;
     }
     setSelectedLot(lot);
-    setScannedInDialog(new Set());
+    // Initialize with already scanned packets from local storage
+    const previouslyScanned = new Set(lot.scannedReturnPackets?.map(p => p.fullBarcode) || []);
+    setScannedInDialog(previouslyScanned);
     setScanInput('');
     setLastScanned(null);
     setIsDialogOpen(true);
   };
   
-   const handleDialogScan = (e: React.FormEvent) => {
+  const handleDialogScan = (e: React.FormEvent) => {
     e.preventDefault();
     if (!scanInput || !selectedLot || !selectedLot.sarinMainPackets) return;
 
@@ -115,9 +117,23 @@ export default function ReturnSarinLotPage() {
     const isValid = mainPacketBases.has(normalizedScanned);
 
     if (isValid) {
-        setScannedInDialog(prev => new Set(prev).add(scanInput));
+        const newScannedSet = new Set(scannedInDialog).add(scanInput);
+        setScannedInDialog(newScannedSet);
+        
+        // Save progress to localStorage
+        const scannedReturnPackets: ScannedPacket[] = [...newScannedSet].map(barcode => ({
+            id: uuidv4(),
+            fullBarcode: barcode,
+            kapanNumber: selectedLot.kapanNumber,
+            packetNumber: barcode.split('-')[1],
+            suffix: barcode.split('-')[2] || ''
+        }));
+        setSarinPackets(prev => prev.map(p => 
+            p.id === selectedLot.id ? { ...p, scannedReturnPackets } : p
+        ));
+
         setLastScanned({ barcode: scanInput, isValid: true });
-        toast({ title: 'Packet Verified', description: scanInput });
+        toast({ title: 'Packet Verified & Saved', description: scanInput });
     } else {
         setLastScanned({ barcode: scanInput, isValid: false });
         setShake(true);
@@ -143,20 +159,9 @@ export default function ReturnSarinLotPage() {
   const handleConfirmReturn = useCallback(() => {
     if (!selectedLot || !returningOperator) return;
 
-    const scannedReturnPackets: ScannedPacket[] = [...scannedInDialog].map(barcode => {
-        const match = barcode.match(/^(?:R)?(\d+)-(\d+)(?:-(.+))?$/);
-        const [, kapanNumber, packetNumber, suffix] = match || [];
-        return {
-            id: uuidv4(),
-            fullBarcode: barcode,
-            kapanNumber,
-            packetNumber,
-            suffix: suffix || ''
-        }
-    });
-
+    // The scanned packets are already saved, so we just need to mark as returned.
     const updatedPackets = sarinPackets.map(p =>
-      p.id === selectedLot.id ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString(), scannedReturnPackets } : p
+      p.id === selectedLot.id ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : p
     );
     setSarinPackets(updatedPackets);
     toast({ title: 'Success', description: `Lot ${selectedLot.lotNumber} has been marked as returned.` });
@@ -165,7 +170,7 @@ export default function ReturnSarinLotPage() {
     setSelectedLot(null);
     setScannedInDialog(new Set());
     setReturningOperator('');
-  }, [selectedLot, returningOperator, scannedInDialog, sarinPackets, setSarinPackets, toast]);
+  }, [selectedLot, returningOperator, sarinPackets, setSarinPackets, toast]);
 
   useEffect(() => {
     if (allPacketsScanned) {
