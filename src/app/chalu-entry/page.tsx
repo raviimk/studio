@@ -314,17 +314,33 @@ export default function ChaluEntryPage() {
   
   const expectedReturnPackets = useMemo(() => {
     if (!entryToReturn) return [];
-    
+
     const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
     const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
+    const packetSuffixMatch = entryToReturn.packetNumber.match(/-([A-Z])$/);
+    const isMainPacket = !packetSuffixMatch || packetSuffixMatch[1] === 'A';
+    
+    const packets: string[] = [];
 
-    const packets = [`${baseBarcode}-A`];
-
-    if (entryToReturn.adjustment > 0 && entryToReturn.suffix) {
+    // Logic for plus adjustments on main packets
+    if (isMainPacket && entryToReturn.adjustment > 0 && entryToReturn.suffix) {
+        packets.push(`${baseBarcode}-A`);
         const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
         plusSuffixes.forEach(suffix => {
              packets.push(`${baseBarcode}-${suffix}`);
         });
+    }
+    // Logic for minus adjustments on sub-packets (e.g. 530-B)
+    else if (!isMainPacket && entryToReturn.adjustment < 0 && entryToReturn.suffix) {
+        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
+        const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
+        minusSuffixes.forEach(suffix => {
+            packets.push(`${baseBarcode}-${suffix}`);
+        });
+    }
+    // Default case for main packets with no/minus adjustment, or sub-packets with no/plus adjustment
+    else {
+        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
     return packets;
@@ -992,5 +1008,3 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
-
-    
