@@ -312,12 +312,30 @@ export default function ChaluEntryPage() {
       setTimeout(() => returnScanInputRef.current?.focus(), 100);
   };
   
+  const expectedReturnPackets = useMemo(() => {
+    if (!entryToReturn) return [];
+    
+    const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
+    const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
+
+    const packets = [`${baseBarcode}-A`];
+
+    if (entryToReturn.adjustment > 0 && entryToReturn.suffix) {
+        const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
+        plusSuffixes.forEach(suffix => {
+             packets.push(`${baseBarcode}-${suffix}`);
+        });
+    }
+    
+    return packets;
+  }, [entryToReturn]);
+  
   const allPacketsScanned = useMemo(() => {
     if (!entryToReturn) return false;
     const expected = expectedReturnPackets;
-    if (expected.length === 0) return true; // No packets to scan, can confirm.
+    if (expected.length === 0) return true;
     return expected.every(p => scannedReturnPackets.has(p));
-  }, [entryToReturn, scannedReturnPackets]);
+  }, [entryToReturn, scannedReturnPackets, expectedReturnPackets]);
 
   const handleReturnScanSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -344,29 +362,6 @@ export default function ChaluEntryPage() {
           return newSet;
       });
   }
-  
-  const expectedReturnPackets = useMemo(() => {
-    if (!entryToReturn) return [];
-    
-    // Base packet number, without suffix if any exists
-    const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
-    const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
-
-    // Always expect the main packet, which is suffixed with 'A'
-    const mainPacket = `${baseBarcode}-A`;
-    const packets = [mainPacket];
-
-    // If there was a positive adjustment, generate barcodes for the suffix packets
-    if (entryToReturn.adjustment > 0 && entryToReturn.suffix) {
-        const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
-        plusSuffixes.forEach(suffix => {
-             packets.push(`${baseBarcode}-${suffix}`);
-        });
-    }
-    
-    return packets;
-  }, [entryToReturn]);
-
 
   const handleConfirmReturn = async () => {
     if (!firestore || !entryToReturn) return;
@@ -823,7 +818,7 @@ export default function ChaluEntryPage() {
                         <TableBody>
                              {loadingEntries && <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>}
                             {!loadingEntries && filteredEntries.map(entry => (
-                                <TableRow key={entry.id} className="bg-green-100/60 dark:bg-green-900/30">
+                                <TableRow key={entry.id} className="relative bg-green-100/60 dark:bg-green-900/30">
                                     <TableCell>
                                         <div className="font-bold">{entry.kapanNumber}-{entry.packetNumber}</div>
                                         <div className="text-xs text-muted-foreground">Entered: {entry.createdAt?.toDate ? format(entry.createdAt.toDate(), 'PP') : 'N/A'}</div>
@@ -926,7 +921,7 @@ export default function ChaluEntryPage() {
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id'))}>Delete Scan</AlertDialogAction>
+                                                <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id))}>Delete Scan</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
