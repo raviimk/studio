@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2 } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs } from 'firebase/firestore';
@@ -105,7 +105,7 @@ export default function ChaluEntryPage() {
   const [kapanFilter, setKapanFilter] = useState('');
   const [isReportOpen, setReportOpen] = useState(false);
   
-  const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
+  const [pendingJiramId, setPendingJiramId = useState<string | null>(null);
 
   // State for inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -118,9 +118,9 @@ export default function ChaluEntryPage() {
 
   // State for return dialog
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
-  const [entryToReturn, setEntryToReturn] = useState<ChaluEntry | null>(null);
+  const [entryToReturn, setEntryToReturn = useState<ChaluEntry | null>(null);
   const [returnScanInput, setReturnScanInput] = useState('');
-  const [scannedReturnPackets, setScannedReturnPackets] = useState<string[]>([]);
+  const [scannedReturnPackets, setScannedReturnPackets] = useState<Set<string>>(new Set());
 
 
   // Use refs to store the latest state for the cleanup function
@@ -303,7 +303,7 @@ export default function ChaluEntryPage() {
 
   const handleOpenReturnDialog = (entry: ChaluEntry) => {
       setEntryToReturn(entry);
-      setScannedReturnPackets([]);
+      setScannedReturnPackets(new Set(entry.returnedPackets || []));
       setReturnScanInput('');
       setReturnDialogOpen(true);
       setTimeout(() => returnScanInputRef.current?.focus(), 100);
@@ -312,21 +312,63 @@ export default function ChaluEntryPage() {
   const handleReturnScanSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       if (!returnScanInput) return;
-      setScannedReturnPackets(prev => [...prev, returnScanInput]);
+      setScannedReturnPackets(prev => new Set(prev).add(returnScanInput));
       setReturnScanInput('');
   }
 
   const handleRemoveScannedReturn = (barcode: string) => {
-      setScannedReturnPackets(prev => prev.filter(b => b !== barcode));
+      setScannedReturnPackets(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(barcode);
+          return newSet;
+      });
   }
+  
+  const expectedReturnPackets = useMemo(() => {
+    if (!entryToReturn) return [];
+    
+    const baseBarcode = `R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`;
+    const mainPacket = `${baseBarcode}-A`;
+    
+    // If it's not a main packet itself, it can't have plus packets
+    if (entryToReturn.packetNumber.includes('-')) {
+        return [`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`];
+    }
+    
+    const originalPcs = entryToReturn.originalPcs || 0;
+    const adjustment = entryToReturn.adjustment || 0;
+    
+    const packets = [mainPacket];
+    
+    if (adjustment > 0) {
+        for (let i = 0; i < adjustment; i++) {
+            const suffixCharCode = 'A'.charCodeAt(0) + originalPcs + i;
+            packets.push(`${baseBarcode}-${String.fromCharCode(suffixCharCode)}`);
+        }
+    }
+    
+    return packets;
+  }, [entryToReturn]);
+  
+  const allPacketsScanned = useMemo(() => {
+    if (!entryToReturn || expectedReturnPackets.length === 0) return false;
+    return expectedReturnPackets.every(p => scannedReturnPackets.has(p));
+  }, [entryToReturn, expectedReturnPackets, scannedReturnPackets]);
+
 
   const handleConfirmReturn = async () => {
     if (!firestore || !entryToReturn) return;
+    
+    if (!allPacketsScanned) {
+        toast({ variant: "destructive", title: "Scan Incomplete", description: "You must scan all expected packets before confirming." });
+        return;
+    }
+    
     const docRef = doc(firestore, 'chaluEntries', entryToReturn.id);
     try {
         await updateDoc(docRef, {
             isReturned: true,
-            returnedPackets: scannedReturnPackets,
+            returnedPackets: Array.from(scannedReturnPackets),
         });
         toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
         setReturnDialogOpen(false);
@@ -636,7 +678,7 @@ export default function ChaluEntryPage() {
                                                       <TableHead>પેકેટ</TableHead>
                                                       <TableHead>ઓરિજિનલ</TableHead>
                                                       <TableHead>નુકશાની</TableHead>
-                                                      <TableHead>પ્లસ/માઈનસ</TableHead>
+                                                      <TableHead>પ્લસ/માઈનસ</TableHead>
                                                       <TableHead>ટોટલ</TableHead>
                                                       <TableHead>વજન</TableHead>
                                                   </TableRow>
@@ -681,7 +723,7 @@ export default function ChaluEntryPage() {
                       <TableBody>
                           {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
-                          <TableRow key={entry.id} className={cn(entry.isReturned && 'bg-destructive/10 text-destructive-foreground line-through', entry.adjustment < 0 && !entry.isReturned && 'bg-destructive/10')}>
+                          <TableRow key={entry.id} className={cn(entry.isReturned && 'bg-green-100/60 dark:bg-green-900/30', entry.adjustment < 0 && !entry.isReturned && 'bg-destructive/10')}>
                             {editingId === entry.id ? (
                                 <>
                                     <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
@@ -698,18 +740,18 @@ export default function ChaluEntryPage() {
                                 </>
                             ) : (
                                  <>
-                                    <TableCell>{entry.kapanNumber}</TableCell>
-                                    <TableCell>{entry.packetNumber}</TableCell>
-                                    <TableCell>{entry.originalPcs}</TableCell>
-                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
+                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.kapanNumber}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.packetNumber}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.originalPcs}</TableCell>
+                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold", entry.isReturned && 'line-through')}>
                                       {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
                                     </TableCell>
-                                    <TableCell>{entry.suffix}</TableCell>
-                                    <TableCell className="font-bold">{entry.currentPcs}</TableCell>
-                                    <TableCell>{entry.vajan}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.suffix}</TableCell>
+                                    <TableCell className={cn("font-bold", entry.isReturned && 'line-through')}>{entry.currentPcs}</TableCell>
+                                    <TableCell className={cn(entry.isReturned && 'line-through')}>{entry.vajan}</TableCell>
                                     <TableCell className="flex gap-1">
                                         {entry.isReturned ? (
-                                             <div className="flex items-center gap-1 font-semibold text-green-700">
+                                             <div className="flex items-center gap-1 font-semibold text-green-700 dark:text-green-300">
                                                 <CheckCircle2 className="h-4 w-4" /> Returned
                                             </div>
                                         ) : (
@@ -828,40 +870,56 @@ export default function ChaluEntryPage() {
       </Card>
 
       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
             <DialogHeader>
                 <DialogTitle>Return Entry: {entryToReturn?.kapanNumber} - {entryToReturn?.packetNumber}</DialogTitle>
-                <DialogDescription>Scan all physical packets that are being returned to close this entry.</DialogDescription>
+                <DialogDescription>Scan all {expectedReturnPackets.length} physical packets that are being returned to close this entry.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-                 <form onSubmit={handleReturnScanSubmit} className="flex gap-2">
-                    <Input
-                        ref={returnScanInputRef}
-                        placeholder="Scan barcode..."
-                        value={returnScanInput}
-                        onChange={e => setReturnScanInput(e.target.value)}
-                    />
-                    <Button type="submit">Add</Button>
-                </form>
-                {scannedReturnPackets.length > 0 && (
-                    <div className="border rounded-md p-2 space-y-1 max-h-40 overflow-y-auto">
-                        {scannedReturnPackets.map(p => (
-                            <div key={p} className="flex justify-between items-center bg-muted/50 p-1.5 rounded-sm">
-                                <span className="font-mono text-sm">{p}</span>
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveScannedReturn(p)}>
-                                    <X className="h-4 w-4"/>
-                                </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                 <div>
+                    <form onSubmit={handleReturnScanSubmit} className="flex flex-col gap-2">
+                        <Input
+                            ref={returnScanInputRef}
+                            placeholder="Scan packet barcode..."
+                            value={returnScanInput}
+                            onChange={e => setReturnScanInput(e.target.value)}
+                        />
+                        <Button type="submit">Add</Button>
+                    </form>
+                    <div className="mt-4">
+                        <h4 className="text-sm font-semibold mb-2">Scanned Packets ({scannedReturnPackets.size})</h4>
+                        <div className="border rounded-md p-2 space-y-1 max-h-40 overflow-y-auto">
+                            {Array.from(scannedReturnPackets).map(p => (
+                                <div key={p} className="flex justify-between items-center bg-muted/50 p-1.5 rounded-sm">
+                                    <span className="font-mono text-sm">{p}</span>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveScannedReturn(p)}>
+                                        <X className="h-4 w-4"/>
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                 </div>
+                 <div>
+                    <h4 className="text-sm font-semibold mb-2">Expected Packets ({expectedReturnPackets.length})</h4>
+                     <div className="border rounded-md p-2 space-y-1 max-h-60 overflow-y-auto">
+                        {expectedReturnPackets.map(p => (
+                            <div key={p} className={cn("flex items-center gap-2 text-sm p-1.5 rounded-sm", scannedReturnPackets.has(p) && 'bg-green-100 dark:bg-green-900/30')}>
+                                {scannedReturnPackets.has(p) ? <Check className="h-4 w-4 text-green-600"/> : <Circle className="h-4 w-4 text-muted-foreground"/>}
+                                <span className="font-mono">{p}</span>
                             </div>
                         ))}
                     </div>
-                )}
+                 </div>
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setReturnDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleConfirmReturn}>Confirm Return</Button>
+                <Button onClick={handleConfirmReturn} disabled={!allPacketsScanned}>Confirm Return</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+
+    
