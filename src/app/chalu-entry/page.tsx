@@ -93,7 +93,7 @@ export default function ChaluEntryPage() {
   }, [firestore]);
 
 
-  const { data: chaluEntries, loading: loadingEntries } = useCollection<ChaluEntry>(chaluEntriesQuery);
+  const { data: chaluEntries, loading: loadingEntries, refetch: refetchChaluEntries } = useCollection<ChaluEntry>(chaluEntriesQuery);
   const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
   const { data: jiramEntries, loading: loadingJiramEntries, refetch: refetchJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
   
@@ -108,6 +108,7 @@ export default function ChaluEntryPage() {
   const [isReportOpen, setReportOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'live' | 'history'>('live');
   const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [liveSearchTerm, setLiveSearchTerm] = useState('');
   
   const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
 
@@ -200,6 +201,7 @@ export default function ChaluEntryPage() {
     setKapanFilter('');
     setJiramSearchTerm('');
     setHistorySearchTerm('');
+    setLiveSearchTerm('');
     toast({ title: 'Form Reset', description: 'All fields and filters have been cleared.' });
   }
 
@@ -322,25 +324,22 @@ export default function ChaluEntryPage() {
     const packetSuffixMatch = entryToReturn.packetNumber.match(/-([A-Z])$/);
     
     const packets: string[] = [];
-
-    // Logic for plus adjustments on main packets
+    
     if (entryToReturn.adjustment > 0 && entryToReturn.suffix) {
         packets.push(`${baseBarcode}-A`); // Always include main 'A' packet
         const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
         plusSuffixes.forEach(suffix => {
              packets.push(`${baseBarcode}-${suffix}`);
         });
-    }
-    // Logic for minus adjustments on sub-packets
-    else if (entryToReturn.adjustment < 0 && packetSuffixMatch) {
+    } else if (entryToReturn.adjustment < 0 && packetSuffixMatch) {
          packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
          const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
          minusSuffixes.forEach(suffix => {
-            packets.push(`${baseBarcode}-${suffix}`);
+            if (packetSuffixMatch && suffix === packetSuffixMatch[1]) {
+                packets.push(`R${entryToReturn.kapanNumber}-${basePacketNumber}-${suffix}`);
+            }
         });
-    }
-    // Default case (main packet with no/minus adjustment, or sub-packet with no/plus adjustment)
-    else {
+    } else {
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
@@ -397,6 +396,7 @@ export default function ChaluEntryPage() {
         });
         toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
         setReturnDialogOpen(false);
+        if (refetchChaluEntries) refetchChaluEntries();
     } catch(e) {
         console.error('Error returning entry:', e);
         toast({ variant: 'destructive', title: 'Return Failed' });
@@ -465,6 +465,9 @@ export default function ChaluEntryPage() {
         if (kapanFilter) {
             baseFilter = baseFilter.filter(entry => entry.kapanNumber === kapanFilter);
         }
+        if (liveSearchTerm) {
+            baseFilter = baseFilter.filter(entry => entry.packetNumber.toLowerCase().includes(liveSearchTerm.toLowerCase()));
+        }
     } else { // history mode
         baseFilter = chaluEntries.filter(entry => entry.isReturned === true);
         if (kapanFilter) {
@@ -477,7 +480,7 @@ export default function ChaluEntryPage() {
     
     return baseFilter;
 
-  }, [chaluEntries, kapanFilter, viewMode, historySearchTerm]);
+  }, [chaluEntries, kapanFilter, viewMode, historySearchTerm, liveSearchTerm]);
 
   const reportSummary = useMemo(() => {
     if (!kapanFilter || filteredEntries.length === 0) return null;
@@ -571,11 +574,11 @@ export default function ChaluEntryPage() {
     reader.readAsText(file);
   };
   
-    const uniqueKapansForFilter = useMemo(() => {
-        if (!chaluEntries) return [];
-        const unique = new Set(chaluEntries.map(e => e.kapanNumber));
-        return Array.from(unique).sort((a,b) => a.localeCompare(b, undefined, { numeric: true }));
-    }, [chaluEntries]);
+  const uniqueKapansForFilter = useMemo(() => {
+      if (!chaluEntries) return [];
+      const unique = new Set(chaluEntries.map(e => e.kapanNumber));
+      return Array.from(unique).sort((a,b) => a.localeCompare(b, undefined, { numeric: true }));
+  }, [chaluEntries]);
 
 
   return (
@@ -756,6 +759,18 @@ export default function ChaluEntryPage() {
                          </Dialog>
                     </div>
                   </div>
+                    {viewMode === 'live' && (
+                        <div className="relative mt-4">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search by packet number..."
+                                className="pl-8 sm:w-[300px]"
+                                value={liveSearchTerm}
+                                onChange={(e) => setLiveSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    )}
                     {viewMode === 'history' && (
                         <div className="relative mt-4">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
