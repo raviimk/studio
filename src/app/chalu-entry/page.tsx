@@ -311,8 +311,19 @@ export default function ChaluEntryPage() {
   
   const handleReturnScanSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      if (!returnScanInput) return;
-      setScannedReturnPackets(prev => new Set(prev).add(returnScanInput));
+      if (!returnScanInput || !entryToReturn) return;
+      
+      const expected = expectedReturnPackets;
+      if (expected.includes(returnScanInput)) {
+        if (scannedReturnPackets.has(returnScanInput)) {
+            toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This packet has already been scanned.' });
+        } else {
+            setScannedReturnPackets(prev => new Set(prev).add(returnScanInput));
+        }
+      } else {
+          toast({ variant: 'destructive', title: 'Incorrect Packet', description: `This packet is not expected for this entry.` });
+      }
+
       setReturnScanInput('');
   }
 
@@ -883,8 +894,9 @@ export default function ChaluEntryPage() {
                             placeholder="Scan packet barcode..."
                             value={returnScanInput}
                             onChange={e => setReturnScanInput(e.target.value)}
+                            disabled={allPacketsScanned}
                         />
-                        <Button type="submit">Add</Button>
+                        <Button type="submit" disabled={allPacketsScanned}>Add</Button>
                     </form>
                     <div className="mt-4">
                         <h4 className="text-sm font-semibold mb-2">Scanned Packets ({scannedReturnPackets.size})</h4>
