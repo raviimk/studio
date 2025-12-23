@@ -321,7 +321,7 @@ export default function BoxSortingPage() {
     const kapan = firstPacket.packetNumber.split('-')[0].replace('R', '') || 'N/A';
     
     const shapeMap: Record<string, string> = {
-        'ROUND': 'રાઉન્ડ 4P', 'PEAR': 'પાન', 'EMERALD': 'ચોકી', 'MARQUISE': 'માર્કिस',
+        'ROUND': 'રાઉન્ડ 4P', 'PEAR': 'પાન', 'EMERALD': 'ચોકી', 'MARQUISE': 'માર્કિસ',
         'PRINCESS': 'પ્રિન્સેસ', 'SQUARE': 'ચોકી', 'CHOKI': 'ચોકી',
     };
     const gujaratiShape = shapeMap[firstPacket.shape.toUpperCase()] || firstPacket.shape;
