@@ -355,10 +355,11 @@ export default function ChaluEntryPage() {
     const packets = [mainPacket];
     
     if (adjustment > 0) {
-        for (let i = 0; i < adjustment; i++) {
-            const suffixCharCode = 'A'.charCodeAt(0) + originalPcs + i;
-            packets.push(`${baseBarcode}-${String.fromCharCode(suffixCharCode)}`);
-        }
+        // Suffix contains comma-separated letters like "B, C"
+        const plusSuffixes = (entryToReturn.suffix || '').split(',').map(s => s.trim()).filter(Boolean);
+        plusSuffixes.forEach(suffix => {
+             packets.push(`${baseBarcode}-${suffix}`);
+        })
     }
     
     return packets;
