@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs } from 'firebase/firestore';
@@ -27,6 +27,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { format } from 'date-fns';
 
 
 type Kapan = {
@@ -58,6 +59,7 @@ type ChaluEntry = {
     isReturned?: boolean;
     returnedPackets?: string[];
     createdAt: any;
+    returnDate?: string;
 };
 
 
@@ -104,6 +106,7 @@ export default function ChaluEntryPage() {
   const [currentPcs, setCurrentPcs] = useState('');
   const [kapanFilter, setKapanFilter] = useState('');
   const [isReportOpen, setReportOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'live' | 'history'>('live');
   
   const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
 
@@ -379,6 +382,7 @@ export default function ChaluEntryPage() {
     try {
         await updateDoc(docRef, {
             isReturned: true,
+            returnDate: new Date().toISOString(),
             returnedPackets: Array.from(scannedReturnPackets),
         });
         toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
@@ -442,10 +446,18 @@ export default function ChaluEntryPage() {
   };
 
   const filteredEntries = useMemo(() => {
-      if (!chaluEntries) return [];
-      if (!kapanFilter) return chaluEntries;
-      return chaluEntries.filter(entry => entry.kapanNumber === kapanFilter);
-  }, [chaluEntries, kapanFilter]);
+    if (!chaluEntries) return [];
+    
+    const baseFilter = chaluEntries.filter(entry => {
+        const isReturned = entry.isReturned === true;
+        if (viewMode === 'live') return !isReturned;
+        if (viewMode === 'history') return isReturned;
+        return true;
+    });
+
+    if (!kapanFilter) return baseFilter;
+    return baseFilter.filter(entry => entry.kapanNumber === kapanFilter);
+  }, [chaluEntries, kapanFilter, viewMode]);
 
   const reportSummary = useMemo(() => {
     if (!kapanFilter || filteredEntries.length === 0) return null;
@@ -635,10 +647,18 @@ export default function ChaluEntryPage() {
           
           <Card className="flex-1 flex flex-col overflow-hidden">
               <CardHeader>
-                  <CardTitle>અત્યાર સુધી ની એન્ટ્રી</CardTitle>
+                  <CardTitle>
+                    {viewMode === 'live' ? 'અત્યાર સુધી ની એન્ટ્રી (Live)' : 'Return History'}
+                  </CardTitle>
                   <div className="flex justify-between items-center">
-                    <CardDescription>Live log of all chalu entries. Click a field to edit.</CardDescription>
+                    <CardDescription>
+                         {viewMode === 'live' ? 'Live log of all chalu entries. Click a field to edit.' : 'Log of all returned chalu entries.'}
+                    </CardDescription>
                     <div className="flex gap-2 items-center">
+                       <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'live' ? 'history' : 'live')}>
+                            <History className="mr-2 h-4 w-4"/>
+                            {viewMode === 'live' ? 'View History' : 'View Live'}
+                       </Button>
                        <Select value={kapanFilter} onValueChange={(value) => setKapanFilter(value === 'all' ? '' : value)}>
                            <SelectTrigger className="max-w-xs">
                                <SelectValue placeholder="Filter by Kapan..."/>
@@ -718,7 +738,8 @@ export default function ChaluEntryPage() {
                   </div>
               </CardHeader>
               <CardContent className="flex-1 overflow-y-auto">
-                  <Table>
+                  {viewMode === 'live' ? (
+                     <Table>
                       <TableHeader>
                           <TableRow>
                               <TableHead>કાપણ</TableHead>
@@ -734,7 +755,7 @@ export default function ChaluEntryPage() {
                       <TableBody>
                           {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
-                          <TableRow key={entry.id} className={cn(entry.isReturned && 'bg-green-100/60 dark:bg-green-900/30', entry.adjustment < 0 && !entry.isReturned && 'bg-destructive/10')}>
+                          <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
                             {editingId === entry.id ? (
                                 <>
                                     <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
@@ -751,43 +772,35 @@ export default function ChaluEntryPage() {
                                 </>
                             ) : (
                                  <>
-                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.kapanNumber}</TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.packetNumber}</TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.originalPcs}</TableCell>
-                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold", entry.isReturned && 'line-through decoration-black decoration-2')}>
+                                    <TableCell>{entry.kapanNumber}</TableCell>
+                                    <TableCell>{entry.packetNumber}</TableCell>
+                                    <TableCell>{entry.originalPcs}</TableCell>
+                                    <TableCell className={cn(entry.adjustment > 0 ? "text-green-600" : entry.adjustment < 0 ? "text-destructive" : "", "font-semibold")}>
                                       {entry.adjustment > 0 ? `+${entry.adjustment}` : entry.adjustment}
                                     </TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.suffix}</TableCell>
-                                    <TableCell className={cn("font-bold", entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.currentPcs}</TableCell>
-                                    <TableCell className={cn(entry.isReturned && 'line-through decoration-black decoration-2')}>{entry.vajan}</TableCell>
+                                    <TableCell>{entry.suffix}</TableCell>
+                                    <TableCell className="font-bold">{entry.currentPcs}</TableCell>
+                                    <TableCell>{entry.vajan}</TableCell>
                                     <TableCell className="flex gap-1">
-                                        {entry.isReturned ? (
-                                             <div className="flex items-center gap-1 font-semibold text-green-700 dark:text-green-300">
-                                                <CheckCircle2 className="h-4 w-4" /> Returned
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <Button size="sm" variant="outline" onClick={() => handleOpenReturnDialog(entry)}><Undo2 className="h-4 w-4" /></Button>
-                                                <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button variant="destructive" size="sm" className="w-9 p-0">
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                            <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </>
-                                        )}
+                                        <Button size="sm" variant="outline" onClick={() => handleOpenReturnDialog(entry)}><Undo2 className="h-4 w-4" /></Button>
+                                        <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm" className="w-9 p-0">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </TableCell>
                                 </>
                             )}
@@ -797,7 +810,60 @@ export default function ChaluEntryPage() {
                               <TableRow><TableCell colSpan={8} className="text-center">No entries found.</TableCell></TableRow>
                           )}
                       </TableBody>
-                  </Table>
+                     </Table>
+                  ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Kapan-Packet</TableHead>
+                                <TableHead>Total PCS</TableHead>
+                                <TableHead>Return Date</TableHead>
+                                <TableHead>Packets Scanned</TableHead>
+                                <TableHead>Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                             {loadingEntries && <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>}
+                            {!loadingEntries && filteredEntries.map(entry => (
+                                <TableRow key={entry.id} className="bg-green-100/60 dark:bg-green-900/30">
+                                    <TableCell>
+                                        <div className="font-bold">{entry.kapanNumber}-{entry.packetNumber}</div>
+                                        <div className="text-xs text-muted-foreground">Entered: {entry.createdAt?.toDate ? format(entry.createdAt.toDate(), 'PP') : 'N/A'}</div>
+                                    </TableCell>
+                                    <TableCell>{entry.currentPcs}</TableCell>
+                                    <TableCell>{entry.returnDate ? format(new Date(entry.returnDate), 'PPp') : 'N/A'}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1 max-w-xs">
+                                          {(entry.returnedPackets || []).map(p => <span key={p} className="font-mono text-xs bg-black/10 dark:bg-white/10 px-1 rounded-sm">{p}</span>)}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive" size="sm" className="w-9 p-0">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>This will permanently delete the entry for packet {entry.packetNumber}.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDeleteEntry(entry.id)}>Delete</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {!loadingEntries && filteredEntries.length === 0 && (
+                              <TableRow><TableCell colSpan={5} className="text-center">No returned entries found.</TableCell></TableRow>
+                          )}
+                        </TableBody>
+                    </Table>
+                  )}
               </CardContent>
           </Card>
       </div>
