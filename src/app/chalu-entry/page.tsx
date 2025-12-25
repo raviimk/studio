@@ -592,7 +592,7 @@ export default function ChaluEntryPage() {
       if (!chaluEntries) return [];
       const unique = new Set(chaluEntries.map(e => e.kapanNumber));
       return Array.from(unique).sort((a,b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, []);
+  }, [chaluEntries]);
   
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
@@ -742,7 +742,7 @@ export default function ChaluEntryPage() {
                   <label className="text-sm font-medium">પ્લસ/માઈનસ</label>
                   <Input 
                     value={suffix} 
-                    onChange={(e) => setSuffix(e.target.value)}
+                    onChange={(e) => setSuffix(e.target.value.toUpperCase())}
                     placeholder="Auto"
                   />
                 </div>
@@ -1199,3 +1199,5 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
+
+    
