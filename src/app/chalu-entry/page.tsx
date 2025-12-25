@@ -326,23 +326,21 @@ export default function ChaluEntryPage() {
     
     const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
     const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
-    const packetSuffixMatch = entryToReturn.packetNumber.match(/-([A-Z])$/);
-    
+    const mainPacketSuffix = entryToReturn.packetNumber.split('-')[1];
+
     let packets: string[] = [];
     
     if (entryToReturn.adjustment > 0) {
-        // Always include the main packet for this entry (e.g., ...-A or ...-B)
+        // For plus, expect the specific main packet AND the new plus suffixes
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
         
-        // Only add plus suffixes if it's a main 'A' packet
-        if (packetSuffixMatch && packetSuffixMatch[1] === 'A') {
-            const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
-            plusSuffixes.forEach(suffix => {
-                packets.push(`${baseBarcode}-${suffix}`);
-            });
-        }
+        const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
+        plusSuffixes.forEach(suffix => {
+            packets.push(`${baseBarcode}-${suffix}`);
+        });
     } else if (entryToReturn.adjustment < 0) {
-        // For minus adjustments, we need the specific packet itself, plus the minus suffix packet.
+        // For minus, expect the main packet of this entry AND the minus suffix packet.
+        // e.g., entry is 530-B, suffix is -D -> expect R1-530-B and R1-530-D
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
         
         const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
@@ -354,7 +352,6 @@ export default function ChaluEntryPage() {
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
-    // Deduplicate in case logic creates overlap
     return [...new Set(packets)];
   }, [entryToReturn]);
   
@@ -595,7 +592,7 @@ export default function ChaluEntryPage() {
       if (!chaluEntries) return [];
       const unique = new Set(chaluEntries.map(e => e.kapanNumber));
       return Array.from(unique).sort((a,b) => a.localeCompare(b, undefined, { numeric: true }));
-  }, [chaluEntries]);
+  }, []);
   
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
@@ -762,6 +759,7 @@ export default function ChaluEntryPage() {
                   <label className="text-sm font-medium">વજન(Weight)</label>
                   <Input 
                     type="number"
+                    step="0.001"
                     value={vajan}
                     onChange={(e) => setVajan(e.target.value)}
                     placeholder="વજન લખો"
