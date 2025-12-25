@@ -28,6 +28,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 type Kapan = {
@@ -126,6 +127,9 @@ export default function ChaluEntryPage() {
   const [entryToReturn, setEntryToReturn] = useState<ChaluEntry | null>(null);
   const [returnScanInput, setReturnScanInput] = useState('');
   const [scannedReturnPackets, setScannedReturnPackets] = useState<Set<string>>(new Set());
+  
+  // State for multi-select
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
 
 
   // Use refs to store the latest state for the cleanup function
@@ -488,6 +492,11 @@ export default function ChaluEntryPage() {
     return baseFilter;
 
   }, [chaluEntries, kapanFilter, viewMode, historySearchTerm, liveSearchTerm]);
+  
+  // Clear selection when filters change
+  useEffect(() => {
+    setSelectedEntries(new Set());
+  }, [kapanFilter, liveSearchTerm, viewMode]);
 
   const reportSummary = useMemo(() => {
     if (!kapanFilter || filteredEntries.length === 0) return null;
@@ -586,6 +595,48 @@ export default function ChaluEntryPage() {
       const unique = new Set(chaluEntries.map(e => e.kapanNumber));
       return Array.from(unique).sort((a,b) => a.localeCompare(b, undefined, { numeric: true }));
   }, [chaluEntries]);
+  
+  
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+      if (checked === true) {
+          const allIds = new Set(filteredEntries.map(e => e.id));
+          setSelectedEntries(allIds);
+      } else {
+          setSelectedEntries(new Set());
+      }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+      const newSelection = new Set(selectedEntries);
+      if (checked) {
+          newSelection.add(id);
+      } else {
+          newSelection.delete(id);
+      }
+      setSelectedEntries(newSelection);
+  };
+  
+  const handleDeleteSelected = async () => {
+    if (!firestore || selectedEntries.size === 0) return;
+
+    const batch = writeBatch(firestore);
+    selectedEntries.forEach(id => {
+        const docRef = doc(firestore, 'chaluEntries', id);
+        batch.delete(docRef);
+    });
+
+    try {
+        await batch.commit();
+        toast({ title: 'Success', description: `${selectedEntries.size} entries deleted.`});
+        setSelectedEntries(new Set());
+    } catch(e) {
+        console.error("Batch delete failed:", e);
+        toast({ variant: 'destructive', title: 'Delete Failed' });
+    }
+  }
+
+  const isAllSelected = filteredEntries.length > 0 && selectedEntries.size === filteredEntries.length;
+  const isSomeSelected = selectedEntries.size > 0 && selectedEntries.size < filteredEntries.length;
 
 
   return (
@@ -767,15 +818,30 @@ export default function ChaluEntryPage() {
                     </div>
                   </div>
                     {viewMode === 'live' && (
-                        <div className="relative mt-4">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search by packet number..."
-                                className="pl-8 sm:w-[300px]"
-                                value={liveSearchTerm}
-                                onChange={(e) => setLiveSearchTerm(e.target.value)}
-                            />
+                        <div className="flex justify-between items-center mt-4">
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search by packet number..."
+                                    className="pl-8 sm:w-[300px]"
+                                    value={liveSearchTerm}
+                                    onChange={(e) => setLiveSearchTerm(e.target.value)}
+                                />
+                            </div>
+                            {selectedEntries.size > 0 && (
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedEntries.size})
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader><AlertDialogTitle>Delete {selectedEntries.size} entries?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelected}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            )}
                         </div>
                     )}
                     {viewMode === 'history' && (
@@ -796,6 +862,12 @@ export default function ChaluEntryPage() {
                      <Table>
                       <TableHeader>
                           <TableRow>
+                              <TableHead className="w-12">
+                                <Checkbox
+                                  checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                                  onCheckedChange={handleSelectAll}
+                                />
+                              </TableHead>
                               <TableHead>કાપણ</TableHead>
                               <TableHead>પેકેટ</TableHead>
                               <TableHead>ઓરિજિનલ થાન</TableHead>
@@ -807,9 +879,10 @@ export default function ChaluEntryPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {loadingEntries && <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>}
+                          {loadingEntries && <TableRow><TableCell colSpan={9} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
                           <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
+                            <TableCell><Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} /></TableCell>
                             {editingId === entry.id ? (
                                 <>
                                     <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
@@ -866,7 +939,7 @@ export default function ChaluEntryPage() {
                           </TableRow>
                           ))}
                           {!loadingEntries && filteredEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={8} className="text-center">No entries found.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={9} className="text-center">No entries found.</TableCell></TableRow>
                           )}
                       </TableBody>
                      </Table>
