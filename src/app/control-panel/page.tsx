@@ -61,6 +61,7 @@ const fourPTechingOperatorSchema = z.object({
 });
 
 const priceMasterSchema = z.object({
+  fourP: z.coerce.number().min(0, 'Rate must be positive'),
   fourPTeching: z.coerce.number().min(0, 'Rate must be positive'),
 });
 
@@ -127,7 +128,7 @@ export default function ControlPanelPage() {
   const [laserMappings, setLaserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
   const [fourPOperators, setFourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
   const [fourPTechingOperators, setFourPTechingOperators] = useLocalStorage<FourPTechingOperator[]>(FOURP_TECHING_OPERATORS_KEY, []);
-  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourPTeching: 0 });
+  const [priceMaster, setPriceMaster] = useLocalStorage<PriceMaster>(PRICE_MASTER_KEY, { fourP: 0, fourPTeching: 0 });
   const [fourPRates, setFourPRates] = useLocalStorage<FourPRate[]>(FOURP_RATES_KEY, []);
   const [udhdhaSettings, setUdhdhaSettings] = useLocalStorage<UdhdaSettings>(UHDHA_SETTINGS_KEY, { returnTimeLimitMinutes: 60 });
   const [fourPDeptSettings, setFourPDeptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
@@ -161,7 +162,7 @@ export default function ControlPanelPage() {
   const laserMapForm = useForm<z.infer<typeof laserMappingSchema>>({ resolver: zodResolver(laserMappingSchema), defaultValues: { tensionType: '', machine: '' } });
   const fourPForm = useForm<z.infer<typeof fourPOperatorSchema>>({ resolver: zodResolver(fourPOperatorSchema), defaultValues: { name: '' } });
   const fourPTechingForm = useForm<z.infer<typeof fourPTechingOperatorSchema>>({ resolver: zodResolver(fourPTechingOperatorSchema), defaultValues: { name: '' } });
-  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster || { fourPTeching: 0 } });
+  const priceMasterForm = useForm<z.infer<typeof priceMasterSchema>>({ resolver: zodResolver(priceMasterSchema), values: priceMaster || { fourP: 0, fourPTeching: 0 } });
   const fourPRateForm = useForm<z.infer<typeof fourPRateSchema>>({ resolver: zodResolver(fourPRateSchema), defaultValues: { from: 0, to: 0, rate: 0 }});
   const fourPDeptSettingsForm = useForm<z.infer<typeof fourPDepartmentSettingsSchema>>({ resolver: zodResolver(fourPDepartmentSettingsSchema), values: fourPDeptSettings || { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' } });
   const udhdhaSettingsForm = useForm<z.infer<typeof udhdaSettingsSchema>>({ resolver: zodResolver(udhdaSettingsSchema), values: udhdhaSettings || { returnTimeLimitMinutes: 60 } });
@@ -736,15 +737,18 @@ export default function ControlPanelPage() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>4P Teching Rate</CardTitle>
+                            <CardTitle>Rate Settings</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Form {...priceMasterForm}>
                                 <form onSubmit={priceMasterForm.handleSubmit(handleUpdatePriceMaster)} className="space-y-4 max-w-sm">
+                                    <FormField control={priceMasterForm.control} name="fourP" render={({ field }) => (
+                                        <FormItem><FormLabel>4P Work Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
+                                    )} />
                                     <FormField control={priceMasterForm.control} name="fourPTeching" render={({ field }) => (
                                         <FormItem><FormLabel>4P Teching Rate per piece (₹)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
-                                    <Button type="submit">Update Teching Rate</Button>
+                                    <Button type="submit">Update Rates</Button>
                                 </form>
                             </Form>
                         </CardContent>
