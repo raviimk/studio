@@ -91,6 +91,7 @@ export interface FourPTechingOperator {
 }
 
 export interface PriceMaster {
+    fourP: number;
     fourPTeching: number;
 }
 
