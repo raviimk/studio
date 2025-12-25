@@ -359,14 +359,14 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 12px;
+    padding: 0.25rem 0.75rem;
     border: 0;
     position: relative;
     overflow: hidden;
     border-radius: 10rem;
     transition: all 0.02s;
-    font-weight: 600;
-    font-size: 0.875rem;
+    font-weight: 500;
+    font-size: 0.8rem;
     color: rgb(37, 37, 37);
     z-index: 0;
     box-shadow: 0 0px 7px -5px rgba(0, 0, 0, 0.5);

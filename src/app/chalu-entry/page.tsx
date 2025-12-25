@@ -318,34 +318,39 @@ export default function ChaluEntryPage() {
   
  const expectedReturnPackets = useMemo(() => {
     if (!entryToReturn) return [];
-
+    
     const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
     const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
     const packetSuffixMatch = entryToReturn.packetNumber.match(/-([A-Z])$/);
     
-    const packets: string[] = [];
+    let packets: string[] = [];
     
     if (entryToReturn.adjustment > 0) {
-        if (packetSuffixMatch && packetSuffixMatch[1] === 'A') { // Only main 'A' packet gets plus suffixes
-             packets.push(`${baseBarcode}-A`);
+        // Always include the main packet for this entry (e.g., ...-A or ...-B)
+        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
+        
+        // Only add plus suffixes if it's a main 'A' packet
+        if (packetSuffixMatch && packetSuffixMatch[1] === 'A') {
             const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
             plusSuffixes.forEach(suffix => {
                 packets.push(`${baseBarcode}-${suffix}`);
             });
-        } else {
-             packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
         }
     } else if (entryToReturn.adjustment < 0) {
-         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-         const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
-         minusSuffixes.forEach(suffix => {
+        // For minus adjustments, we need the specific packet itself, plus the minus suffix packet.
+        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
+        
+        const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
+        minusSuffixes.forEach(suffix => {
             packets.push(`${baseBarcode}-${suffix}`);
         });
-    } else {
+
+    } else { // No adjustment
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
-    return packets;
+    // Deduplicate in case logic creates overlap
+    return [...new Set(packets)];
   }, [entryToReturn]);
   
   const allPacketsScanned = useMemo(() => {
