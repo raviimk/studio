@@ -325,19 +325,21 @@ export default function ChaluEntryPage() {
     
     const packets: string[] = [];
     
-    if (entryToReturn.adjustment > 0 && entryToReturn.suffix) {
-        packets.push(`${baseBarcode}-A`); // Always include main 'A' packet
-        const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
-        plusSuffixes.forEach(suffix => {
-             packets.push(`${baseBarcode}-${suffix}`);
-        });
-    } else if (entryToReturn.adjustment < 0 && packetSuffixMatch) {
+    if (entryToReturn.adjustment > 0) {
+        if (packetSuffixMatch && packetSuffixMatch[1] === 'A') { // Only main 'A' packet gets plus suffixes
+             packets.push(`${baseBarcode}-A`);
+            const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
+            plusSuffixes.forEach(suffix => {
+                packets.push(`${baseBarcode}-${suffix}`);
+            });
+        } else {
+             packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
+        }
+    } else if (entryToReturn.adjustment < 0) {
          packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
          const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
          minusSuffixes.forEach(suffix => {
-            if (packetSuffixMatch && suffix === packetSuffixMatch[1]) {
-                packets.push(`R${entryToReturn.kapanNumber}-${basePacketNumber}-${suffix}`);
-            }
+            packets.push(`${baseBarcode}-${suffix}`);
         });
     } else {
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
@@ -829,7 +831,12 @@ export default function ChaluEntryPage() {
                                     <TableCell className="font-bold">{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.vajan}</TableCell>
                                     <TableCell className="flex gap-1">
-                                        <Button size="sm" variant="outline" onClick={() => handleOpenReturnDialog(entry)}><Undo2 className="h-4 w-4" /></Button>
+                                        <button className="uiverse-return-button" onClick={() => handleOpenReturnDialog(entry)}>
+                                          <div className="hoverEffect"><div></div></div>
+                                          <span className="flex items-center gap-1">
+                                            <Undo2 className="h-4 w-4" /> Return
+                                          </span>
+                                        </button>
                                         <Button size="sm" variant="outline" onClick={() => handleEditClick(entry)}><Edit className="h-4 w-4" /></Button>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>

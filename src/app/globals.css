@@ -354,6 +354,64 @@ body {
     animation: move-to-top-right 0.5s ease-out forwards;
   }
 
+  /* Uiverse Return Button */
+  .uiverse-return-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border: 0;
+    position: relative;
+    overflow: hidden;
+    border-radius: 10rem;
+    transition: all 0.02s;
+    font-weight: bold;
+    color: rgb(37, 37, 37);
+    z-index: 0;
+    box-shadow: 0 0px 7px -5px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+  }
+  .uiverse-return-button:hover {
+    background: rgb(193, 228, 248);
+    color: rgb(33, 0, 85);
+  }
+  .uiverse-return-button:active {
+    transform: scale(0.97);
+  }
+  .uiverse-return-button .hoverEffect {
+    position: absolute;
+    bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: -1;
+  }
+  .uiverse-return-button .hoverEffect div {
+    background: linear-gradient(90deg, #de004b 0%, #bf46ff 49%, #00d4ff 100%);
+    border-radius: 40rem;
+    width: 10rem;
+    height: 10rem;
+    transition: 0.4s;
+    filter: blur(20px);
+    animation: effect 3s linear infinite;
+    opacity: 0.5;
+  }
+  .uiverse-return-button:hover .hoverEffect div {
+    width: 8rem;
+    height: 8rem;
+  }
+  @keyframes effect {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
 
   /* New Uiverse Button CSS */
   .uiverse-button {
