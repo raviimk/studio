@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { deleteKapanData } from '@/lib/kapan-deleter';
 import { useCollection, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc, setDoc } from 'firebase/firestore';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -182,7 +182,8 @@ export default function JiramReportPage() {
     setJiramPackets(prev => [newPacketLocal, ...prev]);
 
     try {
-        await addDoc(collection(firestore, 'jiramEntries'), {
+        const docRef = doc(firestore, 'jiramEntries', barcode);
+        await setDoc(docRef, {
             barcode: barcode,
             kapanNumber: kapanNumber,
             packetNumber: packetIdentifier,

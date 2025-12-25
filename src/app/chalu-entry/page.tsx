@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs, setDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import {
@@ -321,7 +321,7 @@ export default function ChaluEntryPage() {
       setTimeout(() => returnScanInputRef.current?.focus(), 100);
   };
   
- const expectedReturnPackets = useMemo(() => {
+  const expectedReturnPackets = useMemo(() => {
     if (!entryToReturn) return [];
     
     const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
@@ -567,7 +567,7 @@ export default function ChaluEntryPage() {
                 if (match) {
                     const [, , packetIdentifier] = match;
                     const [, suffix] = packetIdentifier.split('-');
-                     const newDocRef = doc(collection(firestore, 'jiramEntries'));
+                     const newDocRef = doc(firestore, 'jiramEntries', item.barcode);
                      addBatch.set(newDocRef, {
                         barcode: item.barcode,
                         kapanNumber: item.kapanNumber,
