@@ -34,6 +34,12 @@ export const BOX_DIAMETER_PACKETS_KEY = 'boxDiameterPackets';
 // Sarin Chalu Progress
 export const CHALU_SARIN_PROGRESS_KEY = 'chaluSarinProgress';
 
+// Chalu Entry (replaces Firestore)
+export const CHALU_ENTRIES_KEY = 'chaluEntries';
+export const KAPANS_KEY = 'kapans';
+export const JIRAM_ENTRIES_KEY = 'jiramEntries';
+
+
 // Production History
 export const PRODUCTION_HISTORY_KEY = 'productionHistory';
 
@@ -71,6 +77,7 @@ export const ALL_APP_KEYS = [
     AUTO_BACKUP_SETTINGS_KEY,
     RETURN_SCAN_SETTINGS_KEY,
     SYSTEM_SETTINGS_KEY,
+    CHALU_ENTRIES_KEY,
+    KAPANS_KEY,
+    JIRAM_ENTRIES_KEY,
 ];
-
-    

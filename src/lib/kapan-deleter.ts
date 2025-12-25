@@ -6,7 +6,10 @@ import {
     LASER_LOTS_KEY, 
     FOURP_TECHING_LOTS_KEY, 
     UHDHA_PACKETS_KEY, 
-    JIRAM_REPORT_PACKETS_KEY 
+    JIRAM_REPORT_PACKETS_KEY,
+    CHALU_ENTRIES_KEY,
+    JIRAM_ENTRIES_KEY,
+    KAPANS_KEY
 } from './constants';
 import * as T from './types';
 
@@ -70,6 +73,20 @@ export function deleteKapanData(kapanNumber: string): void {
     const jiramPackets = getStoredData<T.JiramReportPacket>(JIRAM_REPORT_PACKETS_KEY);
     const updatedJiramPackets = jiramPackets.filter(p => p.kapanNumber !== kapanNumber);
     setStoredData(JIRAM_REPORT_PACKETS_KEY, updatedJiramPackets);
+
+    // 6. Filter Chalu Entry Data
+    const chaluEntries = getStoredData<T.ChaluEntry>(CHALU_ENTRIES_KEY);
+    const updatedChaluEntries = chaluEntries.filter(p => p.kapanNumber !== kapanNumber);
+    setStoredData(CHALU_ENTRIES_KEY, updatedChaluEntries);
+    
+    const jiramEntries = getStoredData<T.JiramEntry>(JIRAM_ENTRIES_KEY);
+    const updatedJiramEntries = jiramEntries.filter(p => p.kapanNumber !== kapanNumber);
+    setStoredData(JIRAM_ENTRIES_KEY, updatedJiramEntries);
+
+    const kapans = getStoredData<T.Kapan>(KAPANS_KEY);
+    const updatedKapans = kapans.filter(p => p.kapanNumber !== kapanNumber);
+    setStoredData(KAPANS_KEY, updatedKapans);
+
 
     // NOTE: We are not touching operator/mapping/settings keys as they are not Kapan-specific.
     // REASSIGN_LOGS_KEY is also not touched as it would require complex lookups and might be better to keep for historical auditing.

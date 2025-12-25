@@ -211,6 +211,32 @@ export interface SystemSettings {
   autoCreateLaserLotDelay?: number;
 }
 
-    
+// Chalu Entry Types
+export type Kapan = {
+    id: string;
+    kapanNumber: string;
+};
 
-    
+export type JiramEntry = {
+    id: string;
+    barcode: string;
+    kapanNumber: string;
+    packetNumber: string;
+    suffix: string;
+    scanTime: string;
+}
+
+export type ChaluEntry = {
+    id: string;
+    kapanNumber: string;
+    packetNumber: string;
+    vajan: number;
+    originalPcs: number;
+    adjustment: number;
+    suffix: string;
+    currentPcs: number;
+    isReturned?: boolean;
+    returnedPackets?: string[];
+    createdAt: string;
+    returnDate?: string;
+};

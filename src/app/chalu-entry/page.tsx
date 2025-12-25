@@ -12,8 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
-import { useCollection, useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs, setDoc } from 'firebase/firestore';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import {
+  CHALU_ENTRIES_KEY,
+  KAPANS_KEY,
+  JIRAM_ENTRIES_KEY,
+} from '@/lib/constants';
+import { ChaluEntry, Kapan, JiramEntry } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import {
@@ -29,40 +34,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
-
-
-type Kapan = {
-    id: string;
-    kapanNumber: string;
-};
-
-type JiramEntry = {
-    id: string;
-    barcode: string;
-    kapanNumber: string;
-    packetNumber: string;
-    suffix: string;
-    scanTime: {
-        seconds: number;
-        nanoseconds: number;
-    }
-}
-
-type ChaluEntry = {
-    id: string;
-    kapanNumber: string;
-    packetNumber: string;
-    vajan: number;
-    originalPcs: number;
-    adjustment: number;
-    suffix: string;
-    currentPcs: number;
-    isReturned?: boolean;
-    returnedPackets?: string[];
-    createdAt: any;
-    returnDate?: string;
-};
-
+import { v4 as uuidv4 } from 'uuid';
 
 type JiramImportPacket = {
     barcode: string;
@@ -74,29 +46,12 @@ export default function ChaluEntryPage() {
   const { isFullscreen, setFullscreen } = useLayout();
   const router = useRouter();
 
-  const firestore = useFirestore();
   const importFileRef = useRef<HTMLInputElement>(null);
   const returnScanInputRef = useRef<HTMLInputElement>(null);
   
-  const chaluEntriesQuery = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'chaluEntries'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
-
-  const kapansQuery = useMemo(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'kapans'));
-  }, [firestore]);
-  
-  const jiramEntriesQuery = useMemo(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'jiramEntries'), orderBy('scanTime', 'desc'));
-  }, [firestore]);
-
-
-  const { data: chaluEntries, loading: loadingEntries, refetch: refetchChaluEntries } = useCollection<ChaluEntry>(chaluEntriesQuery);
-  const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
-  const { data: jiramEntries, loading: loadingJiramEntries, refetch: refetchJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
+  const [chaluEntries, setChaluEntries] = useLocalStorage<ChaluEntry[]>(CHALU_ENTRIES_KEY, []);
+  const [kapans, setKapans] = useLocalStorage<Kapan[]>(KAPANS_KEY, []);
+  const [jiramEntries, setJiramEntries] = useLocalStorage<JiramEntry[]>(JIRAM_ENTRIES_KEY, []);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -136,15 +91,15 @@ export default function ChaluEntryPage() {
   // Use refs to store the latest state for the cleanup function
   const stateRef = useRef({
       kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-      editingId, editFormData, firestore, toast, pendingJiramId
+      editingId, editFormData, pendingJiramId, toast, setChaluEntries, setJiramEntries
   });
 
   useEffect(() => {
       stateRef.current = {
           kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-          editingId, editFormData, firestore, toast, pendingJiramId
+          editingId, editFormData, pendingJiramId, toast, setChaluEntries, setJiramEntries
       };
-  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast, pendingJiramId]);
+  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, pendingJiramId, setChaluEntries, setJiramEntries, toast]);
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -211,11 +166,7 @@ export default function ChaluEntryPage() {
   }
 
   const handleSave = async (showToast = true) => {
-    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId } = stateRef.current;
-    if (!firestore) {
-        if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
-        return false;
-    }
+    const { kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId, setChaluEntries, setJiramEntries, toast } = stateRef.current;
     
     if(!kapanNumber || !packetNumber || !vajan || !originalPcs || !currentPcs) {
         if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Please fill all required fields.' });
@@ -223,7 +174,8 @@ export default function ChaluEntryPage() {
     }
 
     try {
-        await addDoc(collection(firestore, 'chaluEntries'), {
+        const newEntry: ChaluEntry = {
+            id: uuidv4(),
             kapanNumber,
             packetNumber,
             vajan: parseFloat(vajan) || 0,
@@ -231,14 +183,15 @@ export default function ChaluEntryPage() {
             adjustment: parseInt(adjustment, 10) || 0,
             suffix,
             currentPcs: parseInt(currentPcs, 10) || 0,
-            createdAt: serverTimestamp(),
+            createdAt: new Date().toISOString(),
             isReturned: false,
             returnedPackets: [],
-        });
+        };
+        setChaluEntries(prev => [...prev, newEntry]);
         
         // If this entry came from a pending Jiram scan, delete it from the queue
         if(pendingJiramId) {
-            await deleteDoc(doc(firestore, 'jiramEntries', pendingJiramId));
+            setJiramEntries(prev => prev.filter(j => j.id !== pendingJiramId));
         }
 
         if(showToast) toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
@@ -273,9 +226,7 @@ export default function ChaluEntryPage() {
   };
   
   const handleSaveEdit = async (id: string, showToast = true) => {
-      const { firestore, editFormData } = stateRef.current;
-    if (!firestore) return false;
-    const docRef = doc(firestore, 'chaluEntries', id);
+    const { editFormData, setChaluEntries, toast } = stateRef.current;
     const { id: _, ...dataToSave } = editFormData; // Exclude id from data
     
     // Ensure numeric fields are numbers
@@ -285,7 +236,7 @@ export default function ChaluEntryPage() {
     dataToSave.currentPcs = parseInt(dataToSave.currentPcs, 10) || 0;
 
     try {
-      await updateDoc(docRef, dataToSave);
+      setChaluEntries(prev => prev.map(entry => entry.id === id ? { ...entry, ...dataToSave } : entry));
       if(showToast) toast({ title: 'Updated', description: 'Entry updated successfully.'});
       handleCancelEdit();
       return true;
@@ -302,10 +253,8 @@ export default function ChaluEntryPage() {
   };
 
   const handleDeleteEntry = async (id: string) => {
-    if (!firestore) return;
-    const docRef = doc(firestore, 'chaluEntries', id);
     try {
-        await deleteDoc(docRef);
+        setChaluEntries(prev => prev.filter(entry => entry.id !== id));
         toast({ title: 'Deleted', description: 'Entry removed successfully.'});
     } catch (e) {
         console.error("Error deleting document:", e);
@@ -326,29 +275,22 @@ export default function ChaluEntryPage() {
     
     const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
     const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
-    const mainPacketSuffix = entryToReturn.packetNumber.split('-')[1];
 
     let packets: string[] = [];
     
     if (entryToReturn.adjustment > 0) {
-        // For plus, expect the specific main packet AND the new plus suffixes
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-        
         const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
         plusSuffixes.forEach(suffix => {
             packets.push(`${baseBarcode}-${suffix}`);
         });
     } else if (entryToReturn.adjustment < 0) {
-        // For minus, expect the main packet of this entry AND the minus suffix packet.
-        // e.g., entry is 530-B, suffix is -D -> expect R1-530-B and R1-530-D
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-        
         const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
         minusSuffixes.forEach(suffix => {
             packets.push(`${baseBarcode}-${suffix}`);
         });
-
-    } else { // No adjustment
+    } else {
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
@@ -389,29 +331,28 @@ export default function ChaluEntryPage() {
   }
 
   const handleConfirmReturn = async () => {
-    if (!firestore || !entryToReturn) return;
+    if (!entryToReturn) return;
     
     if (!allPacketsScanned) {
         toast({ variant: "destructive", title: "Scan Incomplete", description: "You must scan all expected packets before confirming." });
         return;
     }
     
-    const docRef = doc(firestore, 'chaluEntries', entryToReturn.id);
     try {
-        await updateDoc(docRef, {
+        setChaluEntries(prev => prev.map(e => e.id === entryToReturn.id ? {
+            ...e,
             isReturned: true,
             returnDate: new Date().toISOString(),
             returnedPackets: Array.from(scannedReturnPackets),
-        });
+        } : e));
+
         toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
         setReturnDialogOpen(false);
-        if (refetchChaluEntries) refetchChaluEntries();
     } catch(e) {
         console.error('Error returning entry:', e);
         toast({ variant: 'destructive', title: 'Return Failed' });
     }
   };
-
 
   useEffect(() => {
     const handleEscKey = (e: KeyboardEvent) => {
@@ -427,19 +368,15 @@ export default function ChaluEntryPage() {
   }, []);
 
   useEffect(() => {
-    // Automatically enter fullscreen when component mounts
     setFullscreen(true);
-
     const autoSave = async () => {
         const { kapanNumber, packetNumber, editingId } = stateRef.current;
-        // Autosave new entry if required fields are filled
         if (kapanNumber && packetNumber) {
             const success = await handleSave(false);
             if (success) {
                 stateRef.current.toast({ title: 'Auto-saved', description: 'New entry was automatically saved.' });
             }
         }
-        // Autosave edited entry
         if (editingId) {
             const success = await handleSaveEdit(editingId, false);
             if (success) {
@@ -447,11 +384,8 @@ export default function ChaluEntryPage() {
             }
         }
     };
-
-    // This cleanup function will run when the component is unmounted (e.g., page navigation)
     return () => {
         autoSave();
-        // Exit fullscreen when the component unmounts
         setFullscreen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -465,8 +399,6 @@ export default function ChaluEntryPage() {
   };
 
   const filteredEntries = useMemo(() => {
-    if (!chaluEntries) return [];
-    
     let baseFilter = chaluEntries;
 
     if (viewMode === 'live') {
@@ -487,11 +419,10 @@ export default function ChaluEntryPage() {
         }
     }
     
-    return baseFilter;
+    return baseFilter.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   }, [chaluEntries, kapanFilter, viewMode, historySearchTerm, liveSearchTerm]);
   
-  // Clear selection when filters change
   useEffect(() => {
     setSelectedEntries(new Set());
   }, [kapanFilter, liveSearchTerm, viewMode]);
@@ -524,17 +455,14 @@ export default function ChaluEntryPage() {
   }, [filteredEntries, kapanFilter]);
 
   const filteredJiramEntries = useMemo(() => {
-    if (!jiramEntries) return [];
-    
     return (jiramEntries || []).filter(entry => {
         const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
         const searchMatch = !jiramSearchTerm || entry.packetNumber.toLowerCase().includes(jiramSearchTerm.toLowerCase());
         return kapanMatch && searchMatch;
-    });
+    }).sort((a, b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime());
 }, [jiramEntries, kapanNumber, jiramSearchTerm]);
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!firestore) return;
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -551,33 +479,23 @@ export default function ChaluEntryPage() {
             
             toast({ title: 'Importing...', description: `Processing ${data.length} packets. This may take a moment.` });
 
-            // 1. Delete all existing documents in jiramEntries
-            const allJiramDocs = await getDocs(collection(firestore, 'jiramEntries'));
-            const deleteBatch = writeBatch(firestore);
-            allJiramDocs.forEach(doc => deleteBatch.delete(doc.ref));
-            await deleteBatch.commit();
-            
-            // 2. Add new documents from file
-            const addBatch = writeBatch(firestore);
-            data.forEach(item => {
+            const newJiramEntries: JiramEntry[] = data.map(item => {
                 const match = item.barcode.match(/^(?:R)?(\d+)-(\d+(?:-[A-Z])?)$/);
-                if (match) {
-                    const [, , packetIdentifier] = match;
-                    const [, suffix] = packetIdentifier.split('-');
-                     const newDocRef = doc(firestore, 'jiramEntries', item.barcode);
-                     addBatch.set(newDocRef, {
-                        barcode: item.barcode,
-                        kapanNumber: item.kapanNumber,
-                        packetNumber: packetIdentifier,
-                        suffix: suffix || '',
-                        scanTime: serverTimestamp(),
-                     });
-                }
-            });
-            await addBatch.commit();
+                const [, , packetIdentifier] = match || [];
+                const [, suffix] = (packetIdentifier || '').split('-');
+                return {
+                    id: item.barcode,
+                    barcode: item.barcode,
+                    kapanNumber: item.kapanNumber,
+                    packetNumber: packetIdentifier,
+                    suffix: suffix || '',
+                    scanTime: new Date().toISOString(),
+                };
+            }).filter(e => e.packetNumber);
             
-            toast({ title: 'Import Successful', description: `Successfully imported ${data.length} Jiram scans.` });
-            if (refetchJiramEntries) refetchJiramEntries(); // Refresh the data
+            setJiramEntries(newJiramEntries); // This replaces all existing entries
+            
+            toast({ title: 'Import Successful', description: `Successfully imported ${newJiramEntries.length} Jiram scans.` });
         } catch (error) {
             console.error("Import failed:", error);
             toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not read or process the file.' });
@@ -615,16 +533,9 @@ export default function ChaluEntryPage() {
   };
   
   const handleDeleteSelected = async () => {
-    if (!firestore || selectedEntries.size === 0) return;
-
-    const batch = writeBatch(firestore);
-    selectedEntries.forEach(id => {
-        const docRef = doc(firestore, 'chaluEntries', id);
-        batch.delete(docRef);
-    });
-
+    if (selectedEntries.size === 0) return;
     try {
-        await batch.commit();
+        setChaluEntries(prev => prev.filter(e => !selectedEntries.has(e.id)));
         toast({ title: 'Success', description: `${selectedEntries.size} entries deleted.`});
         setSelectedEntries(new Set());
     } catch(e) {
@@ -636,7 +547,6 @@ export default function ChaluEntryPage() {
   const isAllSelected = filteredEntries.length > 0 && selectedEntries.size === filteredEntries.length;
   const isSomeSelected = selectedEntries.size > 0 && selectedEntries.size < filteredEntries.length;
   
-  // Jiram multi-select handlers
     const handleJiramSelectAll = (checked: boolean | 'indeterminate') => {
         if (checked === true) {
             const allIds = new Set(filteredJiramEntries.map(e => e.id));
@@ -657,16 +567,9 @@ export default function ChaluEntryPage() {
     };
     
     const handleDeleteSelectedJiram = async () => {
-        if (!firestore || selectedJiramEntries.size === 0) return;
-
-        const batch = writeBatch(firestore);
-        selectedJiramEntries.forEach(id => {
-            const docRef = doc(firestore, 'jiramEntries', id);
-            batch.delete(docRef);
-        });
-
+        if (selectedJiramEntries.size === 0) return;
         try {
-            await batch.commit();
+            setJiramEntries(prev => prev.filter(e => !selectedJiramEntries.has(e.id)));
             toast({ title: 'Success', description: `${selectedJiramEntries.size} pending scans deleted.`});
             setSelectedJiramEntries(new Set());
         } catch(e) {
@@ -681,8 +584,6 @@ export default function ChaluEntryPage() {
     useEffect(() => {
         setSelectedJiramEntries(new Set());
     }, [kapanNumber, jiramSearchTerm]);
-
-
 
   return (
     <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6 h-screen overflow-hidden">
@@ -925,8 +826,7 @@ export default function ChaluEntryPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {loadingEntries && <TableRow><TableCell colSpan={9} className="text-center">Loading...</TableCell></TableRow>}
-                          {!loadingEntries && filteredEntries.map(entry => (
+                          {filteredEntries.map(entry => (
                           <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
                             <TableCell><Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} /></TableCell>
                             {editingId === entry.id ? (
@@ -984,7 +884,7 @@ export default function ChaluEntryPage() {
                             )}
                           </TableRow>
                           ))}
-                          {!loadingEntries && filteredEntries.length === 0 && (
+                          {filteredEntries.length === 0 && (
                               <TableRow><TableCell colSpan={9} className="text-center">No entries found.</TableCell></TableRow>
                           )}
                       </TableBody>
@@ -1001,12 +901,11 @@ export default function ChaluEntryPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             {loadingEntries && <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>}
-                            {!loadingEntries && filteredEntries.map(entry => (
+                            {filteredEntries.map(entry => (
                                 <TableRow key={entry.id} className="relative bg-green-100/60 dark:bg-green-900/30">
                                     <TableCell>
                                         <div className="font-bold">{entry.kapanNumber}-{entry.packetNumber}</div>
-                                        <div className="text-xs text-muted-foreground">Entered: {entry.createdAt?.toDate ? format(entry.createdAt.toDate(), 'PP') : 'N/A'}</div>
+                                        <div className="text-xs text-muted-foreground">Entered: {entry.createdAt ? format(new Date(entry.createdAt), 'PP') : 'N/A'}</div>
                                     </TableCell>
                                     <TableCell>{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.returnDate ? format(new Date(entry.returnDate), 'PPp') : 'N/A'}</TableCell>
@@ -1036,7 +935,7 @@ export default function ChaluEntryPage() {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {!loadingEntries && filteredEntries.length === 0 && (
+                            {filteredEntries.length === 0 && (
                               <TableRow><TableCell colSpan={5} className="text-center">No returned entries found.</TableCell></TableRow>
                           )}
                         </TableBody>
@@ -1085,64 +984,62 @@ export default function ChaluEntryPage() {
             </div>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
-             {loadingJiramEntries ? <p>Loading...</p> : (
-                 <Table>
-                     <TableHeader>
-                         <TableRow>
-                             <TableHead className="w-12">
-                                 <Checkbox
-                                     checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
-                                     onCheckedChange={handleJiramSelectAll}
-                                 />
-                             </TableHead>
-                             <TableHead>Kapan</TableHead>
-                             <TableHead>Packet</TableHead>
-                             <TableHead>Action</TableHead>
+             <Table>
+                 <TableHeader>
+                     <TableRow>
+                         <TableHead className="w-12">
+                             <Checkbox
+                                 checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
+                                 onCheckedChange={handleJiramSelectAll}
+                             />
+                         </TableHead>
+                         <TableHead>Kapan</TableHead>
+                         <TableHead>Packet</TableHead>
+                         <TableHead>Action</TableHead>
+                     </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                     {filteredJiramEntries.map(entry => (
+                         <TableRow 
+                            key={entry.id} 
+                            className={cn(
+                                "cursor-pointer transition-colors duration-300", 
+                                pendingJiramId === entry.id && "bg-accent",
+                                lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50'
+                            )}
+                            onClick={() => handleJiramPacketClick(entry)}
+                          >
+                             <TableCell><Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} /></TableCell>
+                             <TableCell>{entry.kapanNumber}</TableCell>
+                             <TableCell>{entry.packetNumber}</TableCell>
+                             <TableCell>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Pending Scan?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This will remove "{entry.barcode}" from the pending list. It won't affect the main Chalu entries.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => setJiramEntries(prev => prev.filter(j => j.id !== entry.id))}>Delete Scan</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                             </TableCell>
                          </TableRow>
-                     </TableHeader>
-                     <TableBody>
-                         {filteredJiramEntries.map(entry => (
-                             <TableRow 
-                                key={entry.id} 
-                                className={cn(
-                                    "cursor-pointer transition-colors duration-300", 
-                                    pendingJiramId === entry.id && "bg-accent",
-                                    lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50'
-                                )}
-                                onClick={() => handleJiramPacketClick(entry)}
-                              >
-                                 <TableCell><Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} /></TableCell>
-                                 <TableCell>{entry.kapanNumber}</TableCell>
-                                 <TableCell>{entry.packetNumber}</TableCell>
-                                 <TableCell>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Pending Scan?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will remove "{entry.barcode}" from the pending list. It won't affect the main Chalu entries.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id))}>Delete Scan</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                 </TableCell>
-                             </TableRow>
-                         ))}
-                         {filteredJiramEntries.length === 0 && (
-                             <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">
-                                {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
-                             </TableCell></TableRow>
-                         )}
-                     </TableBody>
-                 </Table>
-             )}
+                     ))}
+                     {filteredJiramEntries.length === 0 && (
+                         <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">
+                            {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
+                         </TableCell></TableRow>
+                     )}
+                 </TableBody>
+             </Table>
          </CardContent>
       </Card>
 
@@ -1199,5 +1096,3 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
-
-    

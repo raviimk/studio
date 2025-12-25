@@ -1,61 +1,42 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import {
-  collection,
-  query,
-  onSnapshot,
-  Query,
-  DocumentData,
-  FirestoreError,
-  QuerySnapshot,
-} from 'firebase/firestore';
-import { useFirestore } from '.';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { CollectionReference, DocumentData } from 'firebase/firestore'; // Keep types for compatibility if needed
 
-interface Options {
-  listen: boolean;
-}
+// This is a dummy implementation to replace the original Firebase hook.
+// It mimics the API but uses useLocalStorage.
 
 export const useCollection = <T extends DocumentData>(
-  collectionQuery: Query<DocumentData> | null,
-  options?: Options
+  // The query is no longer used, but kept for API compatibility.
+  // We derive the key from the path of the query if it exists.
+  query: { path: string } | null,
+  options?: any
 ) => {
-  const [data, setData] = useState<T[]>([]);
+  const key = query?.path || 'firebase-collection-fallback';
+  const [data, setData] = useLocalStorage<T[]>(key, []);
+  
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<FirestoreError | null>(null);
-
-  const queryRef = useRef(collectionQuery);
-  queryRef.current = collectionQuery;
+  const [error, setError] = useState<any | null>(null);
 
   useEffect(() => {
-    if (!queryRef.current) {
-      setLoading(false);
-      setData([]);
-      return;
-    }
+    // Simulate async loading from Firebase
     setLoading(true);
-
-    const unsubscribe = onSnapshot(
-      queryRef.current,
-      (snapshot: QuerySnapshot<DocumentData>) => {
-        const result: T[] = [];
-        snapshot.forEach((doc) => {
-          result.push({ id: doc.id, ...doc.data() } as T);
-        });
-        setData(result);
+    const timer = setTimeout(() => {
+        // Data is already loaded by useLocalStorage hook
         setLoading(false);
-        setError(null);
-      },
-      (err: FirestoreError) => {
-        setError(err);
-        setLoading(false);
-        console.error(err);
-      }
-    );
+    }, 200); // Simulate a short network delay
 
-    return () => unsubscribe();
-  }, [collectionQuery]);
+    return () => clearTimeout(timer);
+  }, [key]); // Rerun if the "collection path" changes
 
-  return { data, loading, error };
+  const refetch = useCallback(() => {
+    // In a local storage context, data is always "fresh".
+    // This function can be a no-op or force a re-render if needed.
+    // For simplicity, we can just log it.
+    console.log('Refetch called on local storage collection.');
+  }, []);
+
+  return { data, loading, error, refetch, setData };
 };

@@ -2,8 +2,8 @@
 'use client';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY } from '@/lib/constants';
-import { JiramReportPacket, SarinPacket } from '@/lib/types';
+import { JIRAM_ENTRIES_KEY, KAPANS_KEY, SARIN_PACKETS_KEY } from '@/lib/constants';
+import { JiramEntry, Kapan, SarinPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,8 +36,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { deleteKapanData } from '@/lib/kapan-deleter';
-import { useCollection, useFirestore } from '@/firebase';
-import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc, setDoc } from 'firebase/firestore';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -56,7 +54,7 @@ type KapanSummary = {
 type GroupedScans = {
     date: string;
     count: number;
-    packets: JiramReportPacket[];
+    packets: JiramEntry[];
 };
 
 const KAPAN_COMPLETION_WAIT_DAYS = 20;
@@ -64,20 +62,14 @@ const KAPAN_COMPLETION_WAIT_DAYS = 20;
 
 export default function JiramReportPage() {
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const [jiramPackets, setJiramPackets] = useLocalStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
+  const [jiramEntries, setJiramEntries] = useLocalStorage<JiramEntry[]>(JIRAM_ENTRIES_KEY, []);
+  const [kapans, setKapans] = useLocalStorage<Kapan[]>(KAPANS_KEY, []);
   const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-
-  const kapansQuery = useMemo(() => {
-      if (!firestore) return null;
-      return query(collection(firestore, 'kapans'));
-  }, [firestore]);
-  const { data: kapans } = useCollection(kapansQuery);
 
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const [highlightedKapan, setHighlightedKapan] = useState<string | null>(null);
@@ -120,7 +112,7 @@ export default function JiramReportPage() {
       }
     });
 
-    jiramPackets.forEach(p => {
+    jiramEntries.forEach(p => {
       if (!kapanData[p.kapanNumber]) {
         kapanData[p.kapanNumber] = { expected: 0, scanned: 0 };
       }
@@ -146,11 +138,11 @@ export default function JiramReportPage() {
         daysSinceCreation,
       };
     }).sort((a,b) => parseInt(a.kapanNumber) - parseInt(b.kapanNumber));
-  }, [sarinPackets, jiramPackets]);
+  }, [sarinPackets, jiramEntries]);
 
   const handleBarcodeScan = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!barcode || !firestore) return;
+    if (!barcode) return;
 
     const match = barcode.match(/^(?:R)?(\d+)-(\d+(?:-[A-Z])?)$/);
     if (!match) {
@@ -159,10 +151,9 @@ export default function JiramReportPage() {
         return;
     }
     const [, kapanNumber, packetIdentifier] = match;
-    const [packetNumberStr, suffix] = packetIdentifier.split('-');
+    const [, suffix] = packetIdentifier.split('-');
 
-
-    if (jiramPackets.some(p => p.barcode === barcode)) {
+    if (jiramEntries.some(p => p.id === barcode)) {
         toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This packet has already been scanned.' });
         setBarcode('');
         return;
@@ -173,34 +164,22 @@ export default function JiramReportPage() {
         toast({ variant: 'destructive', title: 'No Expected Jiram', description: `No Jiram entries found for Kapan ${kapanNumber} in the Sarin module.`});
     }
 
-    const newPacketLocal: JiramReportPacket = {
-      id: uuidv4(),
+    const newPacket: JiramEntry = {
+      id: barcode,
       barcode,
       kapanNumber,
+      packetNumber: packetIdentifier,
+      suffix: suffix || '',
       scanTime: new Date().toISOString(),
     };
-    setJiramPackets(prev => [newPacketLocal, ...prev]);
+    setJiramEntries(prev => [newPacket, ...prev]);
 
-    try {
-        const docRef = doc(firestore, 'jiramEntries', barcode);
-        await setDoc(docRef, {
-            barcode: barcode,
-            kapanNumber: kapanNumber,
-            packetNumber: packetIdentifier,
-            suffix: suffix || '',
-            scanTime: serverTimestamp(),
-        });
-
-        const kapanExists = kapans?.some(k => k.kapanNumber === kapanNumber);
-        if (!kapanExists) {
-            await addDoc(collection(firestore, 'kapans'), { kapanNumber });
-        }
-        
-         toast({ title: 'Packet Scanned & Queued', description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
-    } catch(err) {
-        console.error("Failed to save Jiram scan to Firestore:", err);
-        toast({ variant: 'destructive', title: 'Cloud Save Failed', description: 'Packet saved locally, but failed to queue for Chalu entry.'})
+    const kapanExists = kapans?.some(k => k.kapanNumber === kapanNumber);
+    if (!kapanExists) {
+        setKapans(prev => [...prev, { id: uuidv4(), kapanNumber }]);
     }
+    
+    toast({ title: 'Packet Scanned & Queued', description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
     
     setLastScannedBarcodes(prev => [barcode, ...prev].slice(0, 10));
     setBarcode('');
@@ -209,7 +188,7 @@ export default function JiramReportPage() {
   };
 
   const handleDeletePacket = (id: string) => {
-    setJiramPackets(jiramPackets.filter(p => p.id !== id));
+    setJiramEntries(jiramEntries.filter(p => p.id !== id));
     toast({ title: 'Scan Deleted' });
   }
   
@@ -225,11 +204,11 @@ export default function JiramReportPage() {
   };
 
   const handleExport = () => {
-    if (jiramPackets.length === 0) {
+    if (jiramEntries.length === 0) {
       toast({ variant: 'destructive', title: 'No Data', description: 'There are no scanned packets to export.' });
       return;
     }
-    const dataStr = JSON.stringify(jiramPackets.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber})), null, 2);
+    const dataStr = JSON.stringify(jiramEntries.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber})), null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -239,15 +218,14 @@ export default function JiramReportPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast({ title: 'Export Successful', description: `${jiramPackets.length} scans exported.` });
+    toast({ title: 'Export Successful', description: `${jiramEntries.length} scans exported.` });
   };
-
 
   const groupedScans: GroupedScans[] = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
-    const filteredPackets = jiramPackets.filter(p => !searchLower || p.barcode.toLowerCase().includes(searchLower));
+    const filteredPackets = jiramEntries.filter(p => !searchLower || p.barcode.toLowerCase().includes(searchLower));
 
-    const groups: Record<string, JiramReportPacket[]> = {};
+    const groups: Record<string, JiramEntry[]> = {};
     filteredPackets.forEach(p => {
         const date = format(startOfDay(parseISO(p.scanTime)), 'yyyy-MM-dd');
         if (!groups[date]) {
@@ -264,7 +242,7 @@ export default function JiramReportPage() {
         }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  }, [jiramPackets, searchTerm]);
+  }, [jiramEntries, searchTerm]);
 
   
   const getStatusIcon = (status: KapanSummary['status']) => {
