@@ -1,23 +1,12 @@
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  assetPrefix: './',
+  output: 'export',              // ये सबसे important है
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
+    unoptimized: true,           // static export के लिए ज़रूरी
   },
+  trailingSlash: true,           // links properly work करेंगे
+  distDir: 'out',                // default ही है, optional
 };
 
 export default nextConfig;
