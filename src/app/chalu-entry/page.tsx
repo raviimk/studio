@@ -130,6 +130,7 @@ export default function ChaluEntryPage() {
   
   // State for multi-select
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
+  const [selectedJiramEntries, setSelectedJiramEntries] = useState<Set<string>>(new Set());
 
 
   // Use refs to store the latest state for the cleanup function
@@ -637,6 +638,53 @@ export default function ChaluEntryPage() {
 
   const isAllSelected = filteredEntries.length > 0 && selectedEntries.size === filteredEntries.length;
   const isSomeSelected = selectedEntries.size > 0 && selectedEntries.size < filteredEntries.length;
+  
+  // Jiram multi-select handlers
+    const handleJiramSelectAll = (checked: boolean | 'indeterminate') => {
+        if (checked === true) {
+            const allIds = new Set(filteredJiramEntries.map(e => e.id));
+            setSelectedJiramEntries(allIds);
+        } else {
+            setSelectedJiramEntries(new Set());
+        }
+    };
+
+    const handleJiramRowSelect = (id: string, checked: boolean) => {
+        const newSelection = new Set(selectedJiramEntries);
+        if (checked) {
+            newSelection.add(id);
+        } else {
+            newSelection.delete(id);
+        }
+        setSelectedJiramEntries(newSelection);
+    };
+    
+    const handleDeleteSelectedJiram = async () => {
+        if (!firestore || selectedJiramEntries.size === 0) return;
+
+        const batch = writeBatch(firestore);
+        selectedJiramEntries.forEach(id => {
+            const docRef = doc(firestore, 'jiramEntries', id);
+            batch.delete(docRef);
+        });
+
+        try {
+            await batch.commit();
+            toast({ title: 'Success', description: `${selectedJiramEntries.size} pending scans deleted.`});
+            setSelectedJiramEntries(new Set());
+        } catch(e) {
+            console.error("Jiram batch delete failed:", e);
+            toast({ variant: 'destructive', title: 'Delete Failed' });
+        }
+    };
+    
+    const isAllJiramSelected = filteredJiramEntries.length > 0 && selectedJiramEntries.size === filteredJiramEntries.length;
+    const isSomeJiramSelected = selectedJiramEntries.size > 0 && selectedJiramEntries.size < filteredJiramEntries.length;
+
+    useEffect(() => {
+        setSelectedJiramEntries(new Set());
+    }, [kapanNumber, jiramSearchTerm]);
+
 
 
   return (
@@ -1012,15 +1060,30 @@ export default function ChaluEntryPage() {
                     <input type="file" ref={importFileRef} accept=".json" className="hidden" onChange={handleImport} />
                 </Button>
             </div>
-             <div className="relative mt-4">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input 
-                    type="search" 
-                    placeholder="Search by packet number..." 
-                    className="pl-8 sm:w-[300px]"
-                    value={jiramSearchTerm}
-                    onChange={(e) => setJiramSearchTerm(e.target.value)}
-                />
+             <div className="flex justify-between items-center mt-4">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        type="search" 
+                        placeholder="Search by packet number..." 
+                        className="pl-8 sm:w-[300px]"
+                        value={jiramSearchTerm}
+                        onChange={(e) => setJiramSearchTerm(e.target.value)}
+                    />
+                </div>
+                 {selectedJiramEntries.size > 0 && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedJiramEntries.size})
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader><AlertDialogTitle>Delete {selectedJiramEntries.size} pending scans?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedJiram}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
@@ -1028,6 +1091,12 @@ export default function ChaluEntryPage() {
                  <Table>
                      <TableHeader>
                          <TableRow>
+                             <TableHead className="w-12">
+                                 <Checkbox
+                                     checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
+                                     onCheckedChange={handleJiramSelectAll}
+                                 />
+                             </TableHead>
                              <TableHead>Kapan</TableHead>
                              <TableHead>Packet</TableHead>
                              <TableHead>Action</TableHead>
@@ -1044,6 +1113,7 @@ export default function ChaluEntryPage() {
                                 )}
                                 onClick={() => handleJiramPacketClick(entry)}
                               >
+                                 <TableCell><Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} /></TableCell>
                                  <TableCell>{entry.kapanNumber}</TableCell>
                                  <TableCell>{entry.packetNumber}</TableCell>
                                  <TableCell>
@@ -1068,7 +1138,7 @@ export default function ChaluEntryPage() {
                              </TableRow>
                          ))}
                          {filteredJiramEntries.length === 0 && (
-                             <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground">
+                             <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">
                                 {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
                              </TableCell></TableRow>
                          )}
