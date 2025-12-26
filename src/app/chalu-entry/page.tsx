@@ -927,14 +927,14 @@ export default function ChaluEntryPage() {
                      <Table>
                       <TableHeader>
                           <TableRow>
-                              <TableHead className="w-12">
-                                {liveSelectionMode && (
+                              {liveSelectionMode && (
+                                <TableHead className="w-12">
                                     <Checkbox
                                     checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
                                     onCheckedChange={handleSelectAll}
                                     />
-                                )}
-                              </TableHead>
+                                </TableHead>
+                              )}
                               <TableHead>કાપણ</TableHead>
                               <TableHead>પેકેટ</TableHead>
                               <TableHead>ઓરિજિનલ થાન</TableHead>
@@ -946,28 +946,27 @@ export default function ChaluEntryPage() {
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {loadingEntries && <TableRow><TableCell colSpan={9} className="text-center">Loading...</TableCell></TableRow>}
+                          {loadingEntries && <TableRow><TableCell colSpan={liveSelectionMode ? 9 : 8} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
                           <TableRow 
                             key={entry.id} 
                             className={cn(entry.adjustment < 0 && 'bg-destructive/10', selectedEntries.has(entry.id) && 'bg-accent/50')}
-                            onClick={() => liveSelectionMode && handleRowSelect(entry.id, !selectedEntries.has(entry.id))}
                           >
-                            <TableCell onClick={e => e.stopPropagation()}>
-                                {liveSelectionMode && (
+                            {liveSelectionMode && (
+                                <TableCell>
                                     <Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} />
-                                )}
-                            </TableCell>
+                                </TableCell>
+                            )}
                             {editingId === entry.id ? (
                                 <>
-                                    <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell><Input type="number" step="0.001" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
-                                    <TableCell onClick={e => e.stopPropagation()}>
+                                    <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell><Input type="number" step="0.001" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell>
                                         <Button size="sm" onClick={() => handleSaveEdit(entry.id, true)}><Save className="h-4 w-4" /></Button>
                                         <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
                                     </TableCell>
@@ -983,7 +982,7 @@ export default function ChaluEntryPage() {
                                     <TableCell>{entry.suffix}</TableCell>
                                     <TableCell className="font-bold">{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.vajan}</TableCell>
-                                    <TableCell className="flex gap-1" onClick={e => e.stopPropagation()}>
+                                    <TableCell className="flex gap-1">
                                         <button className="uiverse-return-button" onClick={() => handleOpenReturnDialog(entry)}>
                                           <div className="hoverEffect"><div></div></div>
                                           <span className="flex items-center gap-1">
@@ -1014,7 +1013,7 @@ export default function ChaluEntryPage() {
                           </TableRow>
                           ))}
                           {!loadingEntries && filteredEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={9} className="text-center">No entries found.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={liveSelectionMode ? 9 : 8} className="text-center">No entries found.</TableCell></TableRow>
                           )}
                       </TableBody>
                      </Table>
@@ -1127,14 +1126,14 @@ export default function ChaluEntryPage() {
                  <Table>
                      <TableHeader>
                          <TableRow>
-                             <TableHead className="w-12">
-                                {jiramSelectionMode && (
+                             {jiramSelectionMode && (
+                                <TableHead className="w-12">
                                     <Checkbox
                                         checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
                                         onCheckedChange={handleJiramSelectAll}
                                     />
-                                )}
-                             </TableHead>
+                                </TableHead>
+                             )}
                              <TableHead>Kapan</TableHead>
                              <TableHead>Packet</TableHead>
                              <TableHead>Action</TableHead>
@@ -1152,11 +1151,11 @@ export default function ChaluEntryPage() {
                                 )}
                                 onClick={() => handleJiramPacketClick(entry)}
                               >
-                                 <TableCell onClick={e => e.stopPropagation()}>
-                                    {jiramSelectionMode && (
+                                 {jiramSelectionMode && (
+                                    <TableCell>
                                         <Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} />
-                                    )}
-                                 </TableCell>
+                                    </TableCell>
+                                 )}
                                  <TableCell>{entry.kapanNumber}</TableCell>
                                  <TableCell>{entry.packetNumber}</TableCell>
                                  <TableCell onClick={(e) => e.stopPropagation()}>
@@ -1181,7 +1180,7 @@ export default function ChaluEntryPage() {
                              </TableRow>
                          ))}
                          {filteredJiramEntries.length === 0 && (
-                             <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">
+                             <TableRow><TableCell colSpan={jiramSelectionMode ? 4 : 3} className="text-center text-muted-foreground">
                                 {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
                              </TableCell></TableRow>
                          )}
