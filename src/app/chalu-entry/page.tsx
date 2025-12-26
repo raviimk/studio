@@ -199,12 +199,12 @@ export default function ChaluEntryPage() {
     setSuffix('');
     setCurrentPcs('');
     setPendingJiramId(null);
-    setKapanNumber('');
     // Do not reset kapan number by default, handled by Esc
   }
   
   const fullReset = () => {
     resetForm();
+    setKapanNumber('');
     setKapanFilter('');
     setJiramSearchTerm('');
     setHistorySearchTerm('');
@@ -1076,49 +1076,47 @@ export default function ChaluEntryPage() {
 
       <Card className="flex flex-col h-full lg:max-h-full overflow-hidden">
          <CardHeader>
-            <div className="flex justify-between items-center">
-                <div>
-                     <CardTitle>Pending Jiram Scans</CardTitle>
-                     <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
-                    <Upload className="mr-2 h-4 w-4" /> Import Scans
-                    <input type="file" ref={importFileRef} accept=".json" className="hidden" onChange={handleImport} />
-                </Button>
-            </div>
-             <div className="flex justify-between items-center mt-4">
-                <div className="flex gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            type="search" 
-                            placeholder="Search by packet number..." 
-                            className="pl-8 sm:w-[300px]"
-                            value={jiramSearchTerm}
-                            onChange={(e) => setJiramSearchTerm(e.target.value)}
-                        />
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => {
-                        setJiramSelectionMode(!jiramSelectionMode);
-                        if(jiramSelectionMode) setSelectedJiramEntries(new Set());
-                    }}>
-                        <Rows className="mr-2 h-4 w-4" />
-                        {jiramSelectionMode ? 'Cancel' : 'Select'}
-                    </Button>
-                </div>
-                 {jiramSelectionMode && selectedJiramEntries.size > 0 && (
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedJiramEntries.size})
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader><AlertDialogTitle>Delete {selectedJiramEntries.size} pending scans?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedJiram}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                )}
+            <CardTitle>Pending Jiram Scans</CardTitle>
+            <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
+            <div className="flex flex-wrap gap-2 items-center justify-between mt-4">
+              <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                      type="search" 
+                      placeholder="Search packets..." 
+                      className="pl-8 sm:w-[200px]"
+                      value={jiramSearchTerm}
+                      onChange={(e) => setJiramSearchTerm(e.target.value)}
+                  />
+              </div>
+              <div className="flex gap-2 items-center">
+                  <Button variant="outline" size="sm" onClick={() => {
+                      setJiramSelectionMode(!jiramSelectionMode);
+                      if(jiramSelectionMode) setSelectedJiramEntries(new Set());
+                  }}>
+                      <Rows className="mr-2 h-4 w-4" />
+                      {jiramSelectionMode ? 'Cancel' : 'Select'}
+                  </Button>
+
+                  {jiramSelectionMode && selectedJiramEntries.size > 0 && (
+                      <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                              <Button variant="destructive" size="sm">
+                                  <Trash2 className="mr-2 h-4 w-4" /> ({selectedJiramEntries.size})
+                              </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                              <AlertDialogHeader><AlertDialogTitle>Delete {selectedJiramEntries.size} pending scans?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedJiram}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
+                          </AlertDialogContent>
+                      </AlertDialog>
+                  )}
+                  
+                  <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
+                      <Upload className="mr-2 h-4 w-4" /> Import
+                      <input type="file" ref={importFileRef} accept=".json" className="hidden" onChange={handleImport} />
+                  </Button>
+              </div>
             </div>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
@@ -1152,7 +1150,7 @@ export default function ChaluEntryPage() {
                                 onClick={() => handleJiramPacketClick(entry)}
                               >
                                  {jiramSelectionMode && (
-                                    <TableCell>
+                                    <TableCell onClick={(e) => e.stopPropagation()}>
                                         <Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} />
                                     </TableCell>
                                  )}
