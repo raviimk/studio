@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 
 type Kapan = {
@@ -236,12 +237,12 @@ export default function ChaluEntryPage() {
             createdAt: serverTimestamp(),
             isReturned: false,
             returnedPackets: [],
+            pendingJiramId: pendingJiramId || null, // Link to the original Jiram scan
         });
         
-        // If this entry came from a pending Jiram scan, delete it from the queue
-        if(pendingJiramId) {
-            await deleteDoc(doc(firestore, 'jiramEntries', pendingJiramId));
-        }
+        // ** LOGIC CHANGE **
+        // Do NOT delete the Jiram entry here. It will be marked as in-progress.
+        // We will remove it once the Chalu entry is Returned.
 
         if(showToast) toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
         resetForm();
@@ -411,6 +412,13 @@ export default function ChaluEntryPage() {
             returnDate: new Date().toISOString(),
             returnedPackets: Array.from(scannedReturnPackets),
         });
+
+        // ** LOGIC CHANGE **
+        // Now that the Chalu entry is returned, delete the original Jiram entry if it exists.
+        if (entryToReturn.pendingJiramId) {
+            await deleteDoc(doc(firestore, 'jiramEntries', entryToReturn.pendingJiramId));
+        }
+        
         toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
         setReturnDialogOpen(false);
         if (refetchChaluEntries) refetchChaluEntries();
@@ -531,15 +539,35 @@ export default function ChaluEntryPage() {
     };
   }, [filteredEntries, kapanFilter]);
 
+  
+  const jiramChaluMap = useMemo(() => {
+    const map = new Map<string, string>(); // Maps pendingJiramId to chaluEntryId
+    if (!chaluEntries) return map;
+    chaluEntries.forEach(entry => {
+        if (entry.pendingJiramId && !entry.isReturned) {
+            map.set(entry.pendingJiramId, entry.id);
+        }
+    });
+    return map;
+  }, [chaluEntries]);
+
+
   const filteredJiramEntries = useMemo(() => {
     if (!jiramEntries) return [];
     
-    return (jiramEntries || []).filter(entry => {
+    const filtered = (jiramEntries || []).filter(entry => {
         const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
         const searchMatch = !jiramSearchTerm || entry.packetNumber.toLowerCase().includes(jiramSearchTerm.toLowerCase());
         return kapanMatch && searchMatch;
     });
-}, [jiramEntries, kapanNumber, jiramSearchTerm]);
+
+    // ** LOGIC CHANGE **
+    // Filter out Jiram entries that are associated with a RETURNED Chalu entry.
+    const returnedJiramIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
+    return filtered.filter(j => !returnedJiramIds.has(j.id));
+
+}, [jiramEntries, chaluEntries, kapanNumber, jiramSearchTerm]);
+
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!firestore) return;
@@ -692,6 +720,26 @@ export default function ChaluEntryPage() {
         setSelectedJiramEntries(new Set());
     }, [kapanNumber, jiramSearchTerm]);
 
+  const kapanCounts = useMemo(() => {
+    if (!kapanFilter) return { pending: 0, live: 0, returned: 0 };
+    const allJiramForKapan = jiramEntries?.filter(j => j.kapanNumber === kapanFilter) || [];
+    const allChaluForKapan = chaluEntries?.filter(c => c.kapanNumber === kapanFilter) || [];
+    
+    const returnedChalu = allChaluForKapan.filter(c => c.isReturned);
+    const liveChalu = allChaluForKapan.filter(c => !c.isReturned);
+    
+    const liveJiramIds = new Set(liveChalu.map(c => c.pendingJiramId));
+    const returnedJiramIds = new Set(returnedChalu.map(c => c.pendingJiramId));
+
+    const pendingJiram = allJiramForKapan.filter(j => !liveJiramIds.has(j.id) && !returnedJiramIds.has(j.id));
+    
+    return {
+        pending: pendingJiram.length,
+        live: liveChalu.length,
+        returned: returnedChalu.length,
+    }
+  }, [kapanFilter, jiramEntries, chaluEntries]);
+
   return (
     <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6 h-screen overflow-hidden">
       <div className="flex flex-col gap-6">
@@ -795,7 +843,7 @@ export default function ChaluEntryPage() {
                             {viewMode === 'live' ? 'View History' : 'View Live'}
                        </Button>
                        <Select value={kapanFilter} onValueChange={(value) => setKapanFilter(value === 'all' ? '' : value)}>
-                           <SelectTrigger className="max-w-xs">
+                           <SelectTrigger className="w-[180px]">
                                <SelectValue placeholder="Filter by Kapan..."/>
                            </SelectTrigger>
                            <SelectContent>
@@ -803,10 +851,17 @@ export default function ChaluEntryPage() {
                                {uniqueKapansForFilter.map(k => <SelectItem key={k} value={k}>{k}</SelectItem>)}
                            </SelectContent>
                        </Select>
+                       {kapanFilter && (
+                         <div className="flex items-center gap-4 text-sm font-medium border rounded-lg px-3 py-1.5 bg-muted/50">
+                            <div title="Pending Jiram">J: <span className="font-bold">{kapanCounts.pending}</span></div>
+                            <div title="Live Chalu">L: <span className="font-bold">{kapanCounts.live}</span></div>
+                            <div title="Returned Chalu">R: <span className="font-bold text-green-600">{kapanCounts.returned}</span></div>
+                         </div>
+                       )}
                          <Dialog open={isReportOpen} onOpenChange={setReportOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="outline" disabled={!kapanFilter || !reportSummary}>
-                                    <FileText className="mr-2 h-4 w-4" /> View Report
+                                <Button variant="outline" size="sm" disabled={!kapanFilter || !reportSummary}>
+                                    <FileText className="mr-2 h-4 w-4" /> Report
                                 </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-4xl">
@@ -879,7 +934,7 @@ export default function ChaluEntryPage() {
                                     <Input
                                         type="search"
                                         placeholder="Search by packet number..."
-                                        className="pl-8 sm:w-[300px]"
+                                        className="pl-8 sm:w-[200px]"
                                         value={liveSearchTerm}
                                         onChange={(e) => setLiveSearchTerm(e.target.value)}
                                     />
@@ -891,20 +946,21 @@ export default function ChaluEntryPage() {
                                     <Rows className="mr-2 h-4 w-4" />
                                     {liveSelectionMode ? 'Cancel' : 'Select'}
                                 </Button>
+                                 {liveSelectionMode && selectedEntries.size > 0 && (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm">
+                                                <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedEntries.size})
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader><AlertDialogTitle>Delete {selectedEntries.size} entries?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelected}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
                             </div>
-                            {liveSelectionMode && selectedEntries.size > 0 && (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedEntries.size})
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader><AlertDialogTitle>Delete {selectedEntries.size} entries?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelected}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
+                           
                         </div>
                     )}
                     {viewMode === 'history' && (
@@ -1138,16 +1194,19 @@ export default function ChaluEntryPage() {
                          </TableRow>
                      </TableHeader>
                      <TableBody>
-                         {filteredJiramEntries.map(entry => (
+                         {filteredJiramEntries.map(entry => {
+                            const isInProgress = jiramChaluMap.has(entry.id);
+                            return (
                              <TableRow 
                                 key={entry.id} 
                                 className={cn(
-                                    "cursor-pointer transition-colors duration-300", 
+                                    "transition-colors duration-300", 
                                     pendingJiramId === entry.id && "bg-accent",
                                     lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50',
-                                    selectedJiramEntries.has(entry.id) && 'bg-accent/50'
+                                    selectedJiramEntries.has(entry.id) && 'bg-accent/50',
+                                    isInProgress ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                 )}
-                                onClick={() => handleJiramPacketClick(entry)}
+                                onClick={() => !isInProgress && handleJiramPacketClick(entry)}
                               >
                                  {jiramSelectionMode && (
                                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -1157,26 +1216,28 @@ export default function ChaluEntryPage() {
                                  <TableCell>{entry.kapanNumber}</TableCell>
                                  <TableCell>{entry.packetNumber}</TableCell>
                                  <TableCell onClick={(e) => e.stopPropagation()}>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>Delete Pending Scan?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This will remove "{entry.barcode}" from the pending list. It won't affect the main Chalu entries.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id))}>Delete Scan</AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
+                                    {isInProgress ? <Badge variant="secondary">In Progress</Badge> : (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Delete Pending Scan?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will remove "{entry.barcode}" from the pending list. It won't affect the main Chalu entries.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id))}>Delete Scan</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
                                  </TableCell>
                              </TableRow>
-                         ))}
+                         )})}
                          {filteredJiramEntries.length === 0 && (
                              <TableRow><TableCell colSpan={jiramSelectionMode ? 4 : 3} className="text-center text-muted-foreground">
                                 {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
