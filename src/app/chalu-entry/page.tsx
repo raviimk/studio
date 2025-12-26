@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs, setDoc } from 'firebase/firestore';
@@ -131,6 +131,8 @@ export default function ChaluEntryPage() {
   // State for multi-select
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [selectedJiramEntries, setSelectedJiramEntries] = useState<Set<string>>(new Set());
+  const [liveSelectionMode, setLiveSelectionMode] = useState(false);
+  const [jiramSelectionMode, setJiramSelectionMode] = useState(false);
 
 
   // Use refs to store the latest state for the cleanup function
@@ -254,7 +256,7 @@ export default function ChaluEntryPage() {
   
   const handleJiramPacketClick = (jiramEntry: JiramEntry) => {
     // If in multi-select mode, handle selection instead of filling form
-    if (selectedJiramEntries.size > 0) {
+    if (jiramSelectionMode) {
         handleJiramRowSelect(jiramEntry.id, !selectedJiramEntries.has(jiramEntry.id));
         return;
     }
@@ -497,7 +499,7 @@ export default function ChaluEntryPage() {
 
   }, [chaluEntries, kapanFilter, viewMode, historySearchTerm, liveSearchTerm]);
   
-  // Clear selection when filters change
+  // Clear selection when filters or mode change
   useEffect(() => {
     setSelectedEntries(new Set());
   }, [kapanFilter, liveSearchTerm, historySearchTerm, viewMode]);
@@ -633,6 +635,7 @@ export default function ChaluEntryPage() {
         await batch.commit();
         toast({ title: 'Success', description: `${selectedEntries.size} entries deleted.`});
         setSelectedEntries(new Set());
+        setLiveSelectionMode(false);
     } catch(e) {
         console.error("Batch delete failed:", e);
         toast({ variant: 'destructive', title: 'Delete Failed' });
@@ -675,6 +678,7 @@ export default function ChaluEntryPage() {
             await batch.commit();
             toast({ title: 'Success', description: `${selectedJiramEntries.size} pending scans deleted.`});
             setSelectedJiramEntries(new Set());
+            setJiramSelectionMode(false);
         } catch(e) {
             console.error("Jiram batch delete failed:", e);
             toast({ variant: 'destructive', title: 'Delete Failed' });
@@ -687,8 +691,6 @@ export default function ChaluEntryPage() {
     useEffect(() => {
         setSelectedJiramEntries(new Set());
     }, [kapanNumber, jiramSearchTerm]);
-
-
 
   return (
     <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6 h-screen overflow-hidden">
@@ -871,17 +873,26 @@ export default function ChaluEntryPage() {
                   </div>
                     {viewMode === 'live' && (
                         <div className="flex justify-between items-center mt-4">
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search by packet number..."
-                                    className="pl-8 sm:w-[300px]"
-                                    value={liveSearchTerm}
-                                    onChange={(e) => setLiveSearchTerm(e.target.value)}
-                                />
+                            <div className="flex gap-2">
+                                <div className="relative">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        type="search"
+                                        placeholder="Search by packet number..."
+                                        className="pl-8 sm:w-[300px]"
+                                        value={liveSearchTerm}
+                                        onChange={(e) => setLiveSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <Button variant="outline" size="sm" onClick={() => {
+                                    setLiveSelectionMode(!liveSelectionMode);
+                                    if(liveSelectionMode) setSelectedEntries(new Set());
+                                }}>
+                                    <Rows className="mr-2 h-4 w-4" />
+                                    {liveSelectionMode ? 'Cancel' : 'Select'}
+                                </Button>
                             </div>
-                            {selectedEntries.size > 0 && (
+                            {liveSelectionMode && selectedEntries.size > 0 && (
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                         <Button variant="destructive" size="sm">
@@ -917,7 +928,7 @@ export default function ChaluEntryPage() {
                       <TableHeader>
                           <TableRow>
                               <TableHead className="w-12">
-                                {selectedEntries.size > 0 && (
+                                {liveSelectionMode && (
                                     <Checkbox
                                     checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
                                     onCheckedChange={handleSelectAll}
@@ -940,11 +951,11 @@ export default function ChaluEntryPage() {
                           <TableRow 
                             key={entry.id} 
                             className={cn(entry.adjustment < 0 && 'bg-destructive/10', selectedEntries.has(entry.id) && 'bg-accent/50')}
-                            onClick={() => handleRowSelect(entry.id, !selectedEntries.has(entry.id))}
+                            onClick={() => liveSelectionMode && handleRowSelect(entry.id, !selectedEntries.has(entry.id))}
                           >
-                            <TableCell>
-                                {selectedEntries.size > 0 && (
-                                    <Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} />
+                            <TableCell onClick={e => e.stopPropagation()}>
+                                {liveSelectionMode && (
+                                    <Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} />
                                 )}
                             </TableCell>
                             {editingId === entry.id ? (
@@ -1077,17 +1088,26 @@ export default function ChaluEntryPage() {
                 </Button>
             </div>
              <div className="flex justify-between items-center mt-4">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        type="search" 
-                        placeholder="Search by packet number..." 
-                        className="pl-8 sm:w-[300px]"
-                        value={jiramSearchTerm}
-                        onChange={(e) => setJiramSearchTerm(e.target.value)}
-                    />
+                <div className="flex gap-2">
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            type="search" 
+                            placeholder="Search by packet number..." 
+                            className="pl-8 sm:w-[300px]"
+                            value={jiramSearchTerm}
+                            onChange={(e) => setJiramSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => {
+                        setJiramSelectionMode(!jiramSelectionMode);
+                        if(jiramSelectionMode) setSelectedJiramEntries(new Set());
+                    }}>
+                        <Rows className="mr-2 h-4 w-4" />
+                        {jiramSelectionMode ? 'Cancel' : 'Select'}
+                    </Button>
                 </div>
-                 {selectedJiramEntries.size > 0 && (
+                 {jiramSelectionMode && selectedJiramEntries.size > 0 && (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm">
@@ -1108,7 +1128,7 @@ export default function ChaluEntryPage() {
                      <TableHeader>
                          <TableRow>
                              <TableHead className="w-12">
-                                {selectedJiramEntries.size > 0 && (
+                                {jiramSelectionMode && (
                                     <Checkbox
                                         checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
                                         onCheckedChange={handleJiramSelectAll}
@@ -1132,9 +1152,9 @@ export default function ChaluEntryPage() {
                                 )}
                                 onClick={() => handleJiramPacketClick(entry)}
                               >
-                                 <TableCell>
-                                    {selectedJiramEntries.size > 0 && (
-                                        <Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} />
+                                 <TableCell onClick={e => e.stopPropagation()}>
+                                    {jiramSelectionMode && (
+                                        <Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} />
                                     )}
                                  </TableCell>
                                  <TableCell>{entry.kapanNumber}</TableCell>
