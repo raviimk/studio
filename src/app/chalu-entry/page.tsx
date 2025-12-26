@@ -253,6 +253,12 @@ export default function ChaluEntryPage() {
   };
   
   const handleJiramPacketClick = (jiramEntry: JiramEntry) => {
+    // If in multi-select mode, handle selection instead of filling form
+    if (selectedJiramEntries.size > 0) {
+        handleJiramRowSelect(jiramEntry.id, !selectedJiramEntries.has(jiramEntry.id));
+        return;
+    }
+
     setKapanNumber(jiramEntry.kapanNumber);
     setPacketNumber(jiramEntry.packetNumber);
     setSuffix(jiramEntry.suffix || '');
@@ -494,7 +500,7 @@ export default function ChaluEntryPage() {
   // Clear selection when filters change
   useEffect(() => {
     setSelectedEntries(new Set());
-  }, [kapanFilter, liveSearchTerm, viewMode]);
+  }, [kapanFilter, liveSearchTerm, historySearchTerm, viewMode]);
 
   const reportSummary = useMemo(() => {
     if (!kapanFilter || filteredEntries.length === 0) return null;
@@ -891,15 +897,17 @@ export default function ChaluEntryPage() {
                         </div>
                     )}
                     {viewMode === 'history' && (
-                        <div className="relative mt-4">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                type="search"
-                                placeholder="Search by packet number..."
-                                className="pl-8 sm:w-[300px]"
-                                value={historySearchTerm}
-                                onChange={(e) => setHistorySearchTerm(e.target.value)}
-                            />
+                         <div className="flex justify-between items-center mt-4">
+                            <div className="relative">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    type="search"
+                                    placeholder="Search by packet number..."
+                                    className="pl-8 sm:w-[300px]"
+                                    value={historySearchTerm}
+                                    onChange={(e) => setHistorySearchTerm(e.target.value)}
+                                />
+                            </div>
                         </div>
                     )}
               </CardHeader>
@@ -909,10 +917,12 @@ export default function ChaluEntryPage() {
                       <TableHeader>
                           <TableRow>
                               <TableHead className="w-12">
-                                <Checkbox
-                                  checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
-                                  onCheckedChange={handleSelectAll}
-                                />
+                                {selectedEntries.size > 0 && (
+                                    <Checkbox
+                                    checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                                    onCheckedChange={handleSelectAll}
+                                    />
+                                )}
                               </TableHead>
                               <TableHead>કાપણ</TableHead>
                               <TableHead>પેકેટ</TableHead>
@@ -927,18 +937,26 @@ export default function ChaluEntryPage() {
                       <TableBody>
                           {loadingEntries && <TableRow><TableCell colSpan={9} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
-                          <TableRow key={entry.id} className={cn(entry.adjustment < 0 && 'bg-destructive/10')}>
-                            <TableCell><Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} /></TableCell>
+                          <TableRow 
+                            key={entry.id} 
+                            className={cn(entry.adjustment < 0 && 'bg-destructive/10', selectedEntries.has(entry.id) && 'bg-accent/50')}
+                            onClick={() => handleRowSelect(entry.id, !selectedEntries.has(entry.id))}
+                          >
+                            <TableCell>
+                                {selectedEntries.size > 0 && (
+                                    <Checkbox checked={selectedEntries.has(entry.id)} onCheckedChange={(checked) => handleRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} />
+                                )}
+                            </TableCell>
                             {editingId === entry.id ? (
                                 <>
-                                    <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell><Input type="number" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
-                                    <TableCell>
+                                    <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell><Input name="packetNumber" value={editFormData.packetNumber} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell><Input type="number" name="originalPcs" value={editFormData.originalPcs} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell><Input type="number" name="adjustment" value={editFormData.adjustment} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell><Input type="number" step="0.001" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} onClick={e => e.stopPropagation()}/></TableCell>
+                                    <TableCell onClick={e => e.stopPropagation()}>
                                         <Button size="sm" onClick={() => handleSaveEdit(entry.id, true)}><Save className="h-4 w-4" /></Button>
                                         <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
                                     </TableCell>
@@ -954,7 +972,7 @@ export default function ChaluEntryPage() {
                                     <TableCell>{entry.suffix}</TableCell>
                                     <TableCell className="font-bold">{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.vajan}</TableCell>
-                                    <TableCell className="flex gap-1">
+                                    <TableCell className="flex gap-1" onClick={e => e.stopPropagation()}>
                                         <button className="uiverse-return-button" onClick={() => handleOpenReturnDialog(entry)}>
                                           <div className="hoverEffect"><div></div></div>
                                           <span className="flex items-center gap-1">
@@ -1090,10 +1108,12 @@ export default function ChaluEntryPage() {
                      <TableHeader>
                          <TableRow>
                              <TableHead className="w-12">
-                                 <Checkbox
-                                     checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
-                                     onCheckedChange={handleJiramSelectAll}
-                                 />
+                                {selectedJiramEntries.size > 0 && (
+                                    <Checkbox
+                                        checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
+                                        onCheckedChange={handleJiramSelectAll}
+                                    />
+                                )}
                              </TableHead>
                              <TableHead>Kapan</TableHead>
                              <TableHead>Packet</TableHead>
@@ -1107,17 +1127,22 @@ export default function ChaluEntryPage() {
                                 className={cn(
                                     "cursor-pointer transition-colors duration-300", 
                                     pendingJiramId === entry.id && "bg-accent",
-                                    lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50'
+                                    lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50',
+                                    selectedJiramEntries.has(entry.id) && 'bg-accent/50'
                                 )}
                                 onClick={() => handleJiramPacketClick(entry)}
                               >
-                                 <TableCell><Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} /></TableCell>
+                                 <TableCell>
+                                    {selectedJiramEntries.size > 0 && (
+                                        <Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} onClick={(e) => e.stopPropagation()} />
+                                    )}
+                                 </TableCell>
                                  <TableCell>{entry.kapanNumber}</TableCell>
                                  <TableCell>{entry.packetNumber}</TableCell>
-                                 <TableCell>
+                                 <TableCell onClick={(e) => e.stopPropagation()}>
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
+                                            <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
@@ -1199,5 +1224,3 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
-
-    
