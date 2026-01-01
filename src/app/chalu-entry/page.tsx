@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows, MinusCircle } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows, MinusCircle, ArrowDownWideNarrow, Clock } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs, setDoc } from 'firebase/firestore';
@@ -30,6 +30,8 @@ import {
 import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 
 type Kapan = {
@@ -48,6 +50,8 @@ type ScanEntry = {
         nanoseconds: number;
     }
 }
+
+type CombinedScanEntry = ScanEntry & { type: 'jiram' | 'minus' };
 
 type ChaluEntry = {
     id: string;
@@ -130,9 +134,11 @@ export default function ChaluEntryPage() {
   
   const [lastClickedJiramId, setLastClickedJiramId] = useState<string | null>(null);
 
-  // New state for Jiram search
-  const [jiramSearchTerm, setJiramSearchTerm] = useState('');
-  const [minusSearchTerm, setMinusSearchTerm] = useState('');
+  // New state for combined scan list
+  const [scanSearchTerm, setScanSearchTerm] = useState('');
+  const [scanFilter, setScanFilter] = useState<'all' | 'jiram' | 'minus'>('all');
+  const [scanSort, setScanSort] = useState<'numeric' | 'recent'>('numeric');
+
 
   // State for return dialog
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -142,13 +148,9 @@ export default function ChaluEntryPage() {
   
   // State for multi-select
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
-  const [selectedJiramEntries, setSelectedJiramEntries] = useState<Set<string>>(new Set());
+  const [selectedScans, setSelectedScans] = useState<Set<string>>(new Set());
   const [liveSelectionMode, setLiveSelectionMode] = useState(false);
-  const [jiramSelectionMode, setJiramSelectionMode] = useState(false);
-  const [minusSelectionMode, setMinusSelectionMode] = useState(false);
-  const [selectedMinusScans, setSelectedMinusScans] = useState<Set<string>>(new Set());
-
-
+  const [scanSelectionMode, setScanSelectionMode] = useState(false);
 
   // Use refs to store the latest state for the cleanup function
   const stateRef = useRef({
@@ -222,8 +224,7 @@ export default function ChaluEntryPage() {
     resetForm();
     setKapanNumber('');
     setKapanFilter('');
-    setJiramSearchTerm('');
-    setMinusSearchTerm('');
+    setScanSearchTerm('');
     setHistorySearchTerm('');
     setLiveSearchTerm('');
     toast({ title: 'Form Reset', description: 'All fields and filters have been cleared.' });
@@ -268,32 +269,19 @@ export default function ChaluEntryPage() {
     }
   };
   
-  const handleJiramPacketClick = (jiramEntry: ScanEntry) => {
-    if (jiramSelectionMode) {
-        handleJiramRowSelect(jiramEntry.id, !selectedJiramEntries.has(jiramEntry.id));
+  const handleScanPacketClick = (scanEntry: CombinedScanEntry) => {
+     if (scanSelectionMode) {
+        handleScanRowSelect(scanEntry.id, !selectedScans.has(scanEntry.id));
         return;
     }
-    setKapanNumber(jiramEntry.kapanNumber);
-    setPacketNumber(jiramEntry.packetNumber);
-    setSuffix(jiramEntry.suffix || '');
-    setPendingJiramId(jiramEntry.id);
-    setPendingMinusScanId(null);
-    setLastClickedJiramId(jiramEntry.id);
-    setTimeout(() => setLastClickedJiramId(null), 500);
-  }
 
-  const handleMinusPacketClick = (minusEntry: ScanEntry) => {
-    if (minusSelectionMode) {
-        handleMinusRowSelect(minusEntry.id, !selectedMinusScans.has(minusEntry.id));
-        return;
-    }
-    setKapanNumber(minusEntry.kapanNumber);
-    setPacketNumber(minusEntry.packetNumber);
-    setSuffix(minusEntry.suffix || '');
-    setAdjustment('-1'); // Automatically set adjustment to -1
-    setPendingMinusScanId(minusEntry.id);
-    setPendingJiramId(null);
-    setLastClickedJiramId(minusEntry.id); // Re-use for highlight animation
+    setKapanNumber(scanEntry.kapanNumber);
+    setPacketNumber(scanEntry.packetNumber);
+    setSuffix(scanEntry.suffix || '');
+    setAdjustment(scanEntry.type === 'minus' ? '-1' : '');
+    setPendingJiramId(scanEntry.type === 'jiram' ? scanEntry.id : null);
+    setPendingMinusScanId(scanEntry.type === 'minus' ? scanEntry.id : null);
+    setLastClickedJiramId(scanEntry.id);
     setTimeout(() => setLastClickedJiramId(null), 500);
   }
 
@@ -563,28 +551,36 @@ export default function ChaluEntryPage() {
   }, [chaluEntries]);
 
 
-  const filteredJiramEntries = useMemo(() => {
-    if (!jiramEntries) return [];
-    const returnedScanIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
-    return (jiramEntries || []).filter(entry => {
-        const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
-        const searchMatch = !jiramSearchTerm || entry.packetNumber.toLowerCase().includes(jiramSearchTerm.toLowerCase());
-        const isReturned = returnedScanIds.has(entry.id);
-        return kapanMatch && searchMatch && !isReturned;
-    });
-  }, [jiramEntries, chaluEntries, kapanNumber, jiramSearchTerm]);
-  
-  const filteredMinusEntries = useMemo(() => {
-    if (!minusScanEntries) return [];
-    const returnedScanIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingMinusScanId).map(c => c.pendingMinusScanId));
-    return (minusScanEntries || []).filter(entry => {
-        const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
-        const searchMatch = !minusSearchTerm || entry.packetNumber.toLowerCase().includes(minusSearchTerm.toLowerCase());
-        const isReturned = returnedScanIds.has(entry.id);
-        return kapanMatch && searchMatch && !isReturned;
-    });
-  }, [minusScanEntries, chaluEntries, kapanNumber, minusSearchTerm]);
+  const filteredScans = useMemo(() => {
+    const jiram: CombinedScanEntry[] = (jiramEntries || []).map(e => ({ ...e, type: 'jiram' }));
+    const minus: CombinedScanEntry[] = (minusScanEntries || []).map(e => ({ ...e, type: 'minus' }));
+    
+    let combined = [...jiram, ...minus];
+    
+    const returnedJiramIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
+    const returnedMinusIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingMinusScanId).map(c => c.pendingMinusScanId));
 
+    combined = combined.filter(scan => {
+        const isReturned = scan.type === 'jiram' ? returnedJiramIds.has(scan.id) : returnedMinusIds.has(scan.id);
+        if (isReturned) return false;
+
+        const kapanMatch = !kapanNumber || scan.kapanNumber === kapanNumber;
+        const searchMatch = !scanSearchTerm || scan.packetNumber.toLowerCase().includes(scanSearchTerm.toLowerCase());
+        const typeMatch = scanFilter === 'all' || scan.type === scanFilter;
+
+        return kapanMatch && searchMatch && typeMatch;
+    });
+
+    if (scanSort === 'numeric') {
+        combined.sort((a, b) => a.packetNumber.localeCompare(b.packetNumber, undefined, { numeric: true }));
+    } else { // recent
+        combined.sort((a, b) => b.scanTime.seconds - a.scanTime.seconds);
+    }
+    
+    return combined;
+
+  }, [jiramEntries, minusScanEntries, chaluEntries, kapanNumber, scanSearchTerm, scanFilter, scanSort]);
+  
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!firestore) return;
@@ -688,79 +684,52 @@ export default function ChaluEntryPage() {
   const isAllSelected = filteredEntries.length > 0 && selectedEntries.size === filteredEntries.length;
   const isSomeSelected = selectedEntries.size > 0 && selectedEntries.size < filteredEntries.length;
   
-    const handleJiramSelectAll = (checked: boolean | 'indeterminate') => {
+    const handleScanSelectAll = (checked: boolean | 'indeterminate') => {
         if (checked === true) {
-            const allIds = new Set(filteredJiramEntries.map(e => e.id));
-            setSelectedJiramEntries(allIds);
+            const allIds = new Set(filteredScans.map(e => e.id));
+            setSelectedScans(allIds);
         } else {
-            setSelectedJiramEntries(new Set());
+            setSelectedScans(new Set());
         }
     };
 
-    const handleJiramRowSelect = (id: string, checked: boolean) => {
-        const newSelection = new Set(selectedJiramEntries);
+    const handleScanRowSelect = (id: string, checked: boolean) => {
+        const newSelection = new Set(selectedScans);
         if (checked) {
             newSelection.add(id);
         } else {
             newSelection.delete(id);
         }
-        setSelectedJiramEntries(newSelection);
+        setSelectedScans(newSelection);
     };
     
-    const handleDeleteSelectedJiram = async () => {
-        if (!firestore || selectedJiramEntries.size === 0) return;
+    const handleDeleteSelectedScans = async () => {
+        if (!firestore || selectedScans.size === 0) return;
 
         const batch = writeBatch(firestore);
-        selectedJiramEntries.forEach(id => {
-            const docRef = doc(firestore, 'jiramEntries', id);
-            batch.delete(docRef);
+        selectedScans.forEach(id => {
+            const entry = filteredScans.find(s => s.id === id);
+            if (entry) {
+                const collectionName = entry.type === 'jiram' ? 'jiramEntries' : 'minusScanEntries';
+                const docRef = doc(firestore, collectionName, id);
+                batch.delete(docRef);
+            }
         });
 
         try {
             await batch.commit();
-            toast({ title: 'Success', description: `${selectedJiramEntries.size} pending scans deleted.`});
-            setSelectedJiramEntries(new Set());
-            setJiramSelectionMode(false);
+            toast({ title: 'Success', description: `${selectedScans.size} pending scans deleted.`});
+            setSelectedScans(new Set());
+            setScanSelectionMode(false);
         } catch(e) {
-            console.error("Jiram batch delete failed:", e);
+            console.error("Scan batch delete failed:", e);
             toast({ variant: 'destructive', title: 'Delete Failed' });
         }
     };
-
-    const handleMinusRowSelect = (id: string, checked: boolean) => {
-        const newSelection = new Set(selectedMinusScans);
-        if (checked) newSelection.add(id); else newSelection.delete(id);
-        setSelectedMinusScans(newSelection);
-    };
-
-    const handleMinusSelectAll = (checked: boolean | 'indeterminate') => {
-        if (checked === true) setSelectedMinusScans(new Set(filteredMinusEntries.map(e => e.id)));
-        else setSelectedMinusScans(new Set());
-    };
-    
-    const handleDeleteSelectedMinus = async () => {
-        if (!firestore || selectedMinusScans.size === 0) return;
-        const batch = writeBatch(firestore);
-        selectedMinusScans.forEach(id => batch.delete(doc(firestore, 'minusScanEntries', id)));
-        try {
-            await batch.commit();
-            toast({ title: 'Success', description: `${selectedMinusScans.size} minus scans deleted.`});
-            setSelectedMinusScans(new Set());
-            setMinusSelectionMode(false);
-        } catch(e) {
-            toast({ variant: 'destructive', title: 'Delete Failed' });
-        }
-    };
-    
-    const isAllJiramSelected = filteredJiramEntries.length > 0 && selectedJiramEntries.size === filteredJiramEntries.length;
-    const isSomeJiramSelected = selectedJiramEntries.size > 0 && selectedJiramEntries.size < filteredJiramEntries.length;
-    const isAllMinusSelected = filteredMinusEntries.length > 0 && selectedMinusScans.size === filteredMinusEntries.length;
-    const isSomeMinusSelected = selectedMinusScans.size > 0 && selectedMinusScans.size < filteredMinusEntries.length;
 
     useEffect(() => {
-        setSelectedJiramEntries(new Set());
-        setSelectedMinusScans(new Set());
-    }, [kapanNumber, jiramSearchTerm, minusSearchTerm]);
+        setSelectedScans(new Set());
+    }, [kapanNumber, scanSearchTerm]);
 
   const kapanCounts = useMemo(() => {
     if (!kapanFilter) return { pending: 0, live: 0, returned: 0, minus: 0 };
@@ -786,9 +755,13 @@ export default function ChaluEntryPage() {
         minus: pendingMinus.length,
     }
   }, [kapanFilter, jiramEntries, minusScanEntries, chaluEntries]);
+  
+  const isAllScansSelected = filteredScans.length > 0 && selectedScans.size === filteredScans.length;
+  const isSomeScansSelected = selectedScans.size > 0 && selectedScans.size < filteredScans.length;
+
 
   return (
-    <div className="grid lg:grid-cols-[1fr,350px,350px] gap-6 p-6 h-screen overflow-hidden">
+    <div className="grid lg:grid-cols-[1fr,500px] gap-6 p-6 h-screen overflow-hidden">
       <div className="flex flex-col gap-6">
           <div className="flex justify-between items-start">
             <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
@@ -819,7 +792,7 @@ export default function ChaluEntryPage() {
                   <label className="text-sm font-medium">પેકેટ નંબર</label>
                   <Input 
                     value={packetNumber}
-                    onChange={(e) => setPacketNumber(e.target.value)}
+                    onChange={(e) => setPacketNumber(e.target.value.toUpperCase())}
                     placeholder="પેકેટ નંબર ?."
                   />
                 </div>
@@ -1180,10 +1153,10 @@ export default function ChaluEntryPage() {
           </Card>
       </div>
 
-      <Card className="flex flex-col h-full lg:max-h-full overflow-hidden">
+       <Card className="flex flex-col h-full lg:max-h-full overflow-hidden">
          <CardHeader>
-            <CardTitle>Pending Jiram Scans</CardTitle>
-            <CardDescription>Packets scanned in Jiram Verification, ready for Chalu entry.</CardDescription>
+            <CardTitle>Pending Scans</CardTitle>
+            <CardDescription>Packets from Jiram or Minus scans, ready for Chalu entry.</CardDescription>
             <div className="flex flex-wrap gap-2 items-center justify-between mt-4">
               <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -1191,29 +1164,43 @@ export default function ChaluEntryPage() {
                       type="search" 
                       placeholder="Search packets..." 
                       className="pl-8 sm:w-[200px]"
-                      value={jiramSearchTerm}
-                      onChange={(e) => setJiramSearchTerm(e.target.value)}
+                      value={scanSearchTerm}
+                      onChange={(e) => setScanSearchTerm(e.target.value)}
                   />
               </div>
+
+               <RadioGroup value={scanFilter} onValueChange={(v) => setScanFilter(v as any)} className="flex gap-1 bg-muted p-1 rounded-md">
+                  <Label htmlFor="scan-all" className={cn("px-2 py-1 text-xs rounded-sm cursor-pointer", scanFilter === 'all' && 'bg-background shadow-sm')}>All</Label>
+                  <RadioGroupItem value="all" id="scan-all" className="sr-only"/>
+                  <Label htmlFor="scan-jiram" className={cn("px-2 py-1 text-xs rounded-sm cursor-pointer", scanFilter === 'jiram' && 'bg-background shadow-sm')}>Jiram</Label>
+                  <RadioGroupItem value="jiram" id="scan-jiram" className="sr-only"/>
+                  <Label htmlFor="scan-minus" className={cn("px-2 py-1 text-xs rounded-sm cursor-pointer", scanFilter === 'minus' && 'bg-background shadow-sm')}>Minus</Label>
+                  <RadioGroupItem value="minus" id="scan-minus" className="sr-only"/>
+              </RadioGroup>
+
               <div className="flex gap-2 items-center">
+                   <Button variant="ghost" size="icon" onClick={() => setScanSort(scanSort === 'numeric' ? 'recent' : 'numeric')}>
+                      {scanSort === 'numeric' ? <ArrowDownWideNarrow className="h-4 w-4"/> : <Clock className="h-4 w-4"/>}
+                   </Button>
+
                   <Button variant="outline" size="sm" onClick={() => {
-                      setJiramSelectionMode(!jiramSelectionMode);
-                      if(jiramSelectionMode) setSelectedJiramEntries(new Set());
+                      setScanSelectionMode(!scanSelectionMode);
+                      if(scanSelectionMode) setSelectedScans(new Set());
                   }}>
                       <Rows className="mr-2 h-4 w-4" />
-                      {jiramSelectionMode ? 'Cancel' : 'Select'}
+                      {scanSelectionMode ? 'Cancel' : 'Select'}
                   </Button>
 
-                  {jiramSelectionMode && selectedJiramEntries.size > 0 && (
+                  {scanSelectionMode && selectedScans.size > 0 && (
                       <AlertDialog>
                           <AlertDialogTrigger asChild>
                               <Button variant="destructive" size="sm">
-                                  <Trash2 className="mr-2 h-4 w-4" /> ({selectedJiramEntries.size})
+                                  <Trash2 className="mr-2 h-4 w-4" /> ({selectedScans.size})
                               </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
-                              <AlertDialogHeader><AlertDialogTitle>Delete {selectedJiramEntries.size} pending scans?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedJiram}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
+                              <AlertDialogHeader><AlertDialogTitle>Delete {selectedScans.size} pending scans?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
+                              <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedScans}>Confirm Delete</AlertDialogAction></AlertDialogFooter>
                           </AlertDialogContent>
                       </AlertDialog>
                   )}
@@ -1226,47 +1213,51 @@ export default function ChaluEntryPage() {
             </div>
          </CardHeader>
          <CardContent className="flex-1 overflow-y-auto">
-             {loadingJiramEntries ? <p>Loading...</p> : (
+             {(loadingJiramEntries || loadingMinusScans) ? <p>Loading...</p> : (
                  <Table>
                      <TableHeader>
                          <TableRow>
-                             {jiramSelectionMode && (
+                             {scanSelectionMode && (
                                 <TableHead className="w-12">
                                     <Checkbox
-                                        checked={isAllJiramSelected ? true : isSomeJiramSelected ? 'indeterminate' : false}
-                                        onCheckedChange={handleJiramSelectAll}
+                                        checked={isAllScansSelected ? true : isSomeScansSelected ? 'indeterminate' : false}
+                                        onCheckedChange={handleScanSelectAll}
                                     />
                                 </TableHead>
                              )}
                              <TableHead>Kapan</TableHead>
                              <TableHead>Packet</TableHead>
+                             <TableHead>Type</TableHead>
                              <TableHead>Action</TableHead>
                          </TableRow>
                      </TableHeader>
                      <TableBody>
-                         {filteredJiramEntries.map(entry => {
+                         {filteredScans.map(entry => {
                             const isInProgress = jiramChaluMap.has(entry.id);
                             return (
                              <TableRow 
                                 key={entry.id} 
                                 className={cn(
                                     "transition-colors duration-300", 
-                                    pendingJiramId === entry.id && "bg-accent",
+                                    (pendingJiramId === entry.id || pendingMinusScanId === entry.id) && "bg-accent",
                                     lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50',
-                                    selectedJiramEntries.has(entry.id) && 'bg-accent/50',
+                                    selectedScans.has(entry.id) && 'bg-accent/50',
                                     isInProgress ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                                 )}
-                                onClick={() => !isInProgress && handleJiramPacketClick(entry)}
+                                onClick={() => !isInProgress && handleScanPacketClick(entry)}
                               >
-                                 {jiramSelectionMode && (
+                                 {scanSelectionMode && (
                                     <TableCell onClick={(e) => e.stopPropagation()}>
-                                        <Checkbox checked={selectedJiramEntries.has(entry.id)} onCheckedChange={(checked) => handleJiramRowSelect(entry.id, !!checked)} />
+                                        <Checkbox checked={selectedScans.has(entry.id)} onCheckedChange={(checked) => handleScanRowSelect(entry.id, !!checked)} />
                                     </TableCell>
                                  )}
                                  <TableCell>{entry.kapanNumber}</TableCell>
                                  <TableCell>{entry.packetNumber}</TableCell>
+                                 <TableCell>
+                                    <Badge variant={entry.type === 'jiram' ? 'secondary' : 'destructive'}>{entry.type}</Badge>
+                                 </TableCell>
                                  <TableCell onClick={(e) => e.stopPropagation()}>
-                                    {isInProgress ? <Badge variant="secondary">In Progress</Badge> : (
+                                    {isInProgress ? <Badge variant="outline">In Progress</Badge> : (
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
                                                 <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive/70"/></Button>
@@ -1274,13 +1265,11 @@ export default function ChaluEntryPage() {
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>Delete Pending Scan?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This will remove "{entry.barcode}" from the pending list. It won't affect the main Chalu entries.
-                                                    </AlertDialogDescription>
+                                                    <AlertDialogDescription>This will remove "{entry.barcode}" from the pending list.</AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'jiramEntries', entry.id))}>Delete Scan</AlertDialogAction>
+                                                    <AlertDialogAction onClick={() => deleteDoc(doc(firestore, entry.type === 'jiram' ? 'jiramEntries' : 'minusScanEntries', entry.id))}>Delete Scan</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
@@ -1288,9 +1277,9 @@ export default function ChaluEntryPage() {
                                  </TableCell>
                              </TableRow>
                          )})}
-                         {filteredJiramEntries.length === 0 && (
-                             <TableRow><TableCell colSpan={jiramSelectionMode ? 4 : 3} className="text-center text-muted-foreground">
-                                {kapanNumber || jiramSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
+                         {filteredScans.length === 0 && (
+                             <TableRow><TableCell colSpan={scanSelectionMode ? 5 : 4} className="text-center text-muted-foreground">
+                                {kapanNumber || scanSearchTerm ? 'No matching scans found.' : 'Select a Kapan to see pending scans.'}
                              </TableCell></TableRow>
                          )}
                      </TableBody>
@@ -1299,62 +1288,6 @@ export default function ChaluEntryPage() {
          </CardContent>
       </Card>
       
-      <Card className="flex flex-col h-full lg:max-h-full overflow-hidden">
-        <CardHeader>
-            <CardTitle>Pending Minus Scans</CardTitle>
-            <CardDescription>Packets scanned to be automatically marked as a minus entry.</CardDescription>
-            <div className="flex flex-wrap gap-2 items-center justify-between mt-4">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input type="search" placeholder="Search..." className="pl-8 sm:w-[200px]" value={minusSearchTerm} onChange={(e) => setMinusSearchTerm(e.target.value)} />
-                </div>
-                <div className="flex gap-2 items-center">
-                    <Button variant="outline" size="sm" onClick={() => { setMinusSelectionMode(!minusSelectionMode); if(minusSelectionMode) setSelectedMinusScans(new Set()); }}>
-                        <Rows className="mr-2 h-4 w-4" />{minusSelectionMode ? 'Cancel' : 'Select'}
-                    </Button>
-                    {minusSelectionMode && selectedMinusScans.size > 0 && (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" />({selectedMinusScans.size})</Button></AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader><AlertDialogTitle>Delete {selectedMinusScans.size} minus scans?</AlertDialogTitle></AlertDialogHeader>
-                                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedMinus}>Delete</AlertDialogAction></AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                </div>
-            </div>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-y-auto">
-            <Table>
-                <TableHeader><TableRow>
-                    {minusSelectionMode && <TableHead className="w-12"><Checkbox checked={isAllMinusSelected ? true : isSomeMinusSelected ? 'indeterminate' : false} onCheckedChange={handleMinusSelectAll} /></TableHead>}
-                    <TableHead>Kapan</TableHead><TableHead>Packet</TableHead><TableHead>Action</TableHead>
-                </TableRow></TableHeader>
-                <TableBody>
-                    {filteredMinusEntries.map(entry => {
-                        const isInProgress = jiramChaluMap.has(entry.id);
-                        return (
-                        <TableRow key={entry.id} className={cn("transition-colors", pendingMinusScanId === entry.id && "bg-accent", lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50', selectedMinusScans.has(entry.id) && 'bg-accent/50', isInProgress ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer')} onClick={() => !isInProgress && handleMinusPacketClick(entry)}>
-                           {minusSelectionMode && <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selectedMinusScans.has(entry.id)} onCheckedChange={(c) => handleMinusRowSelect(entry.id, !!c)} /></TableCell>}
-                           <TableCell>{entry.kapanNumber}</TableCell>
-                           <TableCell>{entry.packetNumber}</TableCell>
-                           <TableCell onClick={(e) => e.stopPropagation()}>
-                                {isInProgress ? <Badge variant="secondary">In Progress</Badge> : (
-                                    <AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon"><MinusCircle className="h-4 w-4 text-destructive/70"/></Button></AlertDialogTrigger><AlertDialogContent>
-                                        <AlertDialogHeader><AlertDialogTitle>Delete Minus Scan?</AlertDialogTitle><AlertDialogDescription>This will remove "{entry.barcode}" from the pending list.</AlertDialogDescription></AlertDialogHeader>
-                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'minusScanEntries', entry.id))}>Delete Scan</AlertDialogAction></AlertDialogFooter>
-                                    </AlertDialogContent></AlertDialog>
-                                )}
-                           </TableCell>
-                        </TableRow>
-                    )})}
-                    {filteredMinusEntries.length === 0 && <TableRow><TableCell colSpan={minusSelectionMode ? 4 : 3} className="text-center text-muted-foreground">{kapanNumber || minusSearchTerm ? 'No matching scans.' : 'No minus scans.'}</TableCell></TableRow>}
-                </TableBody>
-            </Table>
-        </CardContent>
-      </Card>
-
-
       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
         <DialogContent className="max-w-2xl">
             <DialogHeader>
