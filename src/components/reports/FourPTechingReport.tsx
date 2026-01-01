@@ -8,7 +8,7 @@ import { FourPLot, FourPTechingOperator } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { DatePickerWithPresets } from '@/components/ui/date-picker-presets';
+import { DatePickerWithRange } from '@/components/ui/date-picker-range';
 import type { DateRange } from 'react-day-picker';
 import { startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 import { Button } from '../ui/button';
@@ -75,7 +75,7 @@ export default function FourPTechingReport() {
             </div>
             <div className="md:col-span-1">
               <label className="text-sm font-medium">Date Range</label>
-              <DatePickerWithPresets date={dateRange} setDate={setDateRange} />
+              <DatePickerWithRange date={dateRange} setDate={setDateRange} />
             </div>
           </div>
            <div className="pt-2">
