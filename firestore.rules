@@ -22,5 +22,10 @@ service cloud.firestore {
     match /jiramEntries/{jiramEntryId} {
         allow read, write: if true;
     }
+
+    // Allow public access to the 'minusScanEntries' collection for the queue
+    match /minusScanEntries/{minusScanEntryId} {
+        allow read, write: if true;
+    }
   }
 }
