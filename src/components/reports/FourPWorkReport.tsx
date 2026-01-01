@@ -69,6 +69,14 @@ export default function FourPWorkReport() {
     return deptSummary;
   }, [filteredData, deptSettings]);
 
+  const grandTotal = useMemo(() => {
+    return Object.values(summaryByDepartment).reduce((acc, summary) => {
+        acc.totalPcs += summary.totalPcs;
+        acc.totalAmount += summary.totalAmount;
+        return acc;
+    }, { totalPcs: 0, totalAmount: 0 });
+  }, [summaryByDepartment]);
+
   const handlePrint = () => window.print();
 
   return (
@@ -108,9 +116,25 @@ export default function FourPWorkReport() {
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
+         <Card className="md:col-span-1 bg-primary text-primary-foreground">
+            <CardHeader>
+                <CardTitle>Grand Total</CardTitle>
+                <CardDescription className="text-primary-foreground/80">Combined summary of all departments.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+                <div>
+                    <p className="text-sm text-primary-foreground/80">Total Final PCS</p>
+                    <p className="text-3xl font-bold">{grandTotal.totalPcs.toLocaleString()}</p>
+                </div>
+                <div>
+                    <p className="text-sm text-primary-foreground/80">Total Amount (₹)</p>
+                    <p className="text-3xl font-bold">₹{grandTotal.totalAmount.toFixed(2)}</p>
+                </div>
+            </CardContent>
+        </Card>
         {Object.entries(summaryByDepartment).map(([deptName, summary]) => (
-            <Card key={deptName}>
+            <Card key={deptName} className="md:col-span-1">
               <CardHeader>
                 <CardTitle>{deptName}</CardTitle>
                 <CardDescription>Summary for this department</CardDescription>
