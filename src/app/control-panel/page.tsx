@@ -17,7 +17,7 @@ import {
   FOURP_OPERATORS_KEY, FOURP_TECHING_OPERATORS_KEY, PRICE_MASTER_KEY, UHDHA_SETTINGS_KEY,
   FOURP_DEPARTMENT_SETTINGS_KEY, BOX_SORTING_RANGES_KEY, AUTO_BACKUP_SETTINGS_KEY, RETURN_SCAN_SETTINGS_KEY,
   DIAMETER_SORTING_RANGES_KEY, FOURP_RATES_KEY, FOURP_TECHING_LOTS_KEY, SARIN_PACKETS_KEY,
-  LASER_LOTS_KEY, REASSIGN_LOGS_KEY, UHDHA_PACKETS_KEY, SYSTEM_SETTINGS_KEY
+  LASER_LOTS_KEY, REASSIGN_LOGS_KEY, UHDHA_PACKETS_KEY, SYSTEM_SETTINGS_KEY, STATION_NAME_KEY
 } from '@/lib/constants';
 import { LaserMapping, LaserOperator, SarinMapping, SarinOperator, FourPOperator, FourPTechingOperator, PriceMaster, UdhdaSettings, FourPDepartmentSettings, BoxSortingRange, AutoBackupSettings, ReturnScanSettings, BoxDiameterRange, FourPRate, FourPLot, SarinPacket, LaserLot, ReassignLog, UdhdaPacket, SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -136,6 +136,7 @@ export default function ControlPanelPage() {
   const [autoBackupSettings, setAutoBackupSettings] = useLocalStorage<AutoBackupSettings>(AUTO_BACKUP_SETTINGS_KEY, { intervalHours: 0, officeEndTime: '18:30' });
   const [returnScanSettings, setReturnScanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
   const [systemSettings, setSystemSettings] = useLocalStorage<SystemSettings>(SYSTEM_SETTINGS_KEY, { youtubeLink: 'https://www.youtube.com/watch?v=8-lR3VWJzCg', videoStartTime: '09:00', videoEndTime: '18:30', autoCreateLaserLot: false, autoCreateLaserLotDelay: 10 });
+  const [stationName, setStationName] = useLocalStorage<string>(STATION_NAME_KEY, '');
   
   // Data for cascading edits
   const [fourPTechingLots, setFourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
@@ -993,6 +994,25 @@ export default function ControlPanelPage() {
             </Card>
           </TabsContent>
           <TabsContent value="system" className="space-y-6 mt-6">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Station Name</CardTitle>
+                    <CardDescription>
+                        Assign a unique name to this computer/station to track where entries are made.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <div className="max-w-sm space-y-2">
+                        <Label htmlFor="station-name">This Station's Name</Label>
+                        <Input
+                            id="station-name"
+                            value={stationName}
+                            onChange={(e) => setStationName(e.target.value)}
+                            placeholder="e.g., Counter 1, Ravi PC"
+                        />
+                   </div>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>Laser Lot Auto-Creation</CardTitle>

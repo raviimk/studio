@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows, MinusCircle, ArrowDownWideNarrow, Clock } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows, MinusCircle, ArrowDownWideNarrow, Clock, Computer } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs, setDoc } from 'firebase/firestore';
@@ -32,6 +32,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { STATION_NAME_KEY } from '@/lib/constants';
+import type { ChaluEntry } from '@/lib/types';
 
 
 type Kapan = {
@@ -53,28 +56,6 @@ type ScanEntry = {
 
 type CombinedScanEntry = ScanEntry & { type: 'jiram' | 'minus' };
 
-type ChaluEntry = {
-    id: string;
-    kapanNumber: string;
-    packetNumber: string;
-    vajan: number;
-    originalPcs: number;
-    adjustment: number;
-    suffix: string;
-    currentPcs: number;
-    isReturned?: boolean;
-    returnedPackets?: string[];
-    createdAt: any;
-    returnDate?: string;
-    pendingJiramId?: string;
-    pendingMinusScanId?: string;
-};
-
-
-type JiramImportPacket = {
-    barcode: string;
-    kapanNumber: string;
-}
 
 export default function ChaluEntryPage() {
   const { toast } = useToast();
@@ -127,6 +108,7 @@ export default function ChaluEntryPage() {
   const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
   const [pendingMinusScanId, setPendingMinusScanId] = useState<string | null>(null);
 
+  const [stationName] = useLocalStorage<string>(STATION_NAME_KEY, '');
 
   // State for inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -155,15 +137,15 @@ export default function ChaluEntryPage() {
   // Use refs to store the latest state for the cleanup function
   const stateRef = useRef({
       kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-      editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId,
+      editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId, stationName
   });
 
   useEffect(() => {
       stateRef.current = {
           kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-          editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId
+          editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId, stationName
       };
-  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId]);
+  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId, stationName]);
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -231,7 +213,7 @@ export default function ChaluEntryPage() {
   }
 
   const handleSave = async (showToast = true) => {
-    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId, pendingMinusScanId } = stateRef.current;
+    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId, pendingMinusScanId, stationName } = stateRef.current;
     if (!firestore) {
         if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
         return false;
@@ -256,6 +238,7 @@ export default function ChaluEntryPage() {
             returnedPackets: [],
             pendingJiramId: pendingJiramId || null,
             pendingMinusScanId: pendingMinusScanId || null,
+            createdByStation: stationName || 'Unknown',
         });
         
         if(showToast) toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
@@ -296,7 +279,7 @@ export default function ChaluEntryPage() {
   };
   
   const handleSaveEdit = async (id: string, showToast = true) => {
-      const { firestore, editFormData } = stateRef.current;
+      const { firestore, editFormData, stationName } = stateRef.current;
     if (!firestore) return false;
     const docRef = doc(firestore, 'chaluEntries', id);
     const { id: _, ...dataToSave } = editFormData; // Exclude id from data
@@ -305,6 +288,7 @@ export default function ChaluEntryPage() {
     dataToSave.originalPcs = parseInt(dataToSave.originalPcs, 10) || 0;
     dataToSave.adjustment = parseInt(dataToSave.adjustment, 10) || 0;
     dataToSave.currentPcs = parseInt(dataToSave.currentPcs, 10) || 0;
+    dataToSave.createdByStation = dataToSave.createdByStation || stationName || 'Unknown'; // Persist original station if exists
 
     try {
       await updateDoc(docRef, dataToSave);
@@ -417,6 +401,7 @@ export default function ChaluEntryPage() {
             isReturned: true,
             returnDate: new Date().toISOString(),
             returnedPackets: Array.from(scannedReturnPackets),
+            returnedByStation: stationName || 'Unknown',
         });
 
         if (entryToReturn.pendingJiramId) {
@@ -557,8 +542,8 @@ export default function ChaluEntryPage() {
     
     let combined = [...jiram, ...minus];
     
-    const returnedJiramIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
-    const returnedMinusIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingMinusScanId).map(c => c.pendingMinusScanId));
+    const returnedJiramIds = new Set(chaluEntries?.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
+    const returnedMinusIds = new Set(chaluEntries?.filter(c => c.isReturned && c.pendingMinusScanId).map(c => c.pendingMinusScanId));
 
     combined = combined.filter(scan => {
         const isReturned = scan.type === 'jiram' ? returnedJiramIds.has(scan.id) : returnedMinusIds.has(scan.id);
@@ -591,7 +576,7 @@ export default function ChaluEntryPage() {
     reader.onload = async (e) => {
         try {
             const text = e.target?.result as string;
-            const data: JiramImportPacket[] = JSON.parse(text);
+            const data: {barcode: string, kapanNumber: string}[] = JSON.parse(text);
 
             if (!Array.isArray(data) || data.length === 0) {
                 toast({ variant: 'destructive', title: 'Import Error', description: 'File is empty or not in the correct format.' });
@@ -1021,11 +1006,12 @@ export default function ChaluEntryPage() {
                               <TableHead>પ્લસ/માઈનસ</TableHead>
                               <TableHead>ટો.થાન</TableHead>
                               <TableHead>વજન</TableHead>
+                              <TableHead>Station</TableHead>
                               <TableHead>સુધારો</TableHead>
                           </TableRow>
                       </TableHeader>
                       <TableBody>
-                          {loadingEntries && <TableRow><TableCell colSpan={liveSelectionMode ? 9 : 8} className="text-center">Loading...</TableCell></TableRow>}
+                          {loadingEntries && <TableRow><TableCell colSpan={liveSelectionMode ? 10 : 9} className="text-center">Loading...</TableCell></TableRow>}
                           {!loadingEntries && filteredEntries.map(entry => (
                           <TableRow 
                             key={entry.id} 
@@ -1045,6 +1031,7 @@ export default function ChaluEntryPage() {
                                     <TableCell><Input name="suffix" value={editFormData.suffix} onChange={handleEditFormChange} /></TableCell>
                                     <TableCell><Input type="number" name="currentPcs" value={editFormData.currentPcs} onChange={handleEditFormChange} /></TableCell>
                                     <TableCell><Input type="number" step="0.001" name="vajan" value={editFormData.vajan} onChange={handleEditFormChange} /></TableCell>
+                                    <TableCell>{entry.createdByStation}</TableCell>
                                     <TableCell>
                                         <Button size="sm" onClick={() => handleSaveEdit(entry.id, true)}><Save className="h-4 w-4" /></Button>
                                         <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
@@ -1061,6 +1048,7 @@ export default function ChaluEntryPage() {
                                     <TableCell>{entry.suffix}</TableCell>
                                     <TableCell className="font-bold">{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.vajan}</TableCell>
+                                    <TableCell><Badge variant="outline">{entry.createdByStation}</Badge></TableCell>
                                     <TableCell className="flex gap-1">
                                         <button className="uiverse-return-button" onClick={() => handleOpenReturnDialog(entry)}>
                                           <div className="hoverEffect"><div></div></div>
@@ -1092,7 +1080,7 @@ export default function ChaluEntryPage() {
                           </TableRow>
                           ))}
                           {!loadingEntries && filteredEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={liveSelectionMode ? 9 : 8} className="text-center">No entries found.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={liveSelectionMode ? 10 : 9} className="text-center">No entries found.</TableCell></TableRow>
                           )}
                       </TableBody>
                      </Table>
@@ -1103,12 +1091,14 @@ export default function ChaluEntryPage() {
                                 <TableHead>Kapan-Packet</TableHead>
                                 <TableHead>Total PCS</TableHead>
                                 <TableHead>Return Date</TableHead>
+                                <TableHead>Created At</TableHead>
+                                <TableHead>Returned At</TableHead>
                                 <TableHead>Packets Scanned</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                             {loadingEntries && <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>}
+                             {loadingEntries && <TableRow><TableCell colSpan={7} className="text-center">Loading...</TableCell></TableRow>}
                             {!loadingEntries && filteredEntries.map(entry => (
                                 <TableRow key={entry.id} className="relative bg-green-100/60 dark:bg-green-900/30">
                                     <TableCell>
@@ -1117,6 +1107,8 @@ export default function ChaluEntryPage() {
                                     </TableCell>
                                     <TableCell>{entry.currentPcs}</TableCell>
                                     <TableCell>{entry.returnDate ? format(new Date(entry.returnDate), 'PPp') : 'N/A'}</TableCell>
+                                    <TableCell><Badge variant="outline" className="gap-1.5"><Computer size={12}/>{entry.createdByStation}</Badge></TableCell>
+                                    <TableCell><Badge variant="outline" className="gap-1.5"><Computer size={12}/>{entry.returnedByStation}</Badge></TableCell>
                                     <TableCell>
                                         <div className="flex flex-col gap-1 max-w-xs">
                                           {(entry.returnedPackets || []).map(p => <span key={p} className="font-mono text-xs bg-black/10 dark:bg-white/10 px-1 rounded-sm">{p}</span>)}
@@ -1144,7 +1136,7 @@ export default function ChaluEntryPage() {
                                 </TableRow>
                             ))}
                             {!loadingEntries && filteredEntries.length === 0 && (
-                              <TableRow><TableCell colSpan={5} className="text-center">No returned entries found.</TableCell></TableRow>
+                              <TableRow><TableCell colSpan={7} className="text-center">No returned entries found.</TableCell></TableRow>
                           )}
                         </TableBody>
                     </Table>
