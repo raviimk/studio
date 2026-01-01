@@ -877,13 +877,15 @@ export default function ChaluEntryPage() {
           
           <Card className="flex-1 flex flex-col overflow-hidden">
               <CardHeader>
-                  <CardTitle>
-                    {viewMode === 'live' ? 'અત્યાર સુધી ની એન્ટ્રી (Live)' : 'Return History'}
-                  </CardTitle>
                   <div className="flex justify-between items-center">
-                    <CardDescription>
-                         {viewMode === 'live' ? 'Live log of all chalu entries. Click a field to edit.' : 'Log of all returned chalu entries.'}
-                    </CardDescription>
+                    <div>
+                      <CardTitle>
+                        {viewMode === 'live' ? 'અત્યાર સુધી ની એન્ટ્રી (Live)' : 'Return History'}
+                      </CardTitle>
+                      <CardDescription>
+                          {viewMode === 'live' ? 'Live log of all chalu entries. Click a field to edit.' : 'Log of all returned chalu entries.'}
+                      </CardDescription>
+                    </div>
                     <div className="flex gap-2 items-center">
                        <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'live' ? 'history' : 'live')}>
                             <History className="mr-2 h-4 w-4"/>
