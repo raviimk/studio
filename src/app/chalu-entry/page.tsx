@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows } from 'lucide-react';
+import { Maximize, Minimize, Save, PlusCircle, Edit, Trash2, FileText, Settings, X, RefreshCw, Upload, Search, Undo2, CheckCircle2, Check, Circle, History, Rows, MinusCircle } from 'lucide-react';
 import { useLayout } from '@/hooks/useLayout';
 import { useCollection, useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, updateDoc, doc, query, deleteDoc, orderBy, writeBatch, getDocs, setDoc } from 'firebase/firestore';
@@ -37,7 +37,7 @@ type Kapan = {
     kapanNumber: string;
 };
 
-type JiramEntry = {
+type ScanEntry = {
     id: string;
     barcode: string;
     kapanNumber: string;
@@ -62,6 +62,8 @@ type ChaluEntry = {
     returnedPackets?: string[];
     createdAt: any;
     returnDate?: string;
+    pendingJiramId?: string;
+    pendingMinusScanId?: string;
 };
 
 
@@ -93,11 +95,17 @@ export default function ChaluEntryPage() {
     if (!firestore) return null;
     return query(collection(firestore, 'jiramEntries'), orderBy('scanTime', 'desc'));
   }, [firestore]);
+  
+  const minusScanEntriesQuery = useMemo(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'minusScanEntries'), orderBy('scanTime', 'desc'));
+  }, [firestore]);
 
 
   const { data: chaluEntries, loading: loadingEntries, refetch: refetchChaluEntries } = useCollection<ChaluEntry>(chaluEntriesQuery);
   const { data: kapans, loading: loadingKapans } = useCollection<Kapan>(kapansQuery);
-  const { data: jiramEntries, loading: loadingJiramEntries, refetch: refetchJiramEntries } = useCollection<JiramEntry>(jiramEntriesQuery);
+  const { data: jiramEntries, loading: loadingJiramEntries, refetch: refetchJiramEntries } = useCollection<ScanEntry>(jiramEntriesQuery);
+  const { data: minusScanEntries, loading: loadingMinusScans, refetch: refetchMinusScans } = useCollection<ScanEntry>(minusScanEntriesQuery);
   
   const [kapanNumber, setKapanNumber] = useState('');
   const [packetNumber, setPacketNumber] = useState('');
@@ -113,6 +121,8 @@ export default function ChaluEntryPage() {
   const [liveSearchTerm, setLiveSearchTerm] = useState('');
   
   const [pendingJiramId, setPendingJiramId] = useState<string | null>(null);
+  const [pendingMinusScanId, setPendingMinusScanId] = useState<string | null>(null);
+
 
   // State for inline editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -122,6 +132,7 @@ export default function ChaluEntryPage() {
 
   // New state for Jiram search
   const [jiramSearchTerm, setJiramSearchTerm] = useState('');
+  const [minusSearchTerm, setMinusSearchTerm] = useState('');
 
   // State for return dialog
   const [returnDialogOpen, setReturnDialogOpen] = useState(false);
@@ -134,20 +145,23 @@ export default function ChaluEntryPage() {
   const [selectedJiramEntries, setSelectedJiramEntries] = useState<Set<string>>(new Set());
   const [liveSelectionMode, setLiveSelectionMode] = useState(false);
   const [jiramSelectionMode, setJiramSelectionMode] = useState(false);
+  const [minusSelectionMode, setMinusSelectionMode] = useState(false);
+  const [selectedMinusScans, setSelectedMinusScans] = useState<Set<string>>(new Set());
+
 
 
   // Use refs to store the latest state for the cleanup function
   const stateRef = useRef({
       kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-      editingId, editFormData, firestore, toast, pendingJiramId
+      editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId,
   });
 
   useEffect(() => {
       stateRef.current = {
           kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment,
-          editingId, editFormData, firestore, toast, pendingJiramId
+          editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId
       };
-  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast, pendingJiramId]);
+  }, [kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, editingId, editFormData, firestore, toast, pendingJiramId, pendingMinusScanId]);
 
   const originalCount = parseInt(originalPcs, 10) || 0;
   const adjustmentValue = parseInt(adjustment, 10) || 0;
@@ -200,6 +214,7 @@ export default function ChaluEntryPage() {
     setSuffix('');
     setCurrentPcs('');
     setPendingJiramId(null);
+    setPendingMinusScanId(null);
     // Do not reset kapan number by default, handled by Esc
   }
   
@@ -208,13 +223,14 @@ export default function ChaluEntryPage() {
     setKapanNumber('');
     setKapanFilter('');
     setJiramSearchTerm('');
+    setMinusSearchTerm('');
     setHistorySearchTerm('');
     setLiveSearchTerm('');
     toast({ title: 'Form Reset', description: 'All fields and filters have been cleared.' });
   }
 
   const handleSave = async (showToast = true) => {
-    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId } = stateRef.current;
+    const { firestore, kapanNumber, packetNumber, vajan, originalPcs, currentPcs, suffix, adjustment, pendingJiramId, pendingMinusScanId } = stateRef.current;
     if (!firestore) {
         if(showToast) toast({ variant: 'destructive', title: 'Error', description: 'Firestore is not initialized.' });
         return false;
@@ -237,13 +253,10 @@ export default function ChaluEntryPage() {
             createdAt: serverTimestamp(),
             isReturned: false,
             returnedPackets: [],
-            pendingJiramId: pendingJiramId || null, // Link to the original Jiram scan
+            pendingJiramId: pendingJiramId || null,
+            pendingMinusScanId: pendingMinusScanId || null,
         });
         
-        // ** LOGIC CHANGE **
-        // Do NOT delete the Jiram entry here. It will be marked as in-progress.
-        // We will remove it once the Chalu entry is Returned.
-
         if(showToast) toast({ title: 'Success', description: 'Chalu entry saved successfully.' });
         resetForm();
         return true;
@@ -255,19 +268,32 @@ export default function ChaluEntryPage() {
     }
   };
   
-  const handleJiramPacketClick = (jiramEntry: JiramEntry) => {
-    // If in multi-select mode, handle selection instead of filling form
+  const handleJiramPacketClick = (jiramEntry: ScanEntry) => {
     if (jiramSelectionMode) {
         handleJiramRowSelect(jiramEntry.id, !selectedJiramEntries.has(jiramEntry.id));
         return;
     }
-
     setKapanNumber(jiramEntry.kapanNumber);
     setPacketNumber(jiramEntry.packetNumber);
     setSuffix(jiramEntry.suffix || '');
     setPendingJiramId(jiramEntry.id);
-    
+    setPendingMinusScanId(null);
     setLastClickedJiramId(jiramEntry.id);
+    setTimeout(() => setLastClickedJiramId(null), 500);
+  }
+
+  const handleMinusPacketClick = (minusEntry: ScanEntry) => {
+    if (minusSelectionMode) {
+        handleMinusRowSelect(minusEntry.id, !selectedMinusScans.has(minusEntry.id));
+        return;
+    }
+    setKapanNumber(minusEntry.kapanNumber);
+    setPacketNumber(minusEntry.packetNumber);
+    setSuffix(minusEntry.suffix || '');
+    setAdjustment('-1'); // Automatically set adjustment to -1
+    setPendingMinusScanId(minusEntry.id);
+    setPendingJiramId(null);
+    setLastClickedJiramId(minusEntry.id); // Re-use for highlight animation
     setTimeout(() => setLastClickedJiramId(null), 500);
   }
 
@@ -287,7 +313,6 @@ export default function ChaluEntryPage() {
     const docRef = doc(firestore, 'chaluEntries', id);
     const { id: _, ...dataToSave } = editFormData; // Exclude id from data
     
-    // Ensure numeric fields are numbers
     dataToSave.vajan = parseFloat(dataToSave.vajan) || 0;
     dataToSave.originalPcs = parseInt(dataToSave.originalPcs, 10) || 0;
     dataToSave.adjustment = parseInt(dataToSave.adjustment, 10) || 0;
@@ -335,29 +360,22 @@ export default function ChaluEntryPage() {
     
     const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
     const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
-    const mainPacketSuffix = entryToReturn.packetNumber.split('-')[1];
 
     let packets: string[] = [];
     
     if (entryToReturn.adjustment > 0) {
-        // For plus, expect the specific main packet AND the new plus suffixes
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-        
         const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
         plusSuffixes.forEach(suffix => {
             packets.push(`${baseBarcode}-${suffix}`);
         });
     } else if (entryToReturn.adjustment < 0) {
-        // For minus, expect the main packet of this entry AND the minus suffix packet.
-        // e.g., entry is 530-B, suffix is -D -> expect R1-530-B and R1-530-D
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-        
         const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
         minusSuffixes.forEach(suffix => {
             packets.push(`${baseBarcode}-${suffix}`);
         });
-
-    } else { // No adjustment
+    } else {
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
@@ -413,10 +431,11 @@ export default function ChaluEntryPage() {
             returnedPackets: Array.from(scannedReturnPackets),
         });
 
-        // ** LOGIC CHANGE **
-        // Now that the Chalu entry is returned, delete the original Jiram entry if it exists.
         if (entryToReturn.pendingJiramId) {
             await deleteDoc(doc(firestore, 'jiramEntries', entryToReturn.pendingJiramId));
+        }
+        if (entryToReturn.pendingMinusScanId) {
+            await deleteDoc(doc(firestore, 'minusScanEntries', entryToReturn.pendingMinusScanId));
         }
         
         toast({ title: 'Entry Returned', description: `${entryToReturn.packetNumber} marked as returned.`});
@@ -443,19 +462,15 @@ export default function ChaluEntryPage() {
   }, []);
 
   useEffect(() => {
-    // Automatically enter fullscreen when component mounts
     setFullscreen(true);
-
     const autoSave = async () => {
         const { kapanNumber, packetNumber, editingId } = stateRef.current;
-        // Autosave new entry if required fields are filled
         if (kapanNumber && packetNumber) {
             const success = await handleSave(false);
             if (success) {
                 stateRef.current.toast({ title: 'Auto-saved', description: 'New entry was automatically saved.' });
             }
         }
-        // Autosave edited entry
         if (editingId) {
             const success = await handleSaveEdit(editingId, false);
             if (success) {
@@ -463,11 +478,8 @@ export default function ChaluEntryPage() {
             }
         }
     };
-
-    // This cleanup function will run when the component is unmounted (e.g., page navigation)
     return () => {
         autoSave();
-        // Exit fullscreen when the component unmounts
         setFullscreen(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -482,7 +494,6 @@ export default function ChaluEntryPage() {
 
   const filteredEntries = useMemo(() => {
     if (!chaluEntries) return [];
-    
     let baseFilter = chaluEntries;
 
     if (viewMode === 'live') {
@@ -504,10 +515,8 @@ export default function ChaluEntryPage() {
     }
     
     return baseFilter;
-
   }, [chaluEntries, kapanFilter, viewMode, historySearchTerm, liveSearchTerm]);
   
-  // Clear selection when filters or mode change
   useEffect(() => {
     setSelectedEntries(new Set());
   }, [kapanFilter, liveSearchTerm, historySearchTerm, viewMode]);
@@ -538,14 +547,16 @@ export default function ChaluEntryPage() {
         entries: filteredEntries.sort((a,b) => (a.packetNumber || '').localeCompare(b.packetNumber || '')),
     };
   }, [filteredEntries, kapanFilter]);
-
   
   const jiramChaluMap = useMemo(() => {
-    const map = new Map<string, string>(); // Maps pendingJiramId to chaluEntryId
+    const map = new Map<string, string>();
     if (!chaluEntries) return map;
     chaluEntries.forEach(entry => {
         if (entry.pendingJiramId && !entry.isReturned) {
             map.set(entry.pendingJiramId, entry.id);
+        }
+         if (entry.pendingMinusScanId && !entry.isReturned) {
+            map.set(entry.pendingMinusScanId, entry.id);
         }
     });
     return map;
@@ -554,19 +565,25 @@ export default function ChaluEntryPage() {
 
   const filteredJiramEntries = useMemo(() => {
     if (!jiramEntries) return [];
-    
-    const filtered = (jiramEntries || []).filter(entry => {
+    const returnedScanIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
+    return (jiramEntries || []).filter(entry => {
         const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
         const searchMatch = !jiramSearchTerm || entry.packetNumber.toLowerCase().includes(jiramSearchTerm.toLowerCase());
-        return kapanMatch && searchMatch;
+        const isReturned = returnedScanIds.has(entry.id);
+        return kapanMatch && searchMatch && !isReturned;
     });
-
-    // ** LOGIC CHANGE **
-    // Filter out Jiram entries that are associated with a RETURNED Chalu entry.
-    const returnedJiramIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingJiramId).map(c => c.pendingJiramId));
-    return filtered.filter(j => !returnedJiramIds.has(j.id));
-
-}, [jiramEntries, chaluEntries, kapanNumber, jiramSearchTerm]);
+  }, [jiramEntries, chaluEntries, kapanNumber, jiramSearchTerm]);
+  
+  const filteredMinusEntries = useMemo(() => {
+    if (!minusScanEntries) return [];
+    const returnedScanIds = new Set(chaluEntries.filter(c => c.isReturned && c.pendingMinusScanId).map(c => c.pendingMinusScanId));
+    return (minusScanEntries || []).filter(entry => {
+        const kapanMatch = !kapanNumber || entry.kapanNumber === kapanNumber;
+        const searchMatch = !minusSearchTerm || entry.packetNumber.toLowerCase().includes(minusSearchTerm.toLowerCase());
+        const isReturned = returnedScanIds.has(entry.id);
+        return kapanMatch && searchMatch && !isReturned;
+    });
+  }, [minusScanEntries, chaluEntries, kapanNumber, minusSearchTerm]);
 
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -587,13 +604,11 @@ export default function ChaluEntryPage() {
             
             toast({ title: 'Importing...', description: `Processing ${data.length} packets. This may take a moment.` });
 
-            // 1. Delete all existing documents in jiramEntries
             const allJiramDocs = await getDocs(collection(firestore, 'jiramEntries'));
             const deleteBatch = writeBatch(firestore);
             allJiramDocs.forEach(doc => deleteBatch.delete(doc.ref));
             await deleteBatch.commit();
             
-            // 2. Add new documents from file
             const addBatch = writeBatch(firestore);
             data.forEach(item => {
                 const match = item.barcode.match(/^(?:R)?(\d+)-(\d+(?:-[A-Z])?)$/);
@@ -613,7 +628,7 @@ export default function ChaluEntryPage() {
             await addBatch.commit();
             
             toast({ title: 'Import Successful', description: `Successfully imported ${data.length} Jiram scans.` });
-            if (refetchJiramEntries) refetchJiramEntries(); // Refresh the data
+            if (refetchJiramEntries) refetchJiramEntries();
         } catch (error) {
             console.error("Import failed:", error);
             toast({ variant: 'destructive', title: 'Import Failed', description: 'Could not read or process the file.' });
@@ -673,7 +688,6 @@ export default function ChaluEntryPage() {
   const isAllSelected = filteredEntries.length > 0 && selectedEntries.size === filteredEntries.length;
   const isSomeSelected = selectedEntries.size > 0 && selectedEntries.size < filteredEntries.length;
   
-  // Jiram multi-select handlers
     const handleJiramSelectAll = (checked: boolean | 'indeterminate') => {
         if (checked === true) {
             const allIds = new Set(filteredJiramEntries.map(e => e.id));
@@ -712,36 +726,69 @@ export default function ChaluEntryPage() {
             toast({ variant: 'destructive', title: 'Delete Failed' });
         }
     };
+
+    const handleMinusRowSelect = (id: string, checked: boolean) => {
+        const newSelection = new Set(selectedMinusScans);
+        if (checked) newSelection.add(id); else newSelection.delete(id);
+        setSelectedMinusScans(newSelection);
+    };
+
+    const handleMinusSelectAll = (checked: boolean | 'indeterminate') => {
+        if (checked === true) setSelectedMinusScans(new Set(filteredMinusEntries.map(e => e.id)));
+        else setSelectedMinusScans(new Set());
+    };
+    
+    const handleDeleteSelectedMinus = async () => {
+        if (!firestore || selectedMinusScans.size === 0) return;
+        const batch = writeBatch(firestore);
+        selectedMinusScans.forEach(id => batch.delete(doc(firestore, 'minusScanEntries', id)));
+        try {
+            await batch.commit();
+            toast({ title: 'Success', description: `${selectedMinusScans.size} minus scans deleted.`});
+            setSelectedMinusScans(new Set());
+            setMinusSelectionMode(false);
+        } catch(e) {
+            toast({ variant: 'destructive', title: 'Delete Failed' });
+        }
+    };
     
     const isAllJiramSelected = filteredJiramEntries.length > 0 && selectedJiramEntries.size === filteredJiramEntries.length;
     const isSomeJiramSelected = selectedJiramEntries.size > 0 && selectedJiramEntries.size < filteredJiramEntries.length;
+    const isAllMinusSelected = filteredMinusEntries.length > 0 && selectedMinusScans.size === filteredMinusEntries.length;
+    const isSomeMinusSelected = selectedMinusScans.size > 0 && selectedMinusScans.size < filteredMinusEntries.length;
 
     useEffect(() => {
         setSelectedJiramEntries(new Set());
-    }, [kapanNumber, jiramSearchTerm]);
+        setSelectedMinusScans(new Set());
+    }, [kapanNumber, jiramSearchTerm, minusSearchTerm]);
 
   const kapanCounts = useMemo(() => {
-    if (!kapanFilter) return { pending: 0, live: 0, returned: 0 };
-    const allJiramForKapan = jiramEntries?.filter(j => j.kapanNumber === kapanFilter) || [];
-    const allChaluForKapan = chaluEntries?.filter(c => c.kapanNumber === kapanFilter) || [];
+    if (!kapanFilter) return { pending: 0, live: 0, returned: 0, minus: 0 };
     
+    const allChaluForKapan = chaluEntries?.filter(c => c.kapanNumber === kapanFilter) || [];
     const returnedChalu = allChaluForKapan.filter(c => c.isReturned);
     const liveChalu = allChaluForKapan.filter(c => !c.isReturned);
-    
-    const liveJiramIds = new Set(liveChalu.map(c => c.pendingJiramId));
-    const returnedJiramIds = new Set(returnedChalu.map(c => c.pendingJiramId));
+    const liveChaluJiramIds = new Set(liveChalu.map(c => c.pendingJiramId));
+    const liveChaluMinusIds = new Set(liveChalu.map(c => c.pendingMinusScanId));
 
-    const pendingJiram = allJiramForKapan.filter(j => !liveJiramIds.has(j.id) && !returnedJiramIds.has(j.id));
+    const allJiramForKapan = jiramEntries?.filter(j => j.kapanNumber === kapanFilter) || [];
+    const returnedJiramIds = new Set(returnedChalu.map(c => c.pendingJiramId));
+    const pendingJiram = allJiramForKapan.filter(j => !liveChaluJiramIds.has(j.id) && !returnedJiramIds.has(j.id));
     
+    const allMinusForKapan = minusScanEntries?.filter(m => m.kapanNumber === kapanFilter) || [];
+    const returnedMinusIds = new Set(returnedChalu.map(c => c.pendingMinusScanId));
+    const pendingMinus = allMinusForKapan.filter(m => !liveChaluMinusIds.has(m.id) && !returnedMinusIds.has(m.id));
+
     return {
         pending: pendingJiram.length,
         live: liveChalu.length,
         returned: returnedChalu.length,
+        minus: pendingMinus.length,
     }
-  }, [kapanFilter, jiramEntries, chaluEntries]);
+  }, [kapanFilter, jiramEntries, minusScanEntries, chaluEntries]);
 
   return (
-    <div className="grid lg:grid-cols-[1fr,350px] gap-6 p-6 h-screen overflow-hidden">
+    <div className="grid lg:grid-cols-[1fr,350px,350px] gap-6 p-6 h-screen overflow-hidden">
       <div className="flex flex-col gap-6">
           <div className="flex justify-between items-start">
             <PageHeader title="નુકશાની/ફાટેલા એન્ટ્રી" description="કાપણ પ્રમાણે નુકશાની ની યાદી." />
@@ -854,6 +901,7 @@ export default function ChaluEntryPage() {
                        {kapanFilter && (
                          <div className="flex items-center gap-4 text-sm font-medium border rounded-lg px-3 py-1.5 bg-muted/50">
                             <div title="Pending Jiram">J: <span className="font-bold">{kapanCounts.pending}</span></div>
+                            <div title="Pending Minus">M: <span className="font-bold text-destructive">{kapanCounts.minus}</span></div>
                             <div title="Live Chalu">L: <span className="font-bold">{kapanCounts.live}</span></div>
                             <div title="Returned Chalu">R: <span className="font-bold text-green-600">{kapanCounts.returned}</span></div>
                          </div>
@@ -1248,6 +1296,62 @@ export default function ChaluEntryPage() {
              )}
          </CardContent>
       </Card>
+      
+      <Card className="flex flex-col h-full lg:max-h-full overflow-hidden">
+        <CardHeader>
+            <CardTitle>Pending Minus Scans</CardTitle>
+            <CardDescription>Packets scanned to be automatically marked as a minus entry.</CardDescription>
+            <div className="flex flex-wrap gap-2 items-center justify-between mt-4">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input type="search" placeholder="Search..." className="pl-8 sm:w-[200px]" value={minusSearchTerm} onChange={(e) => setMinusSearchTerm(e.target.value)} />
+                </div>
+                <div className="flex gap-2 items-center">
+                    <Button variant="outline" size="sm" onClick={() => { setMinusSelectionMode(!minusSelectionMode); if(minusSelectionMode) setSelectedMinusScans(new Set()); }}>
+                        <Rows className="mr-2 h-4 w-4" />{minusSelectionMode ? 'Cancel' : 'Select'}
+                    </Button>
+                    {minusSelectionMode && selectedMinusScans.size > 0 && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild><Button variant="destructive" size="sm"><Trash2 className="mr-2 h-4 w-4" />({selectedMinusScans.size})</Button></AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader><AlertDialogTitle>Delete {selectedMinusScans.size} minus scans?</AlertDialogTitle></AlertDialogHeader>
+                                <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedMinus}>Delete</AlertDialogAction></AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </div>
+            </div>
+        </CardHeader>
+        <CardContent className="flex-1 overflow-y-auto">
+            <Table>
+                <TableHeader><TableRow>
+                    {minusSelectionMode && <TableHead className="w-12"><Checkbox checked={isAllMinusSelected ? true : isSomeMinusSelected ? 'indeterminate' : false} onCheckedChange={handleMinusSelectAll} /></TableHead>}
+                    <TableHead>Kapan</TableHead><TableHead>Packet</TableHead><TableHead>Action</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                    {filteredMinusEntries.map(entry => {
+                        const isInProgress = jiramChaluMap.has(entry.id);
+                        return (
+                        <TableRow key={entry.id} className={cn("transition-colors", pendingMinusScanId === entry.id && "bg-accent", lastClickedJiramId === entry.id && 'animate-pulse bg-accent/50', selectedMinusScans.has(entry.id) && 'bg-accent/50', isInProgress ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer')} onClick={() => !isInProgress && handleMinusPacketClick(entry)}>
+                           {minusSelectionMode && <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selectedMinusScans.has(entry.id)} onCheckedChange={(c) => handleMinusRowSelect(entry.id, !!c)} /></TableCell>}
+                           <TableCell>{entry.kapanNumber}</TableCell>
+                           <TableCell>{entry.packetNumber}</TableCell>
+                           <TableCell onClick={(e) => e.stopPropagation()}>
+                                {isInProgress ? <Badge variant="secondary">In Progress</Badge> : (
+                                    <AlertDialog><AlertDialogTrigger asChild><Button variant="ghost" size="icon"><MinusCircle className="h-4 w-4 text-destructive/70"/></Button></AlertDialogTrigger><AlertDialogContent>
+                                        <AlertDialogHeader><AlertDialogTitle>Delete Minus Scan?</AlertDialogTitle><AlertDialogDescription>This will remove "{entry.barcode}" from the pending list.</AlertDialogDescription></AlertDialogHeader>
+                                        <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteDoc(doc(firestore, 'minusScanEntries', entry.id))}>Delete Scan</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent></AlertDialog>
+                                )}
+                           </TableCell>
+                        </TableRow>
+                    )})}
+                    {filteredMinusEntries.length === 0 && <TableRow><TableCell colSpan={minusSelectionMode ? 4 : 3} className="text-center text-muted-foreground">{kapanNumber || minusSearchTerm ? 'No matching scans.' : 'No minus scans.'}</TableCell></TableRow>}
+                </TableBody>
+            </Table>
+        </CardContent>
+      </Card>
+
 
       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
         <DialogContent className="max-w-2xl">

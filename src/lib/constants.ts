@@ -23,6 +23,8 @@ export const UHDHA_SETTINGS_KEY = 'udhdhaSettings';
 
 // Jiram Report
 export const JIRAM_REPORT_PACKETS_KEY = 'jiramReportPackets';
+export const MINUS_SCANS_KEY = 'minusScans'; // New key for minus scans
+
 
 // Box Sorting
 export const BOX_SORTING_RANGES_KEY = 'boxSortingRanges';
@@ -62,6 +64,7 @@ export const ALL_APP_KEYS = [
     UHDHA_PACKETS_KEY,
     UHDHA_SETTINGS_KEY,
     JIRAM_REPORT_PACKETS_KEY,
+    MINUS_SCANS_KEY, // Added for backup
     BOX_SORTING_RANGES_KEY,
     BOX_SORTING_PACKETS_KEY,
     DIAMETER_SORTING_RANGES_KEY,

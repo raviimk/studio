@@ -153,6 +153,9 @@ export interface JiramReportPacket {
     scanTime: string;
 }
 
+// New type for minus scans, identical for now
+export interface MinusScanPacket extends JiramReportPacket {}
+
 export interface BoxSortingRange {
     id: string;
     from: number;

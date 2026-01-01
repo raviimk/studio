@@ -2,8 +2,8 @@
 'use client';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY } from '@/lib/constants';
-import { JiramReportPacket, SarinPacket } from '@/lib/types';
+import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY, MINUS_SCANS_KEY } from '@/lib/constants';
+import { JiramReportPacket, SarinPacket, MinusScanPacket } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,12 +41,17 @@ import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch,
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
+
+type ScanMode = 'jiram' | 'minus';
 
 type KapanSummary = {
   kapanNumber: string;
   expected: number;
   scanned: number;
+  minus: number;
   status: 'match' | 'extra' | 'less';
   extra: number;
   missing: number;
@@ -56,7 +61,7 @@ type KapanSummary = {
 type GroupedScans = {
     date: string;
     count: number;
-    packets: JiramReportPacket[];
+    packets: (JiramReportPacket | MinusScanPacket)[];
 };
 
 const KAPAN_COMPLETION_WAIT_DAYS = 20;
@@ -66,8 +71,10 @@ export default function JiramReportPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [jiramPackets, setJiramPackets] = useLocalStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
+  const [minusScans, setMinusScans] = useLocalStorage<MinusScanPacket[]>(MINUS_SCANS_KEY, []);
   const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   
+  const [scanMode, setScanMode] = useState<ScanMode>('jiram');
   const [barcode, setBarcode] = useState('');
   const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,11 +111,11 @@ export default function JiramReportPage() {
   }, [showSuccessTick]);
 
   const kapanSummary = useMemo((): KapanSummary[] => {
-    const kapanData: Record<string, { expected: number; scanned: number; firstDate?: Date; }> = {};
+    const kapanData: Record<string, { expected: number; scanned: number; minus: number; firstDate?: Date; }> = {};
 
     sarinPackets.forEach(p => {
       if (!kapanData[p.kapanNumber]) {
-        kapanData[p.kapanNumber] = { expected: 0, scanned: 0 };
+        kapanData[p.kapanNumber] = { expected: 0, scanned: 0, minus: 0 };
       }
       if (p.jiramCount && p.jiramCount > 0) {
         kapanData[p.kapanNumber].expected += p.jiramCount;
@@ -122,9 +129,16 @@ export default function JiramReportPage() {
 
     jiramPackets.forEach(p => {
       if (!kapanData[p.kapanNumber]) {
-        kapanData[p.kapanNumber] = { expected: 0, scanned: 0 };
+        kapanData[p.kapanNumber] = { expected: 0, scanned: 0, minus: 0 };
       }
       kapanData[p.kapanNumber].scanned += 1;
+    });
+
+    minusScans.forEach(p => {
+        if (!kapanData[p.kapanNumber]) {
+            kapanData[p.kapanNumber] = { expected: 0, scanned: 0, minus: 0 };
+        }
+        kapanData[p.kapanNumber].minus += 1;
     });
 
     const today = startOfDay(new Date());
@@ -146,7 +160,7 @@ export default function JiramReportPage() {
         daysSinceCreation,
       };
     }).sort((a,b) => parseInt(a.kapanNumber) - parseInt(b.kapanNumber));
-  }, [sarinPackets, jiramPackets]);
+  }, [sarinPackets, jiramPackets, minusScans]);
 
   const handleBarcodeScan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,30 +173,36 @@ export default function JiramReportPage() {
         return;
     }
     const [, kapanNumber, packetIdentifier] = match;
-    const [packetNumberStr, suffix] = packetIdentifier.split('-');
+    const [, suffix] = packetIdentifier.split('-');
 
-
-    if (jiramPackets.some(p => p.barcode === barcode)) {
-        toast({ variant: 'destructive', title: 'Duplicate Scan', description: 'This packet has already been scanned.' });
+    const currentPackets = scanMode === 'jiram' ? jiramPackets : minusScans;
+    if (currentPackets.some(p => p.barcode === barcode)) {
+        toast({ variant: 'destructive', title: 'Duplicate Scan', description: `This packet has already been scanned in ${scanMode} mode.` });
         setBarcode('');
         return;
     }
 
     const hasExpectedJiram = sarinPackets.some(p => p.kapanNumber === kapanNumber && (p.jiramCount || 0) > 0);
-    if(!hasExpectedJiram) {
+    if(scanMode === 'jiram' && !hasExpectedJiram) {
         toast({ variant: 'destructive', title: 'No Expected Jiram', description: `No Jiram entries found for Kapan ${kapanNumber} in the Sarin module.`});
     }
 
-    const newPacketLocal: JiramReportPacket = {
+    const newPacket: JiramReportPacket | MinusScanPacket = {
       id: uuidv4(),
       barcode,
       kapanNumber,
       scanTime: new Date().toISOString(),
     };
-    setJiramPackets(prev => [newPacketLocal, ...prev]);
+    
+    if (scanMode === 'jiram') {
+        setJiramPackets(prev => [newPacket, ...prev]);
+    } else {
+        setMinusScans(prev => [newPacket, ...prev]);
+    }
 
     try {
-        const docRef = doc(firestore, 'jiramEntries', barcode);
+        const collectionName = scanMode === 'jiram' ? 'jiramEntries' : 'minusScanEntries';
+        const docRef = doc(firestore, collectionName, barcode);
         await setDoc(docRef, {
             barcode: barcode,
             kapanNumber: kapanNumber,
@@ -196,9 +216,9 @@ export default function JiramReportPage() {
             await addDoc(collection(firestore, 'kapans'), { kapanNumber });
         }
         
-         toast({ title: 'Packet Scanned & Queued', description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
+         toast({ title: `Packet Scanned (${scanMode})`, description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
     } catch(err) {
-        console.error("Failed to save Jiram scan to Firestore:", err);
+        console.error(`Failed to save ${scanMode} scan to Firestore:`, err);
         toast({ variant: 'destructive', title: 'Cloud Save Failed', description: 'Packet saved locally, but failed to queue for Chalu entry.'})
     }
     
@@ -208,8 +228,12 @@ export default function JiramReportPage() {
     setShowSuccessTick(true);
   };
 
-  const handleDeletePacket = (id: string) => {
-    setJiramPackets(jiramPackets.filter(p => p.id !== id));
+  const handleDeletePacket = (id: string, mode: ScanMode) => {
+    if (mode === 'jiram') {
+        setJiramPackets(jiramPackets.filter(p => p.id !== id));
+    } else {
+        setMinusScans(minusScans.filter(p => p.id !== id));
+    }
     toast({ title: 'Scan Deleted' });
   }
   
@@ -225,29 +249,34 @@ export default function JiramReportPage() {
   };
 
   const handleExport = () => {
-    if (jiramPackets.length === 0) {
+    const exportData = {
+        jiram: jiramPackets.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber})),
+        minus: minusScans.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber}))
+    };
+    if (exportData.jiram.length === 0 && exportData.minus.length === 0) {
       toast({ variant: 'destructive', title: 'No Data', description: 'There are no scanned packets to export.' });
       return;
     }
-    const dataStr = JSON.stringify(jiramPackets.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber})), null, 2);
+    const dataStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'jiram-scans.json';
+    link.download = 'jiram-and-minus-scans.json';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast({ title: 'Export Successful', description: `${jiramPackets.length} scans exported.` });
+    toast({ title: 'Export Successful', description: `${jiramPackets.length + minusScans.length} scans exported.` });
   };
 
 
   const groupedScans: GroupedScans[] = useMemo(() => {
     const searchLower = searchTerm.toLowerCase();
-    const filteredPackets = jiramPackets.filter(p => !searchLower || p.barcode.toLowerCase().includes(searchLower));
+    const allScans = [...jiramPackets, ...minusScans];
+    const filteredPackets = allScans.filter(p => !searchLower || p.barcode.toLowerCase().includes(searchLower));
 
-    const groups: Record<string, JiramReportPacket[]> = {};
+    const groups: Record<string, (JiramReportPacket | MinusScanPacket)[]> = {};
     filteredPackets.forEach(p => {
         const date = format(startOfDay(parseISO(p.scanTime)), 'yyyy-MM-dd');
         if (!groups[date]) {
@@ -264,7 +293,7 @@ export default function JiramReportPage() {
         }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  }, [jiramPackets, searchTerm]);
+  }, [jiramPackets, minusScans, searchTerm]);
 
   
   const getStatusIcon = (status: KapanSummary['status']) => {
@@ -283,26 +312,40 @@ export default function JiramReportPage() {
         <div className="grid lg:grid-cols-2 gap-8">
           <Card>
             <CardHeader>
-              <CardTitle>Scan Jiram Packet</CardTitle>
-              <CardDescription>Scan the barcode of a packet created from a Jiram piece. The Kapan number will be extracted automatically.</CardDescription>
+              <CardTitle>Scan Packet</CardTitle>
+              <CardDescription>Select a mode, then scan the barcode of a packet. The Kapan number will be extracted automatically.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm relative">
-                <Input
-                  ref={barcodeInputRef}
-                  placeholder="Scan Jiram packet barcode..."
-                  value={barcode}
-                  onChange={e => setBarcode(e.target.value)}
-                />
-                <Button type="submit" disabled={!barcode}>
-                  <Barcode className="mr-2 h-4 w-4" /> Scan
-                </Button>
-                {showSuccessTick && (
-                  <div className="absolute right-[-30px] top-1/2 -translate-y-1/2">
-                      <CheckCircle2 className="h-6 w-6 text-green-500" />
-                  </div>
-                )}
-              </form>
+              <div className="space-y-4">
+                <div>
+                   <Label>Scan Mode</Label>
+                    <RadioGroup value={scanMode} onValueChange={(v) => setScanMode(v as ScanMode)} className="flex gap-4 mt-1">
+                        <Label htmlFor="mode-jiram" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
+                            <RadioGroupItem value="jiram" id="mode-jiram" /> Jiram Scan (+)
+                        </Label>
+                        <Label htmlFor="mode-minus" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
+                            <RadioGroupItem value="minus" id="mode-minus" /> Minus Scan (-)
+                        </Label>
+                    </RadioGroup>
+                </div>
+
+                <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm relative">
+                    <Input
+                    ref={barcodeInputRef}
+                    placeholder="Scan packet barcode..."
+                    value={barcode}
+                    onChange={e => setBarcode(e.target.value)}
+                    />
+                    <Button type="submit" disabled={!barcode}>
+                    <Barcode className="mr-2 h-4 w-4" /> Scan
+                    </Button>
+                    {showSuccessTick && (
+                    <div className="absolute right-[-30px] top-1/2 -translate-y-1/2">
+                        <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    </div>
+                    )}
+                </form>
+              </div>
                {lastScannedBarcodes.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <p className="text-sm text-muted-foreground">Recent Scans:</p>
@@ -328,7 +371,8 @@ export default function JiramReportPage() {
                   <RechartsTooltip />
                   <Legend />
                   <Bar dataKey="expected" fill="hsl(var(--primary))" name="Expected Jiram" />
-                  <Bar dataKey="scanned" fill="hsl(var(--accent))" name="Actual Scanned" />
+                  <Bar dataKey="scanned" fill="hsl(var(--chart-2))" name="Actual Scanned" />
+                  <Bar dataKey="minus" fill="hsl(var(--destructive))" name="Minus Scans" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -349,7 +393,7 @@ export default function JiramReportPage() {
             <CardContent>
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Minus</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {kapanSummary.map(k => {
                       const daysRemaining = KAPAN_COMPLETION_WAIT_DAYS - k.daysSinceCreation;
@@ -359,6 +403,7 @@ export default function JiramReportPage() {
                         <TableCell className="font-bold">{k.kapanNumber}</TableCell>
                         <TableCell>{k.expected}</TableCell>
                         <TableCell>{k.scanned}</TableCell>
+                        <TableCell>{k.minus}</TableCell>
                         <TableCell className="flex items-center gap-2">{getStatusIcon(k.status)} {k.status.charAt(0).toUpperCase() + k.status.slice(1)}</TableCell>
                         <TableCell>
                            <Tooltip>
@@ -431,21 +476,27 @@ export default function JiramReportPage() {
                               <TableRow>
                                 <TableHead>Barcode</TableHead>
                                 <TableHead>Kapan</TableHead>
-                                <TableHead>Scan Time</TableHead>
+                                <TableHead>Mode</TableHead>
+                                <TableHead>Time</TableHead>
                                 <TableHead>Action</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {group.packets.map(p => (
+                              {group.packets.map(p => {
+                                const mode: ScanMode = minusScans.some(ms => ms.id === p.id) ? 'minus' : 'jiram';
+                                return (
                                 <TableRow key={p.id}>
                                   <TableCell className="font-mono">{p.barcode}</TableCell>
                                   <TableCell>{p.kapanNumber}</TableCell>
+                                  <TableCell>
+                                     <Badge variant={mode === 'minus' ? 'destructive' : 'secondary'}>{mode}</Badge>
+                                  </TableCell>
                                   <TableCell>{format(new Date(p.scanTime), 'p')}</TableCell>
                                   <TableCell>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(p.id)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(p.id, mode)}><Trash2 className="h-4 w-4" /></Button>
                                   </TableCell>
                                 </TableRow>
-                              ))}
+                              )})}
                             </TableBody>
                           </Table>
                       </CollapsibleContent>
