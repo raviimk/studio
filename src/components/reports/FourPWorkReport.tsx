@@ -3,8 +3,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY } from '@/lib/constants';
-import { FourPLot, FourPOperator } from '@/lib/types';
+import { FOURP_TECHING_LOTS_KEY, FOURP_OPERATORS_KEY, FOURP_DEPARTMENT_SETTINGS_KEY } from '@/lib/constants';
+import { FourPLot, FourPOperator, FourPDepartmentSettings } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +19,8 @@ import { Input } from '../ui/input';
 export default function FourPWorkReport() {
   const [fourPTechingLots] = useLocalStorage<FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
   const [fourPOperators] = useLocalStorage<FourPOperator[]>(FOURP_OPERATORS_KEY, []);
+  const [deptSettings] = useLocalStorage<FourPDepartmentSettings>(FOURP_DEPARTMENT_SETTINGS_KEY, { caratThreshold: 0.009, aboveThresholdDeptName: 'Big Dept', belowThresholdDeptName: 'Small Dept' });
+
   const [selectedOperator, setSelectedOperator] = useState('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -47,15 +49,25 @@ export default function FourPWorkReport() {
     }).sort((a, b) => new Date(b.returnDate!).getTime() - new Date(a.returnDate!).getTime());
   }, [fourPTechingLots, selectedOperator, dateRange, searchTerm]);
 
-  const summary = useMemo(() => {
-    return filteredData.reduce((acc, lot) => {
-        acc.totalPcs += lot.pcs || 0;
-        acc.totalBlocking += lot.blocking || 0;
-        acc.totalFinalPcs += lot.finalPcs || 0;
-        acc.totalAmount += lot.fourPAmount || 0;
-        return acc;
-    }, { totalPcs: 0, totalAmount: 0, totalBlocking: 0, totalFinalPcs: 0 });
-  }, [filteredData]);
+  const summaryByDepartment = useMemo(() => {
+    const deptSummary: Record<string, { totalPcs: number, totalAmount: number, lotCount: number }> = {};
+    const departmentNames = [deptSettings.aboveThresholdDeptName, deptSettings.belowThresholdDeptName];
+    departmentNames.forEach(name => {
+      deptSummary[name] = { totalPcs: 0, totalAmount: 0, lotCount: 0 };
+    });
+
+    filteredData.forEach(lot => {
+      const dept = lot.department || 'Unknown';
+      if (!deptSummary[dept]) {
+        deptSummary[dept] = { totalPcs: 0, totalAmount: 0, lotCount: 0 };
+      }
+      deptSummary[dept].totalPcs += lot.finalPcs || 0;
+      deptSummary[dept].totalAmount += lot.fourPAmount || 0;
+      deptSummary[dept].lotCount += 1;
+    });
+
+    return deptSummary;
+  }, [filteredData, deptSettings]);
 
   const handlePrint = () => window.print();
 
@@ -96,23 +108,25 @@ export default function FourPWorkReport() {
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader><CardTitle>Total PCS</CardTitle></CardHeader>
-          <CardContent><p className="text-4xl font-bold">{summary.totalPcs.toLocaleString()}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Total Blocking</CardTitle></CardHeader>
-          <CardContent><p className="text-4xl font-bold text-destructive">{summary.totalBlocking.toLocaleString()}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Total Final PCS</CardTitle></CardHeader>
-          <CardContent><p className="text-4xl font-bold">{summary.totalFinalPcs.toLocaleString()}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Total Amount (₹)</CardTitle></CardHeader>
-          <CardContent><p className="text-4xl font-bold">₹{(summary.totalAmount ?? 0).toFixed(2)}</p></CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2">
+        {Object.entries(summaryByDepartment).map(([deptName, summary]) => (
+            <Card key={deptName}>
+              <CardHeader>
+                <CardTitle>{deptName}</CardTitle>
+                <CardDescription>Summary for this department</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-2 gap-4">
+                  <div>
+                      <p className="text-sm text-muted-foreground">Total Final PCS</p>
+                      <p className="text-2xl font-bold">{summary.totalPcs.toLocaleString()}</p>
+                  </div>
+                  <div>
+                      <p className="text-sm text-muted-foreground">Total Amount (₹)</p>
+                      <p className="text-2xl font-bold">₹{summary.totalAmount.toFixed(2)}</p>
+                  </div>
+              </CardContent>
+            </Card>
+        ))}
       </div>
 
       <Card>
@@ -125,6 +139,7 @@ export default function FourPWorkReport() {
                   <TableHead>Return Date</TableHead>
                   <TableHead>Kapan</TableHead>
                   <TableHead>Lot</TableHead>
+                  <TableHead>Department</TableHead>
                   <TableHead>4P Operator(s)</TableHead>
                   <TableHead>Final PCS</TableHead>
                   <TableHead>Amount (₹)</TableHead>
@@ -136,6 +151,7 @@ export default function FourPWorkReport() {
                     <TableCell>{lot.returnDate ? format(new Date(lot.returnDate), 'PP') : 'N/A'}</TableCell>
                     <TableCell>{lot.kapan}</TableCell>
                     <TableCell>{lot.lot}</TableCell>
+                    <TableCell><Badge>{lot.department}</Badge></TableCell>
                     <TableCell>
                       {lot.fourPData && lot.fourPData.length > 0 ? (
                         <div className="flex flex-col gap-1">
@@ -149,7 +165,7 @@ export default function FourPWorkReport() {
                     <TableCell>₹{(lot.fourPAmount ?? 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
-                {filteredData.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
+                {filteredData.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No data matches your filters.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
