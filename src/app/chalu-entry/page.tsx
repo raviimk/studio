@@ -154,51 +154,7 @@ export default function ChaluEntryPage() {
   useEffect(() => {
     const calculatedCurrent = originalCount + adjustmentValue;
     setCurrentPcs(String(calculatedCurrent));
-
-    const packetSuffixMatch = packetNumber.match(/-([A-Z])$/);
-    const isMainPacket = !packetSuffixMatch || packetSuffixMatch[1] === 'A';
-
-    if (!isMainPacket) {
-        setSuffix('');
-        return;
-    }
-
-    if (adjustmentValue > 0) {
-        if (originalCount > 0) {
-            const suffixes = [];
-            for (let i = 0; i < adjustmentValue; i++) {
-                const nextSuffixCharCode = 'A'.charCodeAt(0) + originalCount + i;
-                suffixes.push(String.fromCharCode(nextSuffixCharCode));
-            }
-            setSuffix(suffixes.join(', '));
-        } else {
-            setSuffix('');
-        }
-    } else if (adjustmentValue < 0) {
-        if (originalCount > 0) {
-            const suffixes = [];
-            for (let i = 0; i < Math.abs(adjustmentValue); i++) {
-                if (originalCount - 1 - i < 0) break; // Don't go below 'A'
-                const charCode = 'A'.charCodeAt(0) + originalCount - 1 - i;
-                suffixes.unshift(`-${String.fromCharCode(charCode)}`);
-            }
-            setSuffix(suffixes.join(', '));
-        } else {
-            setSuffix('');
-        }
-    } else { // adjustmentValue is 0
-        if (originalCount > 1) {
-            const suffixes = [];
-            for (let i = 0; i < originalCount; i++) {
-                const charCode = 'A'.charCodeAt(0) + i;
-                suffixes.push(String.fromCharCode(charCode));
-            }
-            setSuffix(suffixes.join(', '));
-        } else {
-            setSuffix('');
-        }
-    }
-  }, [originalCount, adjustmentValue, packetNumber]);
+  }, [originalCount, adjustmentValue]);
   
   const resetForm = () => {
     setPacketNumber('');
@@ -825,7 +781,7 @@ export default function ChaluEntryPage() {
                   <Input 
                     value={suffix} 
                     onChange={handleSuffixChange}
-                    placeholder="Auto"
+                    placeholder="Manual Suffix"
                   />
                 </div>
                 <div>
