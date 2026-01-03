@@ -156,23 +156,23 @@ export default function ChaluEntryPage() {
 
     const packetSuffixMatch = packetNumber.match(/-([A-Z])$/);
     const isMainPacket = !packetSuffixMatch || packetSuffixMatch[1] === 'A';
-    
+
     if (!isMainPacket) {
         setSuffix('');
         return;
     }
 
     if (adjustmentValue > 0) {
-      if (originalCount > 0) {
-        const suffixes = [];
-        for (let i = 0; i < adjustmentValue; i++) {
-          const nextSuffixCharCode = 'A'.charCodeAt(0) + originalCount + i;
-          suffixes.push(String.fromCharCode(nextSuffixCharCode));
+        if (originalCount > 0) {
+            const suffixes = [];
+            for (let i = 0; i < adjustmentValue; i++) {
+                const nextSuffixCharCode = 'A'.charCodeAt(0) + originalCount + i;
+                suffixes.push(String.fromCharCode(nextSuffixCharCode));
+            }
+            setSuffix(suffixes.join(', '));
+        } else {
+            setSuffix('');
         }
-        setSuffix(suffixes.join(', '));
-      } else {
-        setSuffix('');
-      }
     } else if (adjustmentValue < 0) {
         if (originalCount > 0) {
             const suffixes = [];
@@ -185,8 +185,17 @@ export default function ChaluEntryPage() {
         } else {
             setSuffix('');
         }
-    } else {
-      setSuffix('');
+    } else { // adjustmentValue is 0
+        if (originalCount > 1) {
+            const suffixes = [];
+            for (let i = 0; i < originalCount; i++) {
+                const charCode = 'A'.charCodeAt(0) + i;
+                suffixes.push(String.fromCharCode(charCode));
+            }
+            setSuffix(suffixes.join(', '));
+        } else {
+            setSuffix('');
+        }
     }
   }, [originalCount, adjustmentValue, packetNumber]);
   
@@ -335,19 +344,26 @@ export default function ChaluEntryPage() {
 
     let packets: string[] = [];
     
+    // Case 1: Adjustment is positive (pieces were added)
     if (entryToReturn.adjustment > 0) {
+        // The main packet itself is expected
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
+        // All suffixed packets are also expected
         const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
         plusSuffixes.forEach(suffix => {
             packets.push(`${baseBarcode}-${suffix}`);
         });
-    } else if (entryToReturn.adjustment < 0) {
-        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-        const minusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim().replace('-', '')).filter(Boolean);
-        minusSuffixes.forEach(suffix => {
-            packets.push(`${baseBarcode}-${suffix}`);
+    } 
+    // Case 2: No adjustment, but original pieces > 1
+    else if (entryToReturn.adjustment === 0 && entryToReturn.originalPcs > 1) {
+        const suffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
+        suffixes.forEach(suffix => {
+             packets.push(`${baseBarcode}-${suffix}`);
         });
-    } else {
+    }
+    // Case 3: Negative adjustment (pieces were removed) or default case
+    else {
+        // Only the main packet is expected
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
     }
     
@@ -744,6 +760,16 @@ export default function ChaluEntryPage() {
   const isAllScansSelected = filteredScans.length > 0 && selectedScans.size === filteredScans.length;
   const isSomeScansSelected = selectedScans.size > 0 && selectedScans.size < filteredScans.length;
 
+  const handleSuffixChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    // If the user just typed a letter, add a comma and space
+    if (value.length > suffix.length && /^[A-Z]$/.test(value.slice(-1))) {
+      setSuffix(value + ', ');
+    } else {
+      setSuffix(value);
+    }
+  };
+
 
   return (
     <div className="grid lg:grid-cols-[1fr,500px] gap-6 p-6 h-screen overflow-hidden">
@@ -803,7 +829,7 @@ export default function ChaluEntryPage() {
                   <label className="text-sm font-medium">પ્લસ/માઈનસ</label>
                   <Input 
                     value={suffix} 
-                    onChange={(e) => setSuffix(e.target.value.toUpperCase())}
+                    onChange={handleSuffixChange}
                     placeholder="Auto"
                   />
                 </div>
@@ -1333,3 +1359,5 @@ export default function ChaluEntryPage() {
     </div>
   );
 }
+
+    
