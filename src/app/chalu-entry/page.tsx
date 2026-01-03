@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -336,40 +337,34 @@ export default function ChaluEntryPage() {
       setTimeout(() => returnScanInputRef.current?.focus(), 100);
   };
   
-  const expectedReturnPackets = useMemo(() => {
-    if (!entryToReturn) return [];
-    
-    const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
-    const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
+    const expectedReturnPackets = useMemo(() => {
+        if (!entryToReturn) return [];
+        
+        const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
+        const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
 
-    let packets: string[] = [];
-    
-    // Case 1: Adjustment is positive (pieces were added)
-    if (entryToReturn.adjustment > 0) {
-        // The main packet itself is expected
+        let packets: string[] = [];
+
+        // Always add the main packet itself
         packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-        // All suffixed packets are also expected
-        const plusSuffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
-        plusSuffixes.forEach(suffix => {
-            packets.push(`${baseBarcode}-${suffix}`);
-        });
-    } 
-    // Case 2: No adjustment, but original pieces > 1
-    else if (entryToReturn.adjustment === 0 && entryToReturn.originalPcs > 1) {
-        const suffixes = entryToReturn.suffix.split(',').map(s => s.trim()).filter(Boolean);
-        suffixes.forEach(suffix => {
-             packets.push(`${baseBarcode}-${suffix}`);
-        });
-    }
-    // Case 3: Negative adjustment (pieces were removed) or default case
-    else {
-        // Only the main packet is expected
-        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
-    }
-    
-    return [...new Set(packets)];
-  }, [entryToReturn]);
-  
+
+        // Add suffix packets if they exist
+        const suffixString = entryToReturn.suffix || '';
+        if (suffixString) {
+            const plusSuffixes = suffixString.split(',').map(s => s.trim()).filter(Boolean);
+            plusSuffixes.forEach(suffix => {
+                // Suffixes for negative adjustments might already contain a hyphen
+                if (suffix.startsWith('-')) {
+                    packets.push(`${baseBarcode}${suffix}`);
+                } else {
+                    packets.push(`${baseBarcode}-${suffix}`);
+                }
+            });
+        }
+        
+        return [...new Set(packets)];
+    }, [entryToReturn]);
+
   const allPacketsScanned = useMemo(() => {
     if (!entryToReturn) return false;
     const expected = expectedReturnPackets;
