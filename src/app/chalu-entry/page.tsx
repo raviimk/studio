@@ -296,24 +296,29 @@ export default function ChaluEntryPage() {
     const expectedReturnPackets = useMemo(() => {
         if (!entryToReturn) return [];
         
-        const basePacketNumber = entryToReturn.packetNumber.split('-')[0];
-        const baseBarcode = `R${entryToReturn.kapanNumber}-${basePacketNumber}`;
-
         let packets: string[] = [];
+        
+        const mainPacketIdentifier = entryToReturn.packetNumber;
+        const mainPacketBase = `R${entryToReturn.kapanNumber}-${mainPacketIdentifier}`;
 
-        // Always add the main packet itself
-        packets.push(`R${entryToReturn.kapanNumber}-${entryToReturn.packetNumber}`);
+        // Add the main packet, potentially with an auto-appended suffix
+        if (/^\d+-\d+$/.test(mainPacketIdentifier)) {
+            packets.push(`${mainPacketBase}-A`);
+        } else {
+            packets.push(mainPacketBase);
+        }
 
-        // Add suffix packets if they exist
+        // Add manually entered suffix packets
         const suffixString = entryToReturn.suffix || '';
         if (suffixString) {
-            const plusSuffixes = suffixString.split(',').map(s => s.trim()).filter(Boolean);
+            const plusSuffixes = suffixString.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
             plusSuffixes.forEach(suffix => {
                 // Suffixes for negative adjustments might already contain a hyphen
+                const baseForSuffix = `R${entryToReturn.kapanNumber}-${mainPacketIdentifier.split('-')[0]}`;
                 if (suffix.startsWith('-')) {
-                    packets.push(`${baseBarcode}${suffix}`);
+                    packets.push(`${baseForSuffix}${suffix}`);
                 } else {
-                    packets.push(`${baseBarcode}-${suffix}`);
+                    packets.push(`${baseForSuffix}-${suffix}`);
                 }
             });
         }
@@ -713,12 +718,7 @@ export default function ChaluEntryPage() {
 
   const handleSuffixChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase();
-    // If the user just typed a letter, add a comma and space
-    if (value.length > suffix.length && /^[A-Z]$/.test(value.slice(-1))) {
-      setSuffix(value + ', ');
-    } else {
-      setSuffix(value);
-    }
+    setSuffix(value);
   };
 
 
@@ -789,7 +789,8 @@ export default function ChaluEntryPage() {
                   <Input 
                     type="number"
                     value={currentPcs} 
-                    onChange={(e) => setCurrentPcs(e.target.value)}
+                    readOnly
+                    placeholder="Auto"
                     className="font-bold text-lg"
                   />
                 </div>
@@ -1312,3 +1313,4 @@ export default function ChaluEntryPage() {
 }
 
     
+
