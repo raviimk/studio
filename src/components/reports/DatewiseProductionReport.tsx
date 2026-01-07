@@ -119,6 +119,7 @@ const DetailDialog = ({ operator, department, lots, trigger }: { operator: strin
 
 export default function DatewiseProductionReport() {
   const [productionHistory] = useLocalStorage<T.ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
+  const [sarinPackets] = useLocalStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(),
@@ -133,6 +134,7 @@ export default function DatewiseProductionReport() {
     const selectedDateEnd = endOfDay(dateRange.to || dateRange.from);
     const filterInterval = { start: selectedDateStart, end: selectedDateEnd };
 
+    // Process permanent history
     for (const dateStr in productionHistory) {
       if (isWithinInterval(parseISO(dateStr), filterInterval)) {
         productionHistory[dateStr].forEach(entry => {
@@ -144,15 +146,27 @@ export default function DatewiseProductionReport() {
         });
       }
     }
+    
+    // Process live "chalu" packets from sarinPackets
+    sarinPackets.forEach(packet => {
+        if (!packet.isReturned) {
+             if(!data[packet.operator]) {
+                data[packet.operator] = { returned: 0, chalu: 0, returnedLots: [], chaluLots: [] };
+            }
+            data[packet.operator].chalu += packet.packetCount;
+            data[packet.operator].chaluLots.push({ lotNumber: packet.lotNumber, pcs: packet.packetCount, kapanNumber: packet.kapanNumber, returnDate: packet.date });
+        }
+    });
+
 
     return Object.entries(data)
         .map(([op, depts]) => ({
             operator: op,
             ...depts,
-            total: depts.returned
+            total: depts.returned + depts.chalu
         }))
         .sort((a,b) => b.total - a.total);
-  }, [productionHistory, dateRange]);
+  }, [productionHistory, sarinPackets, dateRange]);
 
 
   const totalSarinProduction = useMemo(() => {
@@ -171,7 +185,13 @@ export default function DatewiseProductionReport() {
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
-            <DepartmentCard title="Sarin Department" total={totalSarinProduction} borderColor="border-orange-400" icon={Diamond}>
+            <DepartmentCard 
+                title="Sarin Department" 
+                total={totalSarinProduction} 
+                borderColor="border-orange-400" 
+                icon={Diamond}
+                totalBreakdown={`Returned: ${sarinData.reduce((s,d) => s+d.returned,0)} + Chalu: ${sarinData.reduce((s,d) => s+d.chalu,0)}`}
+            >
                 <Table>
                     <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
