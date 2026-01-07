@@ -2,15 +2,15 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { LASER_LOTS_KEY, LASER_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY } from '@/lib/constants';
-import { LaserLot, LaserOperator, ScannedPacket, ReturnScanSettings } from '@/lib/types';
+import { LASER_LOTS_KEY, LASER_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY, PRODUCTION_HISTORY_KEY } from '@/lib/constants';
+import { LaserLot, LaserOperator, ScannedPacket, ReturnScanSettings, ProductionHistory, ProductionEntry } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format } from 'date-fns';
+import { format, parseISO, isToday } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Check, X, ThumbsUp } from 'lucide-react';
@@ -23,6 +23,7 @@ export default function ReturnLaserLotPage() {
   const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
   const [scanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [productionHistory, setProductionHistory] = useLocalStorage<ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
 
   const [returningOperator, setReturningOperator] = useState('');
   const { toast } = useToast();
@@ -101,10 +102,27 @@ export default function ReturnLaserLotPage() {
         toast({ variant: 'destructive', title: 'Invalid Sub Packet Count', description: 'Please enter a valid number for sub packets.'});
         return;
     }
+    
+    const returnTimestamp = new Date().toISOString();
+    const todayStr = format(parseISO(returnTimestamp), 'yyyy-MM-dd');
+    
+    // Create production history entry
+    const productionEntry: ProductionEntry = {
+        operator: returningOperator,
+        lotNumber: selectedLot.lotNumber,
+        kapanNumber: selectedLot.kapanNumber,
+        pcs: numSubPackets || selectedLot.packetCount,
+        packetId: selectedLot.id
+    };
+
+    setProductionHistory(prev => ({
+        ...prev,
+        [todayStr]: [...(prev[todayStr] || []), productionEntry]
+    }));
 
     const updatedLots = laserLots.map(lot =>
       lot.id === selectedLot.id
-        ? { ...lot, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString(), subPacketCount: numSubPackets }
+        ? { ...lot, isReturned: true, returnedBy: returningOperator, returnDate: returnTimestamp, subPacketCount: numSubPackets }
         : lot
     );
     setLaserLots(updatedLots);
@@ -115,7 +133,7 @@ export default function ReturnLaserLotPage() {
     setSelectedLot(null);
     setScannedInDialog(new Set());
     setSubPacketCount(0);
-  }, [laserLots, returningOperator, selectedLot, setLaserLots, subPacketCount, toast]);
+  }, [laserLots, returningOperator, selectedLot, setLaserLots, subPacketCount, toast, setProductionHistory]);
   
    const handleLegacyReturn = (lotId: string) => {
     if (!returningOperator) {
@@ -123,9 +141,27 @@ export default function ReturnLaserLotPage() {
         return;
     }
     const lotToReturn = laserLots.find(l => l.id === lotId);
+    if (!lotToReturn) return;
+
     if (window.confirm(`Are you sure you want to return Lot ${lotToReturn?.lotNumber}?`)) {
+      const returnTimestamp = new Date().toISOString();
+      const todayStr = format(parseISO(returnTimestamp), 'yyyy-MM-dd');
+
+      const productionEntry: ProductionEntry = {
+        operator: returningOperator,
+        lotNumber: lotToReturn.lotNumber,
+        kapanNumber: lotToReturn.kapanNumber,
+        pcs: lotToReturn.subPacketCount ?? lotToReturn.packetCount,
+        packetId: lotToReturn.id
+      };
+
+      setProductionHistory(prev => ({
+        ...prev,
+        [todayStr]: [...(prev[todayStr] || []), productionEntry]
+      }));
+
       const updatedLots = laserLots.map(l =>
-        l.id === lotId ? { ...l, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : l
+        l.id === lotId ? { ...l, isReturned: true, returnedBy: returningOperator, returnDate: returnTimestamp } : l
       );
       setLaserLots(updatedLots);
       toast({ title: 'Success', description: 'Lot entry has been marked as returned.' });

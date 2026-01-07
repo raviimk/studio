@@ -7,13 +7,14 @@ import {
   SARIN_PACKETS_KEY,
   LASER_LOTS_KEY,
   FOURP_TECHING_LOTS_KEY,
+  PRODUCTION_HISTORY_KEY
 } from '@/lib/constants';
 import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePickerWithRange } from '@/components/ui/date-picker-range';
 import type { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, parseISO, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
@@ -117,9 +118,7 @@ const DetailDialog = ({ operator, department, lots, trigger }: { operator: strin
 
 
 export default function DatewiseProductionReport() {
-  const [sarinPackets] = useLocalStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
-  const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
-  const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
+  const [productionHistory] = useLocalStorage<T.ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
       from: new Date(),
@@ -134,116 +133,31 @@ export default function DatewiseProductionReport() {
     const selectedDateEnd = endOfDay(dateRange.to || dateRange.from);
     const filterInterval = { start: selectedDateStart, end: selectedDateEnd };
 
-    const ensureOperator = (operator: string) => {
-        if (!data[operator]) {
-            data[operator] = { returned: 0, chalu: 0, returnedLots: [], chaluLots: [] };
-        }
+    for (const dateStr in productionHistory) {
+      if (isWithinInterval(parseISO(dateStr), filterInterval)) {
+        productionHistory[dateStr].forEach(entry => {
+          if(!data[entry.operator]) {
+            data[entry.operator] = { returned: 0, chalu: 0, returnedLots: [], chaluLots: [] };
+          }
+          data[entry.operator].returned += entry.pcs;
+          data[entry.operator].returnedLots.push({ lotNumber: entry.lotNumber, pcs: entry.pcs, kapanNumber: entry.kapanNumber, returnDate: dateStr });
+        });
+      }
     }
 
-    sarinPackets.forEach(p => {
-        // Returned within the selected date range
-        if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), filterInterval)) {
-            ensureOperator(p.returnedBy);
-            data[p.returnedBy].returned += p.packetCount;
-            data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
-        }
-
-        // Chalu (running) during the selected date range
-        const entryDate = parseISO(p.date);
-        const isCreatedOnOrBefore = isBefore(entryDate, selectedDateEnd);
-        const notYetReturned = !p.isReturned;
-        const returnedAfterRange = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateEnd);
-        
-        if (isCreatedOnOrBefore && (notYetReturned || returnedAfterRange)) {
-             ensureOperator(p.operator);
-             data[p.operator].chalu += p.packetCount;
-             data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
-        }
-    });
-
     return Object.entries(data)
-        .filter(([,depts]) => depts.returned > 0 || depts.chalu > 0)
         .map(([op, depts]) => ({
             operator: op,
             ...depts,
-            total: depts.returned // Only count returned in total
+            total: depts.returned
         }))
         .sort((a,b) => b.total - a.total);
-  }, [sarinPackets, dateRange]);
-
-  const laserData = useMemo((): OperatorLaserData[] => {
-    if (!dateRange?.from) return [];
-    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const filterInterval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
-
-    laserLots.forEach(l => {
-        if (l.isReturned && l.returnDate && l.returnedBy && isWithinInterval(parseISO(l.returnDate), filterInterval)) {
-            if (!data[l.returnedBy]) {
-                 data[l.returnedBy] = { pcs: 0, lots: [] };
-            }
-            const pcs = l.subPacketCount ?? l.packetCount;
-            data[l.returnedBy].pcs += pcs;
-            data[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs, kapanNumber: l.kapanNumber, returnDate: l.returnDate });
-        }
-    });
-     return Object.entries(data)
-        .map(([op, details]) => ({ operator: op, ...details }))
-        .sort((a,b) => b.pcs - a.pcs);
-  }, [laserLots, dateRange]);
+  }, [productionHistory, dateRange]);
 
 
-  const fourPData = useMemo((): OperatorFourPData[] => {
-    if (!dateRange?.from) return [];
-    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const filterInterval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
-
-    fourPTechingLots.forEach(l => {
-         if (l.isReturnedToFourP && l.returnDate && isWithinInterval(parseISO(l.returnDate), filterInterval)) {
-            if (l.fourPData) { // New split data structure
-                l.fourPData.forEach(d => {
-                    if (!data[d.operator]) data[d.operator] = { pcs: 0, lots: [] };
-                    data[d.operator].pcs += d.pcs;
-                    data[d.operator].lots.push({ lotNumber: l.lot, pcs: d.pcs, kapanNumber: l.kapan, returnDate: l.returnDate });
-                });
-            } else if (l.fourPOperator) { // Legacy single operator
-                if (!data[l.fourPOperator]) data[l.fourPOperator] = { pcs: 0, lots: [] };
-                const pcs = l.finalPcs || 0;
-                data[l.fourPOperator].pcs += pcs;
-                data[l.fourPOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan, returnDate: l.returnDate });
-            }
-        }
-    });
-    return Object.entries(data)
-        .map(([op, details]) => ({ operator: op, ...details }))
-        .sort((a,b) => b.pcs - a.pcs);
-  }, [fourPTechingLots, dateRange]);
-  
-  const fourPTechingData = useMemo((): OperatorFourPData[] => {
-    if (!dateRange?.from) return [];
-    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const filterInterval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
-
-     fourPTechingLots.forEach(l => {
-        if (isWithinInterval(parseISO(l.entryDate), filterInterval)) {
-            if (!data[l.techingOperator]) data[l.techingOperator] = { pcs: 0, lots: [] };
-            const pcs = l.finalPcs || 0;
-            data[l.techingOperator].pcs += pcs;
-            data[l.techingOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan, returnDate: l.entryDate });
-        }
-    });
-    return Object.entries(data)
-        .map(([op, details]) => ({ operator: op, ...details }))
-        .sort((a,b) => b.pcs - a.pcs);
-  }, [fourPTechingLots, dateRange]);
-
-  const totals = useMemo(() => {
-    return {
-        sarin: sarinData.reduce((sum, d) => sum + d.total, 0),
-        laser: laserData.reduce((sum, d) => sum + d.pcs, 0),
-        fourP: fourPData.reduce((sum, d) => sum + d.pcs, 0),
-        fourPTeching: fourPTechingData.reduce((sum, d) => sum + d.pcs, 0),
-    };
-  }, [sarinData, laserData, fourPData, fourPTechingData]);
+  const totalSarinProduction = useMemo(() => {
+    return sarinData.reduce((sum, d) => sum + d.total, 0)
+  }, [sarinData]);
 
 
   return (
@@ -257,29 +171,13 @@ export default function DatewiseProductionReport() {
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
-            <DepartmentCard title="Sarin Department" total={totals.sarin} borderColor="border-orange-400" icon={Diamond} totalBreakdown={`Returned lots only`}>
+            <DepartmentCard title="Sarin Department" total={totalSarinProduction} borderColor="border-orange-400" icon={Diamond}>
                 <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Returned</TableHead><TableHead>Chalu (For Info)</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {sarinData.map(d => (
                             <TableRow key={d.operator}>
                                 <TableCell>{d.operator}</TableCell>
-                                <TableCell>
-                                  <DetailDialog
-                                    operator={d.operator}
-                                    department="Sarin (Returned)"
-                                    lots={d.returnedLots}
-                                    trigger={<span className="cursor-pointer underline">{d.returned || '-'}</span>}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                    <DetailDialog
-                                      operator={d.operator}
-                                      department="Sarin (Chalu)"
-                                      lots={d.chaluLots}
-                                      trigger={<span className="cursor-pointer underline">{d.chalu || '-'}</span>}
-                                    />
-                                </TableCell>
                                 <TableCell className="text-right font-bold text-orange-600">
                                    <DetailDialog 
                                         operator={d.operator}
@@ -291,66 +189,6 @@ export default function DatewiseProductionReport() {
                             </TableRow>
                         ))}
                         {sarinData.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No Sarin data for this period.</TableCell></TableRow>}
-                    </TableBody>
-                </Table>
-            </DepartmentCard>
-             <DepartmentCard title="Laser Department" total={totals.laser} borderColor="border-red-400" icon={Gem}>
-                <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {laserData.map(d => (
-                            <TableRow key={d.operator}><TableCell>{d.operator}</TableCell>
-                            <TableCell className="text-right font-bold text-red-600">
-                                <DetailDialog
-                                  operator={d.operator}
-                                  department="Laser"
-                                  lots={d.lots}
-                                  trigger={<span className="cursor-pointer underline">{d.pcs}</span>}
-                                />
-                            </TableCell>
-                            </TableRow>
-                        ))}
-                        {laserData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No Laser data for this period.</TableCell></TableRow>}
-                    </TableBody>
-                </Table>
-            </DepartmentCard>
-             <DepartmentCard title="4P Department" total={totals.fourP} borderColor="border-green-400" icon={Puzzle}>
-                 <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {fourPData.map(d => (
-                             <TableRow key={d.operator}><TableCell>{d.operator}</TableCell>
-                             <TableCell className="text-right font-bold text-green-600">
-                                <DetailDialog
-                                  operator={d.operator}
-                                  department="4P"
-                                  lots={d.lots}
-                                  trigger={<span className="cursor-pointer underline">{d.pcs}</span>}
-                                />
-                             </TableCell>
-                             </TableRow>
-                        ))}
-                        {fourPData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No 4P data for this period.</TableCell></TableRow>}
-                    </TableBody>
-                </Table>
-            </DepartmentCard>
-            <DepartmentCard title="4P Teching" total={totals.fourPTeching} borderColor="border-blue-400" icon={Sparkles}>
-                 <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {fourPTechingData.map(d => (
-                             <TableRow key={d.operator}><TableCell>{d.operator}</TableCell>
-                             <TableCell className="text-right font-bold text-blue-600">
-                                <DetailDialog
-                                  operator={d.operator}
-                                  department="4P Teching"
-                                  lots={d.lots}
-                                  trigger={<span className="cursor-pointer underline">{d.pcs}</span>}
-                                />
-                             </TableCell>
-                             </TableRow>
-                        ))}
-                        {fourPTechingData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No 4P Teching data for this period.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </DepartmentCard>

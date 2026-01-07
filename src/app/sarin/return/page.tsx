@@ -2,14 +2,14 @@
 'use client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY } from '@/lib/constants';
-import { SarinPacket, SarinOperator, ScannedPacket, ReturnScanSettings } from '@/lib/types';
+import { SARIN_PACKETS_KEY, SARIN_OPERATORS_KEY, RETURN_SCAN_SETTINGS_KEY, PRODUCTION_HISTORY_KEY } from '@/lib/constants';
+import { SarinPacket, SarinOperator, ScannedPacket, ReturnScanSettings, ProductionHistory, ProductionEntry } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import PageHeader from '@/components/PageHeader';
-import { format, parseISO, differenceInMinutes } from 'date-fns';
+import { format, parseISO, differenceInMinutes, isToday } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Check, ThumbsUp, X } from 'lucide-react';
@@ -34,6 +34,8 @@ export default function ReturnSarinLotPage() {
   const [sarinPackets, setSarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
   const [sarinOperators] = useLocalStorage<SarinOperator[]>(SARIN_OPERATORS_KEY, []);
   const [scanSettings] = useLocalStorage<ReturnScanSettings>(RETURN_SCAN_SETTINGS_KEY, { sarin: true, laser: true });
+  const [productionHistory, setProductionHistory] = useLocalStorage<ProductionHistory>(PRODUCTION_HISTORY_KEY, {});
+
   const { toast } = useToast();
 
   const [returningOperator, setReturningOperator] = useState<string>('');
@@ -107,7 +109,7 @@ export default function ReturnSarinLotPage() {
     if (!scanInput || !selectedLot || !selectedLot.sarinMainPackets) return;
 
     if (scannedInDialog.has(scanInput)) {
-        toast({ variant: 'destructive', title: 'Already Scanned', description: 'This packet has already been verified for this lot.' });
+        toast({variant: 'destructive', title: 'Already Scanned', description: 'This packet has already been verified for this lot.'})
         setScanInput('');
         return;
     }
@@ -159,9 +161,33 @@ export default function ReturnSarinLotPage() {
   const handleConfirmReturn = useCallback(() => {
     if (!selectedLot || !returningOperator) return;
 
+    const returnTimestamp = new Date().toISOString();
+    const todayStr = format(parseISO(returnTimestamp), 'yyyy-MM-dd');
+    
+    // Create production history entry
+    const productionEntry: ProductionEntry = {
+        operator: returningOperator,
+        lotNumber: selectedLot.lotNumber,
+        kapanNumber: selectedLot.kapanNumber,
+        pcs: selectedLot.packetCount,
+        packetId: selectedLot.id
+    };
+
+    setProductionHistory(prev => {
+        const todayEntries = prev[todayStr] || [];
+        // Avoid duplicates if this function is somehow called multiple times
+        if (!todayEntries.some(e => e.packetId === selectedLot.id)) {
+            return {
+                ...prev,
+                [todayStr]: [...todayEntries, productionEntry]
+            }
+        }
+        return prev;
+    });
+
     // The scanned packets are already saved, so we just need to mark as returned.
     const updatedPackets = sarinPackets.map(p =>
-      p.id === selectedLot.id ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : p
+      p.id === selectedLot.id ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: returnTimestamp } : p
     );
     setSarinPackets(updatedPackets);
     toast({ title: 'Success', description: `Lot ${selectedLot.lotNumber} has been marked as returned.` });
@@ -170,7 +196,7 @@ export default function ReturnSarinLotPage() {
     setSelectedLot(null);
     setScannedInDialog(new Set());
     setReturningOperator('');
-  }, [selectedLot, returningOperator, sarinPackets, setSarinPackets, toast]);
+  }, [selectedLot, returningOperator, sarinPackets, setSarinPackets, setProductionHistory, toast]);
 
   useEffect(() => {
     if (allPacketsScanned) {
@@ -195,8 +221,24 @@ export default function ReturnSarinLotPage() {
     const packetToReturn = sarinPackets.find(p => p.id === packetId);
 
     if (window.confirm(`Are you sure you want to return Lot ${packetToReturn?.lotNumber} (Kapan: ${packetToReturn?.kapanNumber})?`)) {
+      const returnTimestamp = new Date().toISOString();
+      const todayStr = format(parseISO(returnTimestamp), 'yyyy-MM-dd');
+      
+      const productionEntry: ProductionEntry = {
+        operator: returningOperator,
+        lotNumber: packetToReturn!.lotNumber,
+        kapanNumber: packetToReturn!.kapanNumber,
+        pcs: packetToReturn!.packetCount,
+        packetId: packetToReturn!.id
+      };
+
+      setProductionHistory(prev => ({
+        ...prev,
+        [todayStr]: [...(prev[todayStr] || []), productionEntry]
+      }));
+
       const updatedPackets = sarinPackets.map(p =>
-        p.id === packetId ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: new Date().toISOString() } : p
+        p.id === packetId ? { ...p, isReturned: true, returnedBy: returningOperator, returnDate: returnTimestamp } : p
       );
       setSarinPackets(updatedPackets);
       toast({ title: 'Success', description: `Lot entry has been marked as returned.` });
