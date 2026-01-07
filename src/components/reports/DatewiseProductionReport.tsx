@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DatePickerWithRange } from '@/components/ui/date-picker-range';
 import type { DateRange } from "react-day-picker";
-import { startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
+import { startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
@@ -122,8 +122,8 @@ export default function DatewiseProductionReport() {
   const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-      from: startOfMonth(new Date()),
-      to: endOfMonth(new Date()),
+      from: new Date(),
+      to: new Date(),
   });
 
   const sarinData = useMemo((): OperatorSarinData[] => {

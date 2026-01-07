@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './select';
-import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek } from 'date-fns';
+import { startOfMonth, endOfMonth, subMonths, startOfWeek, endOfWeek, subDays } from 'date-fns';
 
 
 interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -34,6 +35,10 @@ export function DatePickerWithRange({ className, date, setDate }: DatePickerWith
         switch (value) {
             case 'today':
                 setDate({ from: now, to: now });
+                break;
+            case 'yesterday':
+                const yesterday = subDays(now, 1);
+                setDate({ from: yesterday, to: yesterday });
                 break;
             case 'this_week':
                  setDate({ from: startOfWeek(now), to: endOfWeek(now) });
@@ -83,6 +88,7 @@ export function DatePickerWithRange({ className, date, setDate }: DatePickerWith
                     </SelectTrigger>
                     <SelectContent position="popper">
                         <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="yesterday">Yesterday</SelectItem>
                         <SelectItem value="this_week">This Week</SelectItem>
                         <SelectItem value="this_month">This Month</SelectItem>
                         <SelectItem value="last_month">Last Month</SelectItem>
