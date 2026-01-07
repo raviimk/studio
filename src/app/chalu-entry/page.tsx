@@ -301,12 +301,7 @@ export default function ChaluEntryPage() {
         const mainPacketIdentifier = entryToReturn.packetNumber;
         const mainPacketBase = `R${entryToReturn.kapanNumber}-${mainPacketIdentifier}`;
 
-        // Add the main packet, potentially with an auto-appended suffix
-        if (/^\d+-\d+$/.test(mainPacketIdentifier)) {
-            packets.push(`${mainPacketBase}-A`);
-        } else {
-            packets.push(mainPacketBase);
-        }
+        packets.push(mainPacketBase);
 
         // Add manually entered suffix packets
         const suffixString = entryToReturn.suffix || '';
@@ -717,8 +712,10 @@ export default function ChaluEntryPage() {
   const isSomeScansSelected = selectedScans.size > 0 && selectedScans.size < filteredScans.length;
 
   const handleSuffixChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toUpperCase();
-    setSuffix(value);
+    const rawValue = e.target.value.toUpperCase();
+    // Remove all non-alphanumeric characters, then join with commas
+    const formatted = rawValue.replace(/[^A-Z0-9]/g, '').split('').join(',');
+    setSuffix(formatted);
   };
 
 
@@ -1313,4 +1310,5 @@ export default function ChaluEntryPage() {
 }
 
     
+
 
