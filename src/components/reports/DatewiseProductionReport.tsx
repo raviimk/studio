@@ -15,7 +15,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker-range';
 import type { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, isWithinInterval, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Diamond, Gem, Puzzle } from 'lucide-react';
+import { Diamond, Gem, Puzzle, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 
 type LotDetail = {
@@ -96,8 +96,8 @@ export default function DatewiseProductionReport() {
       to: endOfMonth(new Date()),
   });
 
-  const { sarinData, laserData, fourPData } = useMemo(() => {
-    if (!dateRange?.from) return { sarinData: [], laserData: [], fourPData: [] };
+  const { sarinData, laserData, fourPData, fourPTechingData } = useMemo(() => {
+    if (!dateRange?.from) return { sarinData: [], laserData: [], fourPData: [], fourPTechingData: [] };
     
     const selectedDateStart = startOfDay(dateRange.from);
     const selectedDateEnd = endOfDay(dateRange.to || dateRange.from);
@@ -143,10 +143,24 @@ export default function DatewiseProductionReport() {
         }
     });
 
+    // Process 4P Teching Data
+    const fourPTechingSummary: Record<string, OperatorData> = {};
+    fourPTechingLots.forEach(l => {
+        if (isWithinInterval(parseISO(l.entryDate), filterInterval)) {
+            const operator = l.techingOperator;
+            if (!fourPTechingSummary[operator]) {
+                fourPTechingSummary[operator] = { operator, pcs: 0, lots: [] };
+            }
+            fourPTechingSummary[operator].pcs += l.finalPcs;
+            fourPTechingSummary[operator].lots.push({ lotNumber: l.lot, pcs: l.finalPcs, kapanNumber: l.kapan });
+        }
+    });
+
     return { 
         sarinData: Object.values(sarinSummary).sort((a,b) => b.pcs - a.pcs),
         laserData: Object.values(laserSummary).sort((a,b) => b.pcs - a.pcs),
         fourPData: Object.values(fourPSummary).sort((a,b) => b.pcs - a.pcs),
+        fourPTechingData: Object.values(fourPTechingSummary).sort((a,b) => b.pcs - a.pcs),
     };
   }, [sarinPackets, laserLots, fourPTechingLots, dateRange]);
 
@@ -154,6 +168,7 @@ export default function DatewiseProductionReport() {
   const totalSarin = useMemo(() => sarinData.reduce((sum, d) => sum + d.pcs, 0), [sarinData]);
   const totalLaser = useMemo(() => laserData.reduce((sum, d) => sum + d.pcs, 0), [laserData]);
   const total4P = useMemo(() => fourPData.reduce((sum, d) => sum + d.pcs, 0), [fourPData]);
+  const total4PTeching = useMemo(() => fourPTechingData.reduce((sum, d) => sum + d.pcs, 0), [fourPTechingData]);
 
   return (
     <Card>
@@ -196,6 +211,23 @@ export default function DatewiseProductionReport() {
                             </TableRow>
                         ))}
                         {laserData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No Laser data for this period.</TableCell></TableRow>}
+                    </TableBody>
+                </Table>
+            </DepartmentCard>
+
+            <DepartmentCard title="4P Teching" total={total4PTeching} borderColor="border-blue-400" icon={Users}>
+                 <Table>
+                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {fourPTechingData.map(d => (
+                            <TableRow key={d.operator}>
+                                <TableCell>{d.operator}</TableCell>
+                                <TableCell className="text-right font-bold text-blue-600">
+                                     <DetailDialog operator={d.operator} department="4P Teching" lots={d.lots} trigger={<span className="cursor-pointer underline">{d.pcs}</span>} />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {fourPTechingData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No 4P Teching data for this period.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </DepartmentCard>
