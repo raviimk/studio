@@ -2,8 +2,8 @@
 'use client';
 import React, { useState, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY } from '@/lib/constants';
-import { LaserLot, LaserMapping } from '@/lib/types';
+import { LASER_LOTS_KEY, LASER_MAPPINGS_KEY, LASER_OPERATORS_KEY } from '@/lib/constants';
+import { LaserLot, LaserMapping, LaserOperator } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils';
 export default function RecentLaserEntriesPage() {
   const [laserLots, setLaserLots] = useLocalStorage<LaserLot[]>(LASER_LOTS_KEY, []);
   const [laserMappings] = useLocalStorage<LaserMapping[]>(LASER_MAPPINGS_KEY, []);
+  const [laserOperators] = useLocalStorage<LaserOperator[]>(LASER_OPERATORS_KEY, []);
   const { toast } = useToast();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -43,6 +44,7 @@ export default function RecentLaserEntriesPage() {
         subPacketCount: lot.subPacketCount,
         tensionType: lot.tensionType,
         entryDate: lot.entryDate,
+        returnedBy: lot.returnedBy,
     });
   };
 
@@ -70,11 +72,11 @@ export default function RecentLaserEntriesPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditFormData(prev => ({ ...prev, [name]: value === '' ? undefined : parseInt(value, 10) }));
+    setEditFormData(prev => ({ ...prev, [name]: value === '' ? undefined : value }));
   };
   
-  const handleSelectChange = (value: string) => {
-    setEditFormData(prev => ({ ...prev, tensionType: value }));
+  const handleSelectChange = (name: keyof LaserLot, value: string) => {
+    setEditFormData(prev => ({ ...prev, [name]: value }));
   };
   
   const handleDateChange = (date: Date | undefined) => {
@@ -133,7 +135,7 @@ export default function RecentLaserEntriesPage() {
                             <TableCell><Input name="lotNumber" value={editFormData.lotNumber} onChange={handleInputChange} className="h-8 w-24" /></TableCell>
                             <TableCell><Input name="kapanNumber" value={editFormData.kapanNumber} onChange={handleInputChange} className="h-8 w-24" /></TableCell>
                             <TableCell>
-                                <Select value={editFormData.tensionType} onValueChange={handleSelectChange}>
+                                <Select value={editFormData.tensionType} onValueChange={(val) => handleSelectChange('tensionType', val)}>
                                     <SelectTrigger className="h-8 w-40"><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         {laserMappings.map(m => <SelectItem key={m.id} value={m.tensionType}>{m.tensionType}</SelectItem>)}
@@ -141,8 +143,8 @@ export default function RecentLaserEntriesPage() {
                                 </Select>
                             </TableCell>
                             <TableCell>{laserMappings.find(m => m.tensionType === editFormData.tensionType)?.machine || 'N/A'}</TableCell>
-                            <TableCell><Input type="number" name="packetCount" value={editFormData.packetCount || ''} onChange={handleInputChange} className="h-8 w-20" /></TableCell>
-                             <TableCell><Input type="number" name="subPacketCount" value={editFormData.subPacketCount || ''} onChange={handleInputChange} className="h-8 w-20" /></TableCell>
+                            <TableCell><Input type="number" name="packetCount" value={editFormData.packetCount || ''} onChange={(e) => setEditFormData(prev => ({...prev, packetCount: parseInt(e.target.value)}))} className="h-8 w-20" /></TableCell>
+                            <TableCell><Input type="number" name="subPacketCount" value={editFormData.subPacketCount || ''} onChange={(e) => setEditFormData(prev => ({...prev, subPacketCount: parseInt(e.target.value)}))} className="h-8 w-20" /></TableCell>
                             <TableCell>
                                 <Popover>
                                     <PopoverTrigger asChild>
@@ -162,9 +164,16 @@ export default function RecentLaserEntriesPage() {
                                 </Popover>
                             </TableCell>
                             <TableCell>
-                                <Badge variant={lot.isReturned ? 'secondary' : 'destructive'}>
-                                {lot.isReturned ? `Returned by ${lot.returnedBy}` : 'Not Returned'}
-                                </Badge>
+                                {lot.isReturned ? (
+                                    <Select value={editFormData.returnedBy} onValueChange={(val) => handleSelectChange('returnedBy', val)}>
+                                        <SelectTrigger className="h-8 w-[180px]"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {laserOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <Badge variant="destructive">Not Returned</Badge>
+                                )}
                             </TableCell>
                             <TableCell className="flex gap-1">
                                 <Button variant="ghost" size="icon" onClick={() => handleSaveEdit(lot.id)}><Save className="h-4 w-4 text-green-600" /></Button>
