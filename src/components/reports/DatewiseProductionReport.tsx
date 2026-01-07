@@ -11,8 +11,9 @@ import {
 import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DatePicker } from '@/components/ui/date-picker';
-import { startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
+import { DatePickerWithRange } from '@/components/ui/date-picker-range';
+import type { DateRange } from "react-day-picker";
+import { startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
@@ -54,7 +55,7 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon, total
                  {title}
             </CardTitle>
             <div className="text-right">
-                <p className="text-xs text-muted-foreground">Today's Production</p>
+                <p className="text-xs text-muted-foreground">Production for Period</p>
                 <p className="text-2xl font-bold">{total}</p>
                 {totalBreakdown && <p className="text-xs text-muted-foreground">{totalBreakdown}</p>}
             </div>
@@ -120,15 +121,18 @@ export default function DatewiseProductionReport() {
   const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
   const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
 
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: startOfMonth(new Date()),
+      to: endOfMonth(new Date()),
+  });
 
   const sarinData = useMemo((): OperatorSarinData[] => {
-    if (!date) return [];
+    if (!dateRange?.from) return [];
     
     const data: Record<string, { returned: number; chalu: number; returnedLots: LotDetail[]; chaluLots: LotDetail[] }> = {};
-    const selectedDateStart = startOfDay(date);
-    const selectedDateEnd = endOfDay(date);
-    const dateFilter = { start: selectedDateStart, end: selectedDateEnd };
+    const selectedDateStart = startOfDay(dateRange.from);
+    const selectedDateEnd = endOfDay(dateRange.to || dateRange.from);
+    const filterInterval = { start: selectedDateStart, end: selectedDateEnd };
 
     const ensureOperator = (operator: string) => {
         if (!data[operator]) {
@@ -137,20 +141,20 @@ export default function DatewiseProductionReport() {
     }
 
     sarinPackets.forEach(p => {
-        // Returned on the selected date
-        if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), dateFilter)) {
+        // Returned within the selected date range
+        if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), filterInterval)) {
             ensureOperator(p.returnedBy);
             data[p.returnedBy].returned += p.packetCount;
             data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
         }
 
-        // Chalu (running) on the selected date
+        // Chalu (running) during the selected date range
         const entryDate = parseISO(p.date);
-        const isCreatedOnOrBeforeSelectedDate = isBefore(entryDate, selectedDateEnd);
+        const isCreatedOnOrBefore = isBefore(entryDate, selectedDateEnd);
         const notYetReturned = !p.isReturned;
-        const returnedAfterSelectedDate = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateEnd);
+        const returnedAfterRange = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateEnd);
         
-        if (isCreatedOnOrBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
+        if (isCreatedOnOrBefore && (notYetReturned || returnedAfterRange)) {
              ensureOperator(p.operator);
              data[p.operator].chalu += p.packetCount;
              data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
@@ -165,15 +169,15 @@ export default function DatewiseProductionReport() {
             total: depts.returned // Only count returned in total
         }))
         .sort((a,b) => b.total - a.total);
-  }, [sarinPackets, date]);
+  }, [sarinPackets, dateRange]);
 
   const laserData = useMemo((): OperatorLaserData[] => {
-    if (!date) return [];
+    if (!dateRange?.from) return [];
     const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
+    const filterInterval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
 
     laserLots.forEach(l => {
-        if (l.isReturned && l.returnDate && l.returnedBy && isWithinInterval(parseISO(l.returnDate), dateFilter)) {
+        if (l.isReturned && l.returnDate && l.returnedBy && isWithinInterval(parseISO(l.returnDate), filterInterval)) {
             if (!data[l.returnedBy]) {
                  data[l.returnedBy] = { pcs: 0, lots: [] };
             }
@@ -185,16 +189,16 @@ export default function DatewiseProductionReport() {
      return Object.entries(data)
         .map(([op, details]) => ({ operator: op, ...details }))
         .sort((a,b) => b.pcs - a.pcs);
-  }, [laserLots, date]);
+  }, [laserLots, dateRange]);
 
 
   const fourPData = useMemo((): OperatorFourPData[] => {
-    if (!date) return [];
+    if (!dateRange?.from) return [];
     const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
+    const filterInterval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
 
     fourPTechingLots.forEach(l => {
-         if (l.isReturnedToFourP && l.returnDate && isWithinInterval(parseISO(l.returnDate), dateFilter)) {
+         if (l.isReturnedToFourP && l.returnDate && isWithinInterval(parseISO(l.returnDate), filterInterval)) {
             if (l.fourPData) { // New split data structure
                 l.fourPData.forEach(d => {
                     if (!data[d.operator]) data[d.operator] = { pcs: 0, lots: [] };
@@ -212,15 +216,15 @@ export default function DatewiseProductionReport() {
     return Object.entries(data)
         .map(([op, details]) => ({ operator: op, ...details }))
         .sort((a,b) => b.pcs - a.pcs);
-  }, [fourPTechingLots, date]);
+  }, [fourPTechingLots, dateRange]);
   
   const fourPTechingData = useMemo((): OperatorFourPData[] => {
-    if (!date) return [];
+    if (!dateRange?.from) return [];
     const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
+    const filterInterval = { start: startOfDay(dateRange.from), end: endOfDay(dateRange.to || dateRange.from) };
 
      fourPTechingLots.forEach(l => {
-        if (isWithinInterval(parseISO(l.entryDate), dateFilter)) {
+        if (isWithinInterval(parseISO(l.entryDate), filterInterval)) {
             if (!data[l.techingOperator]) data[l.techingOperator] = { pcs: 0, lots: [] };
             const pcs = l.finalPcs || 0;
             data[l.techingOperator].pcs += pcs;
@@ -230,7 +234,7 @@ export default function DatewiseProductionReport() {
     return Object.entries(data)
         .map(([op, details]) => ({ operator: op, ...details }))
         .sort((a,b) => b.pcs - a.pcs);
-  }, [fourPTechingLots, date]);
+  }, [fourPTechingLots, dateRange]);
 
   const totals = useMemo(() => {
     return {
@@ -246,10 +250,10 @@ export default function DatewiseProductionReport() {
     <Card>
       <CardHeader>
         <CardTitle>Date-wise All Departments Report</CardTitle>
-        <CardDescription>View production for all operators across Sarin, Laser, and 4P for a selected date.</CardDescription>
+        <CardDescription>View production for all operators across Sarin, Laser, and 4P for the selected date range.</CardDescription>
         <div className="pt-4">
-             <label className="text-sm font-medium">Select Date</label>
-             <DatePicker date={date} setDate={setDate} />
+             <label className="text-sm font-medium">Select Date Range</label>
+             <DatePickerWithRange date={dateRange} setDate={setDateRange} />
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
