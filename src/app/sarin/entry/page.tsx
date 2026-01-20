@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -24,7 +25,6 @@ import { cn } from '@/lib/utils';
 
 
 const formSchema = z.object({
-  senderName: z.string(),
   operator: z.string().min(1, 'Please select an operator.'),
   machine: z.string(),
   kapanNumber: z.string().min(1, 'Kapan number is required.'),
@@ -59,7 +59,6 @@ export default function SarinPacketEntryPage() {
   const [initialPacketCount, setInitialPacketCount] = useState(0);
   
   // Refs for Enter key navigation
-  const senderRef = useRef<HTMLInputElement>(null);
   const kapanRef = useRef<HTMLInputElement>(null);
   const lotRef = useRef<HTMLInputElement>(null);
   const packetCountRef = useRef<HTMLInputElement>(null);
@@ -70,7 +69,6 @@ export default function SarinPacketEntryPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      senderName: 'Default Sender',
       operator: '',
       machine: '',
       kapanNumber: '',
@@ -266,9 +264,6 @@ export default function SarinPacketEntryPage() {
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
-                        <FormField control={control} name="senderName" render={({ field }) => (
-                        <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} ref={senderRef} /></FormControl><FormMessage /></FormItem>
-                        )} />
                         <FormField control={control} name="operator" render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Operator Name</FormLabel>

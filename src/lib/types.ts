@@ -2,7 +2,6 @@
 
 export interface SarinPacket {
   id: string;
-  senderName: string;
   operator: string;
   machine: string;
   kapanNumber: string;
