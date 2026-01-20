@@ -284,6 +284,15 @@ export default function SarinPacketEntryPage() {
                                                 {op.name}
                                             </Button>
                                         ))}
+                                        <Button
+                                            type="button"
+                                            variant={!field.value ? 'default' : 'outline'}
+                                            onClick={() => field.onChange('')}
+                                            className="font-bold"
+                                            title="Clear selection"
+                                        >
+                                            ~
+                                        </Button>
                                     </div>
                                 </FormControl>
                                 <FormMessage />
