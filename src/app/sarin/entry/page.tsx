@@ -224,6 +224,7 @@ export default function SarinPacketEntryPage() {
     toast({ title: 'Success', description: 'New Sarin packet entry created.' });
     form.reset({
         ...form.getValues(),
+        operator: '', // This will clear the operator
         kapanNumber: '',
         lotNumber: '',
         sarinMainPackets: [],
