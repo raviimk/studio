@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
@@ -18,7 +17,6 @@ import { SarinPacket, SarinOperator, SarinMapping, LaserLot, ScannedPacket } fro
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import PageHeader from '@/components/PageHeader';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, Sparkles, CheckCircle, PackagePlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -62,7 +60,6 @@ export default function SarinPacketEntryPage() {
   
   // Refs for Enter key navigation
   const senderRef = useRef<HTMLInputElement>(null);
-  const operatorRef = useRef<HTMLButtonElement>(null);
   const kapanRef = useRef<HTMLInputElement>(null);
   const lotRef = useRef<HTMLInputElement>(null);
   const packetCountRef = useRef<HTMLInputElement>(null);
@@ -188,7 +185,6 @@ export default function SarinPacketEntryPage() {
       title: 'Form Cleared',
       description: 'All fields have been reset.',
     });
-    operatorRef.current?.focus();
   };
 
   useEffect(() => {
@@ -271,17 +267,27 @@ export default function SarinPacketEntryPage() {
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                         <FormField control={control} name="senderName" render={({ field }) => (
-                        <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} ref={senderRef} onKeyDown={(e) => handleKeyDown(e, operatorRef)} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>Sender Name</FormLabel><FormControl><Input {...field} ref={senderRef} /></FormControl><FormMessage /></FormItem>
                         )} />
                         <FormField control={control} name="operator" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Operator Name</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger ref={operatorRef}><SelectValue placeholder="Select an operator" /></SelectTrigger></FormControl>
-                            <SelectContent>{sarinOperators.map(op => <SelectItem key={op.id} value={op.name}>{op.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
+                            <FormItem>
+                                <FormLabel>Operator Name</FormLabel>
+                                <FormControl>
+                                    <div className="flex flex-wrap gap-2 pt-2">
+                                        {sarinOperators.map(op => (
+                                            <Button
+                                                key={op.id}
+                                                type="button"
+                                                variant={field.value === op.name ? 'default' : 'outline'}
+                                                onClick={() => field.onChange(op.name)}
+                                            >
+                                                {op.name}
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
                         )} />
                         <FormField control={control} name="machine" render={({ field }) => (
                         <FormItem><FormLabel>Machine Number</FormLabel><FormControl><Input {...field} readOnly disabled /></FormControl><FormMessage /></FormItem>
