@@ -1,13 +1,11 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import PageHeader from '@/components/PageHeader';
 import { Textarea } from '@/components/ui/textarea';
+import PageHeader from '@/components/PageHeader';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Barcode, CheckCircle2, ClipboardCopy, List, ListX, Lock, Unlock, XCircle } from 'lucide-react';
@@ -42,74 +40,98 @@ const normalizeScannedBarcode = (packet: string): string => {
 };
 
 export default function PacketVerifierPage() {
-  const { toast } = useToast();
+    const { toast } = useToast();
 
-  const [pastedData, setPastedData] = useState('');
-  const [expectedPackets, setExpectedPackets] = useState<Set<string>>(new Set());
-  const [scannedBarcodes, setScannedBarcodes] = useState<Set<string>>(new Set());
-  const [isLocked, setIsLocked] = useState(false);
-  const [scanInput, setScanInput] = useState('');
+    const [pastedData, setPastedData] = useState('');
+    const [expectedPackets, setExpectedPackets] = useState<Set<string>>(new Set());
+    const [scannedBarcodes, setScannedBarcodes] = useState<Set<string>>(new Set());
+    const [isLocked, setIsLocked] = useState(false);
+    const [scanInput, setScanInput] = useState('');
 
-  const handleLockList = () => {
-    if (!pastedData.trim()) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Pasted data cannot be empty.' });
-      return;
-    }
-    const lines = pastedData.trim().split('\n');
-    const parsedPackets = new Set(
-      lines.map(findAndNormalizePacketNumber).filter((p): p is string => p !== null)
-    );
+    // New state for highlighting and recent scans
+    const [highlightedStatus, setHighlightedStatus] = useState<'matched' | 'extra' | null>(null);
+    const [recentScans, setRecentScans] = useState<string[]>([]);
     
-    if(parsedPackets.size === 0) {
-        toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not parse any valid packets from the pasted data.' });
-        return;
-    }
+    // Effect to clear highlight after a delay
+    useEffect(() => {
+        if (highlightedStatus) {
+          const timer = setTimeout(() => setHighlightedStatus(null), 2000);
+          return () => clearTimeout(timer);
+        }
+    }, [highlightedStatus]);
 
-    setExpectedPackets(parsedPackets);
-    setIsLocked(true);
-    toast({ title: 'List Locked', description: `Loaded ${parsedPackets.size} packets. You can now start scanning.`});
-  };
 
-  const handleUnlockList = () => {
-    setIsLocked(false);
-    setExpectedPackets(new Set());
-    setScannedBarcodes(new Set());
-    setPastedData('');
-  };
+    const handleLockList = () => {
+        if (!pastedData.trim()) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Pasted data cannot be empty.' });
+            return;
+        }
+        const lines = pastedData.trim().split('\n');
+        const parsedPackets = new Set(
+            lines.map(findAndNormalizePacketNumber).filter((p): p is string => p !== null)
+        );
+        
+        if(parsedPackets.size === 0) {
+            toast({ variant: 'destructive', title: 'Parsing Error', description: 'Could not parse any valid packets from the pasted data.' });
+            return;
+        }
 
-  const handleScan = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!scanInput.trim()) return;
-    
-    const normalizedScannedPacket = normalizeScannedBarcode(scanInput);
+        setExpectedPackets(parsedPackets);
+        setIsLocked(true);
+        toast({ title: 'List Locked', description: `Loaded ${parsedPackets.size} packets. You can now start scanning.`});
+    };
 
-    if (scannedBarcodes.has(normalizedScannedPacket)) {
-        toast({ variant: 'destructive', title: 'Already Scanned', description: `Packet ${normalizedScannedPacket} has already been scanned.`});
-    } else {
-        setScannedBarcodes(new Set(scannedBarcodes).add(normalizedScannedPacket));
-        toast({ title: 'Packet Scanned', description: normalizedScannedPacket });
-    }
-    setScanInput('');
-  };
+    const handleUnlockList = () => {
+        setIsLocked(false);
+        setExpectedPackets(new Set());
+        setScannedBarcodes(new Set());
+        setPastedData('');
+        setRecentScans([]); // Clear recent scans too
+    };
 
-  const { matched, missing, extra } = useMemo(() => {
-    const matchedPackets = new Set([...expectedPackets].filter(p => scannedBarcodes.has(p)));
-    const missingPackets = new Set([...expectedPackets].filter(p => !scannedBarcodes.has(p)));
-    const extraPackets = new Set([...scannedBarcodes].filter(b => !expectedPackets.has(b)));
+    const handleScan = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!scanInput.trim()) return;
+        
+        const normalizedScannedPacket = normalizeScannedBarcode(scanInput);
 
-    return { matched: [...matchedPackets], missing: [...missingPackets], extra: [...extraPackets] };
-  }, [expectedPackets, scannedBarcodes]);
+        if (scannedBarcodes.has(normalizedScannedPacket)) {
+            toast({ variant: 'destructive', title: 'Already Scanned', description: `Packet ${normalizedScannedPacket} has already been scanned.`});
+        } else {
+            setScannedBarcodes(new Set(scannedBarcodes).add(normalizedScannedPacket));
+            
+            // New logic
+            setRecentScans(prev => [normalizedScannedPacket, ...prev].slice(0, 10));
 
-  const handleCopyReport = () => {
-    let report = '--- PACKET VERIFICATION REPORT ---\n\n';
-    report += `--- MISSING (${missing.length}) ---\n`;
-    missing.forEach(p => report += `${p}\n`);
-    report += `\n--- EXTRA SCANNED (${extra.length}) ---\n`;
-    extra.forEach(b => report += `${b}\n`);
-    
-    navigator.clipboard.writeText(report);
-    toast({ title: 'Report Copied', description: 'Missing and extra packets copied to clipboard.'});
-  };
+            if (expectedPackets.has(normalizedScannedPacket)) {
+                setHighlightedStatus('matched');
+                toast({ title: 'Packet Matched!', description: normalizedScannedPacket });
+            } else {
+                setHighlightedStatus('extra');
+                toast({ title: 'Extra Packet Scanned', description: normalizedScannedPacket, variant: 'destructive' });
+            }
+        }
+        setScanInput('');
+    };
+
+    const { matched, missing, extra } = useMemo(() => {
+        const matchedPackets = [...expectedPackets].filter(p => scannedBarcodes.has(p));
+        const missingPackets = [...expectedPackets].filter(p => !scannedBarcodes.has(p));
+        const extraPackets = [...scannedBarcodes].filter(b => !expectedPackets.has(b));
+
+        return { matched: matchedPackets, missing: missingPackets, extra: extraPackets };
+    }, [expectedPackets, scannedBarcodes]);
+
+    const handleCopyReport = () => {
+        let report = '--- PACKET VERIFICATION REPORT ---\n\n';
+        report += `--- MISSING (${missing.length}) ---\n`;
+        missing.forEach(p => report += `${p}\n`);
+        report += `\n--- EXTRA SCANNED (${extra.length}) ---\n`;
+        extra.forEach(b => report += `${b}\n`);
+        
+        navigator.clipboard.writeText(report);
+        toast({ title: 'Report Copied', description: 'Missing and extra packets copied to clipboard.'});
+    };
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
@@ -174,20 +196,45 @@ export default function PacketVerifierPage() {
                         />
                         <Button type="submit"><Barcode className="mr-2" /> Scan</Button>
                     </form>
+                     {recentScans.length > 0 && (
+                        <div className="mt-4">
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Recent Scans:</h4>
+                            <div className="flex flex-wrap gap-2">
+                            {recentScans.map((scan, index) => (
+                                <Badge key={index} variant={index === 0 ? "default" : "secondary"} className="font-mono">{scan}</Badge>
+                            ))}
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
             <div className="grid lg:grid-cols-3 gap-6">
-                <Card className={cn(missing.length === 0 && "border-green-500")}>
-                    <CardHeader><CardTitle>Missing ({missing.length})</CardTitle></CardHeader>
+                <Card className={cn(missing.length > 0 && "border-yellow-500/60")}>
+                    <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2"><ListX className="text-yellow-600" /> Missing</span>
+                            <Badge variant="outline">{missing.length}</Badge>
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent><PacketList barcodes={missing} /></CardContent>
                 </Card>
-                <Card className={cn(extra.length > 0 && "border-red-500")}>
-                    <CardHeader><CardTitle>Extra ({extra.length})</CardTitle></CardHeader>
+                <Card className={cn("transition-all", extra.length > 0 && "border-red-500/60", highlightedStatus === 'extra' && "ring-2 ring-yellow-400")}>
+                    <CardHeader>
+                         <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2"><XCircle className="text-red-500" /> Extra</span>
+                            <Badge variant="destructive">{extra.length}</Badge>
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent><PacketList barcodes={extra} /></CardContent>
                 </Card>
-                 <Card>
-                    <CardHeader><CardTitle>Matched ({matched.length})</CardTitle></CardHeader>
+                 <Card className={cn("transition-all border-green-500/60", highlightedStatus === 'matched' && "ring-2 ring-yellow-400")}>
+                    <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                            <span className="flex items-center gap-2"><CheckCircle2 className="text-green-500" /> Matched</span>
+                            <Badge>{matched.length}</Badge>
+                        </CardTitle>
+                    </CardHeader>
                     <CardContent><PacketList barcodes={matched} /></CardContent>
                 </Card>
             </div>
