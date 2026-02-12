@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Barcode, CheckCircle2, ClipboardCopy, List, ListX, Lock, Unlock, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 // Helper function to find a packet number in a string and normalize it by removing the 'R' prefix
 const findAndNormalizePacketNumber = (line: string): string | null => {
