@@ -134,6 +134,8 @@ export default function PacketVerifierPage() {
         toast({ title: 'Report Copied', description: 'Missing and extra packets copied to clipboard.'});
     };
 
+    const mostRecentScan = recentScans[0] || null;
+
   return (
     <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
       <PageHeader title="Packet Verifier" description="Paste a list of expected packets, then scan to verify." />
@@ -218,7 +220,7 @@ export default function PacketVerifierPage() {
                             <Badge variant="outline">{missing.length}</Badge>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent><PacketList barcodes={missing} /></CardContent>
+                    <CardContent><PacketList barcodes={missing} mostRecentScan={mostRecentScan} /></CardContent>
                 </Card>
                 <Card className={cn("transition-all", extra.length > 0 && "border-red-500/60", highlightedStatus === 'extra' && "ring-2 ring-yellow-400")}>
                     <CardHeader>
@@ -227,7 +229,7 @@ export default function PacketVerifierPage() {
                             <Badge variant="destructive">{extra.length}</Badge>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent><PacketList barcodes={extra} /></CardContent>
+                    <CardContent><PacketList barcodes={extra} mostRecentScan={mostRecentScan} /></CardContent>
                 </Card>
                  <Card className={cn("transition-all border-green-500/60", highlightedStatus === 'matched' && "ring-2 ring-yellow-400")}>
                     <CardHeader>
@@ -236,7 +238,7 @@ export default function PacketVerifierPage() {
                             <Badge>{matched.length}</Badge>
                         </CardTitle>
                     </CardHeader>
-                    <CardContent><PacketList barcodes={matched} /></CardContent>
+                    <CardContent><PacketList barcodes={matched} mostRecentScan={mostRecentScan} /></CardContent>
                 </Card>
             </div>
         </div>
@@ -246,11 +248,19 @@ export default function PacketVerifierPage() {
 }
 
 
-function PacketList({ barcodes }: { barcodes: string[] }) {
-    if (barcodes.length === 0) return <p className="text-sm text-center text-muted-foreground py-4">None</p>;
+function PacketList({ barcodes, mostRecentScan }: { barcodes: string[]; mostRecentScan: string | null }) {
+    const sortedBarcodes = useMemo(() => {
+        const sorted = [...barcodes].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+        if (mostRecentScan && sorted.includes(mostRecentScan)) {
+            return [mostRecentScan, ...sorted.filter(b => b !== mostRecentScan)];
+        }
+        return sorted;
+    }, [barcodes, mostRecentScan]);
+    
+    if (sortedBarcodes.length === 0) return <p className="text-sm text-center text-muted-foreground py-4">None</p>;
 
     return (
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-96 overflow-y-auto mt-4">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -258,8 +268,8 @@ function PacketList({ barcodes }: { barcodes: string[] }) {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {barcodes.sort().map(p => (
-                        <TableRow key={p}>
+                    {sortedBarcodes.map(p => (
+                        <TableRow key={p} className={cn(p === mostRecentScan && "bg-yellow-100 dark:bg-yellow-900/30")}>
                             <TableCell className="font-mono text-xs">{p}</TableCell>
                         </TableRow>
                     ))}
