@@ -27,7 +27,7 @@
         }
 
         .app-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 1rem auto;
             padding: 1rem;
         }
@@ -98,6 +98,11 @@
             margin-bottom: 1rem;
         }
         
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -139,9 +144,6 @@
         .btn-secondary:hover { background-color: #5a6268; }
         .btn-danger { background-color: var(--danger-color); }
         .btn-danger:hover { background-color: #c82333; }
-
-        #login-btn { background-color: var(--accent-color); }
-        #login-btn:hover { background-color: #b88a5f; }
         
         ul, li { list-style: none; padding: 0; }
         
@@ -162,6 +164,24 @@
         th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border-color); }
         thead th { background-color: #f8f9fa; }
         tbody tr:hover { background-color: #f1f3f5; }
+        
+        .dialog-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 100;
+        }
+        .dialog-content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            z-index: 101;
+            min-width: 50vw;
+        }
     </style>
 </head>
 <body>
@@ -169,57 +189,28 @@
     <div class="app-container">
         <header class="app-header">
             <h1>Gem Tracker (Offline)</h1>
-            <p>Sarin, Box Sorting, & Packet Verification</p>
+            <p>Box Sorting & Packet Verification</p>
         </header>
 
         <main class="app-main">
             <div id="app-content">
                  <div class="tab-nav">
-                    <button class="tab-button" data-tab="sarin-entry">Sarin Entry</button>
                     <button class="tab-button active" data-tab="box-sorting">Box Sorting</button>
                     <button class="tab-button" data-tab="packet-verifier">Packet Verifier</button>
-                </div>
-
-                <!-- Sarin Entry Tab -->
-                <div id="sarin-entry" class="tab-content">
-                    <div class="card">
-                        <h2>Sarin Packet Entry</h2>
-                        <form id="sarin-form">
-                            <input type="text" id="sarin-kapan" placeholder="Kapan Number" required>
-                            <input type="text" id="sarin-lot" placeholder="Lot Number" required>
-                            <input type="number" id="sarin-packets" placeholder="Packet Count" required>
-                            <button type="submit">Add Sarin Entry</button>
-                        </form>
-                    </div>
-                     <div class="card">
-                        <h2>Recent Entries</h2>
-                        <div class="table-wrapper">
-                            <table id="sarin-entries-table">
-                                <thead>
-                                    <tr><th>Kapan</th><th>Lot</th><th>Packets</th><th>Date</th></tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Sarin entries will be dynamically added here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <button class="tab-button" data-tab="settings">Settings</button>
                 </div>
 
                 <!-- Box Sorting Tab -->
                 <div id="box-sorting" class="tab-content active">
                     <div class="card">
-                      <h2>Box Sorting</h2>
-                      <p>Scan or enter packet details to automatically sort them into boxes based on weight ranges.</p>
-                      <form id="box-sorting-form">
-                        <input type="text" id="box-sort-packet-barcode" placeholder="Scan or enter packet barcode (e.g., R61-B-1057,0.123)">
-                        <button type="submit">Sort Packet</button>
-                      </form>
+                      <h2>Scan Packet</h2>
+                      <p>Scan a packet barcode to automatically sort it. The page is listening for your scanner.</p>
+                      <small>Expected format: 15 comma-separated values, including diameter, weights, shape, and packet number.</small>
                     </div>
                     <div class="card">
                       <h3>Sorting Summary</h3>
-                      <div id="box-sorting-summary">
-                          <p>No packets sorted yet.</p>
+                      <div id="box-sorting-summary" class="grid-3">
+                          <p>No packets sorted yet. Scan a packet to begin.</p>
                       </div>
                     </div>
                 </div>
@@ -242,7 +233,7 @@
                     </div>
                     <div class="card">
                       <h3>Verification Results</h3>
-                      <div class="grid-2">
+                      <div class="grid-3">
                         <div>
                           <h4>Matched (<span id="matched-count">0</span>)</h4>
                           <ul id="matched-list" class="status-list"></ul>
@@ -251,12 +242,41 @@
                           <h4>Missing (<span id="missing-count">0</span>)</h4>
                           <ul id="missing-list" class="status-list"></ul>
                         </div>
+                         <div>
+                          <h4>Extra (<span id="extra-count">0</span>)</h4>
+                          <ul id="extra-list" class="status-list"></ul>
+                        </div>
                       </div>
                     </div>
                 </div>
 
-                <div class="actions">
-                    <button id="clear-data-btn" class="btn-danger">Clear All Local Data</button>
+                <!-- Settings Tab -->
+                <div id="settings" class="tab-content">
+                    <div class="card">
+                        <h2>Box Sorting Ranges (by Polish Weight)</h2>
+                        <form id="range-form" class="grid-2">
+                            <input type="number" step="0.001" id="range-from" placeholder="From (ct)" required>
+                            <input type="number" step="0.001" id="range-to" placeholder="To (ct)" required>
+                            <input type="text" id="range-label" placeholder="Box Label (e.g., A, B, 0-10)" required>
+                            <button type="submit">Add Range</button>
+                        </form>
+                    </div>
+                     <div class="card">
+                        <h2>Current Ranges</h2>
+                        <div class="table-wrapper">
+                            <table id="ranges-table">
+                                <thead>
+                                    <tr><th>From (ct)</th><th>To (ct)</th><th>Label</th><th>Action</th></tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="actions" style="margin-top: 2rem;">
+                    <button id="clear-data-btn" class="btn-danger">Clear All Sorting & Settings Data</button>
                 </div>
             </div>
         </main>
@@ -264,6 +284,14 @@
         <footer class="app-footer">
             <p>Gem Tracker &copy; 2024</p>
         </footer>
+    </div>
+    
+    <div id="box-details-dialog" class="dialog-overlay hidden">
+        <div class="dialog-content">
+            <h2 id="dialog-title">Box Details</h2>
+            <div id="dialog-body" class="table-wrapper" style="max-height: 60vh; overflow-y: auto;"></div>
+            <button id="dialog-close-btn" style="margin-top: 1rem;">Close</button>
+        </div>
     </div>
     
     <script type="module">
@@ -278,7 +306,9 @@
             onSnapshot,
             serverTimestamp,
             writeBatch,
-            getDocs
+            getDocs,
+            deleteDoc,
+            doc
         } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // === 1. FIREBASE SETUP ===
@@ -306,189 +336,252 @@
             }
         }
 
-        // === 2. DATA STORE (FIRESTORE) ===
+        // === 2. LOCAL & FIRESTORE DATA ===
+        const RANGES_KEY = 'boxSortingRanges';
         const dataStore = {
-            sarin: {
-                addEntry: (entry) => {
-                    const path = `sarinEntries`;
-                    return addDoc(collection(db, path), {
-                        ...entry,
-                        createdAt: serverTimestamp()
+            boxSorting: {
+                addPacket: (packet) => addDoc(collection(db, 'boxSortingPackets'), { ...packet, createdAt: serverTimestamp() }),
+                getPackets: (callback) => {
+                    const q = query(collection(db, 'boxSortingPackets'));
+                    return onSnapshot(q, (snapshot) => {
+                        const packets = [];
+                        snapshot.forEach((doc) => packets.push({ id: doc.id, ...doc.data() }));
+                        callback(packets);
                     });
                 },
-                getEntries: (callback) => {
-                    const path = `sarinEntries`;
-                    const q = query(collection(db, path));
-                    onSnapshot(q, (querySnapshot) => {
-                        const entries = [];
-                        querySnapshot.forEach((doc) => {
-                            entries.push({ id: doc.id, ...doc.data() });
-                        });
-                        callback(entries);
-                    });
-                },
+                deletePacket: (id) => deleteDoc(doc(db, 'boxSortingPackets', id)),
                 clearAll: async () => {
-                   const path = `sarinEntries`;
-                   const querySnapshot = await getDocs(collection(db, path));
-                   const batch = writeBatch(db);
-                   querySnapshot.forEach(doc => batch.delete(doc.ref));
-                   await batch.commit();
+                    const querySnapshot = await getDocs(collection(db, 'boxSortingPackets'));
+                    const batch = writeBatch(db);
+                    querySnapshot.forEach(doc => batch.delete(doc.ref));
+                    await batch.commit();
                 }
             }
-            // Future stores for box-sorting etc. can be added here
         };
 
         // === 3. UI LOGIC ===
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Global UI Elements & State ---
-            const clearDataBtn = document.getElementById('clear-data-btn');
-            const tabs = document.querySelectorAll('.tab-button');
-            const tabContents = document.querySelectorAll('.tab-content');
-            
-            // --- Tab Navigation ---
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    const tabName = tab.getAttribute('data-tab');
-                    tabContents.forEach(content => {
-                        content.classList.toggle('active', content.id === tabName);
+            function initTabs() {
+                const tabs = document.querySelectorAll('.tab-button');
+                const tabContents = document.querySelectorAll('.tab-content');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+                        const tabName = tab.getAttribute('data-tab');
+                        tabContents.forEach(content => {
+                            content.classList.toggle('active', content.id === tabName);
+                        });
                     });
                 });
-            });
-            
-            // --- App Initialization on Page Load ---
-            function initializeAppData() {
-                initSarinEntry();
-                initBoxSorting();
-                initPacketVerifier();
             }
 
-            initializeAppData();
+            function initSettings() {
+                const rangeForm = document.getElementById('range-form');
+                const rangesTableBody = document.querySelector('#ranges-table tbody');
+                let ranges = JSON.parse(localStorage.getItem(RANGES_KEY) || '[]');
 
-            // --- Sarin Entry Feature ---
-            function initSarinEntry() {
-                const sarinForm = document.getElementById('sarin-form');
-                const sarinEntriesTableBody = document.querySelector('#sarin-entries-table tbody');
-
-                function renderSarinEntries(entries) {
-                    sarinEntriesTableBody.innerHTML = '';
-                    if (!entries || entries.length === 0) {
-                        sarinEntriesTableBody.innerHTML = '<tr><td colspan="4">No entries yet.</td></tr>';
-                        return;
-                    }
-                    // Sort by timestamp, newest first
-                    entries.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
-                    entries.forEach(entry => {
+                const renderRanges = () => {
+                    rangesTableBody.innerHTML = '';
+                    ranges.forEach((range, index) => {
                         const tr = document.createElement('tr');
-                        const date = entry.createdAt?.toDate ? new Date(entry.createdAt.toDate()).toLocaleString() : 'N/A';
-                        tr.innerHTML = `<td>${entry.kapan}</td><td>${entry.lot}</td><td>${entry.packets}</td><td>${date}</td>`;
-                        sarinEntriesTableBody.appendChild(tr);
+                        tr.innerHTML = `<td>${range.from}</td><td>${range.to}</td><td>${range.label}</td>
+                                        <td><button class="btn-danger" data-index="${index}">Delete</button></td>`;
+                        rangesTableBody.appendChild(tr);
                     });
-                }
+                };
                 
-                sarinForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const kapan = document.getElementById('sarin-kapan').value;
-                    const lot = document.getElementById('sarin-lot').value;
-                    const packets = document.getElementById('sarin-packets').value;
-
-                    if (!kapan || !lot || !packets) {
-                        alert('Please fill out all fields.');
-                        return;
-                    }
-                    
-                    const newEntry = {
-                        kapan,
-                        lot,
-                        packets: parseInt(packets, 10),
-                    };
-
-                    try {
-                        await dataStore.sarin.addEntry(newEntry);
-                        console.log("Sarin entry saved to Firestore.");
-                        sarinForm.reset();
-                        document.getElementById('sarin-kapan').focus();
-                    } catch (error) {
-                        console.error("Error saving Sarin entry:", error);
-                        alert("Failed to save entry. Are you online?");
+                rangesTableBody.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON' && e.target.dataset.index) {
+                        ranges.splice(e.target.dataset.index, 1);
+                        localStorage.setItem(RANGES_KEY, JSON.stringify(ranges));
+                        renderRanges();
                     }
                 });
-                
-                // Set up listener for Sarin entries
-                dataStore.sarin.getEntries(renderSarinEntries);
-            }
 
-            // --- Box Sorting Feature ---
-            function initBoxSorting() {
-                // Simplified logic inspired by the React component
-                const form = document.getElementById('box-sorting-form');
-                const summaryDiv = document.getElementById('box-sorting-summary');
-                // In a real app, ranges would be configurable and stored in Firestore.
-                const centRanges = [
-                    { from: 0, to: 0.10, label: "A" },
-                    { from: 0.11, to: 0.20, label: "B" },
-                    { from: 0.21, to: 0.30, label: "C" },
-                ];
-                let sortedPackets = []; // In-memory for simplicity for now
+                rangeForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const from = parseFloat(document.getElementById('range-from').value);
+                    const to = parseFloat(document.getElementById('range-to').value);
+                    const label = document.getElementById('range-label').value;
 
-                function renderBoxSummary() {
-                    if (sortedPackets.length === 0) {
-                        summaryDiv.innerHTML = '<p>No packets sorted yet.</p>';
+                    if (isNaN(from) || isNaN(to) || !label) {
+                        alert('Please fill out all fields correctly.');
                         return;
                     }
-                    const summary = sortedPackets.reduce((acc, packet) => {
-                        if (!acc[packet.boxLabel]) {
-                            acc[packet.boxLabel] = { count: 0, weight: 0 };
+                    ranges.push({ from, to, label });
+                    localStorage.setItem(RANGES_KEY, JSON.stringify(ranges));
+                    renderRanges();
+                    rangeForm.reset();
+                });
+
+                renderRanges();
+            }
+
+            function initBoxSorting() {
+                const summaryDiv = document.getElementById('box-sorting-summary');
+                const dialog = document.getElementById('box-details-dialog');
+                const dialogTitle = document.getElementById('dialog-title');
+                const dialogBody = document.getElementById('dialog-body');
+                
+                let allPackets = [];
+                const centRanges = () => JSON.parse(localStorage.getItem(RANGES_KEY) || '[]');
+
+                const renderSummary = () => {
+                    if (allPackets.length === 0) {
+                        summaryDiv.innerHTML = '<p>No packets sorted yet. Scan a packet to begin.</p>';
+                        return;
+                    }
+
+                    const summaryByShape = allPackets.reduce((acc, packet) => {
+                        if (!acc[packet.shape]) {
+                            acc[packet.shape] = { boxes: {}, totalPackets: 0, totalPolishWeight: 0 };
                         }
-                        acc[packet.boxLabel].count++;
-                        acc[packet.boxLabel].weight += packet.weight;
+                        const shapeGroup = acc[packet.shape];
+                        shapeGroup.totalPackets++;
+                        shapeGroup.totalPolishWeight += packet.polishWeight;
+
+                        if (!shapeGroup.boxes[packet.boxLabel]) {
+                            shapeGroup.boxes[packet.boxLabel] = { count: 0, polishWeight: 0, packets: [] };
+                        }
+                        const boxGroup = shapeGroup.boxes[packet.boxLabel];
+                        boxGroup.count++;
+                        boxGroup.polishWeight += packet.polishWeight;
+                        boxGroup.packets.push(packet);
                         return acc;
                     }, {});
 
-                    let html = '<ul>';
-                    for(const [label, data] of Object.entries(summary)) {
-                        html += `<li><strong>Box ${label}:</strong> ${data.count} packets, ${data.weight.toFixed(3)}ct total</li>`;
+                    summaryDiv.innerHTML = '';
+                    for (const [shape, data] of Object.entries(summaryByShape).sort((a,b) => a[0].localeCompare(b[0]))) {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        
+                        let tableRows = '';
+                        for (const [label, boxData] of Object.entries(data.boxes).sort((a,b) => a[0].localeCompare(b[0]))) {
+                            tableRows += `<tr class="box-row" data-shape="${shape}" data-label="${label}">
+                                <td>${label}</td>
+                                <td>${boxData.count}</td>
+                                <td>${boxData.polishWeight.toFixed(3)}</td>
+                                <td><button class="btn-danger btn-sm" data-shape="${shape}" data-label="${label}">Del Box</button></td>
+                            </tr>`;
+                        }
+
+                        card.innerHTML = `
+                            <h3>${shape} (${data.totalPackets} pkts)</h3>
+                            <p>Total Polish: ${data.totalPolishWeight.toFixed(3)}</p>
+                            <button class="btn-danger" data-shape-delete="${shape}">Delete Shape</button>
+                            <div class="table-wrapper" style="margin-top: 1rem;">
+                                <table>
+                                    <thead><tr><th>Box</th><th>Pkts</th><th>Pls Wt</th><th></th></tr></thead>
+                                    <tbody>${tableRows}</tbody>
+                                </table>
+                            </div>
+                        `;
+                        summaryDiv.appendChild(card);
                     }
-                    html += '</ul>';
-                    summaryDiv.innerHTML = html;
-                }
+                };
 
-                form.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const barcodeInput = document.getElementById('box-sort-packet-barcode');
-                    const [barcode, weightStr] = barcodeInput.value.split(',');
-                    const weight = parseFloat(weightStr);
-
-                    if (!barcode || isNaN(weight)) {
-                        alert("Invalid format. Use: Barcode,Weight (e.g., R61-B-1057,0.123)");
-                        return;
+                const sortPacket = (barcode) => {
+                    const values = barcode.split(',');
+                    if (values.length < 15) {
+                        alert("Invalid barcode format. Expected 15 comma-separated values."); return;
                     }
+                    const [diameterStr, ,,,,, roughWeightStr, polishWeightStr, , , shape, ,, packetNumber] = values;
+                    const polishWeight = parseFloat(polishWeightStr);
 
-                    const matchedRange = centRanges.find(r => weight >= r.from && weight <= r.to);
+                    if (isNaN(polishWeight) || !shape || !packetNumber) {
+                        alert("Could not parse required fields (polish weight, shape, packet number) from barcode."); return;
+                    }
+                    
+                    const matchedRange = centRanges().find(r => polishWeight >= r.from && polishWeight <= r.to);
                     if (!matchedRange) {
-                        alert(`No box range found for weight ${weight}.`);
-                        return;
+                        alert(`No box range found for polish weight ${polishWeight}.`); return;
                     }
 
-                    sortedPackets.push({ barcode, weight, boxLabel: matchedRange.label });
-                    renderBoxSummary();
-                    barcodeInput.value = '';
-                    barcodeInput.focus();
+                    const newPacket = {
+                        barcode, packetNumber, shape: shape.trim().toUpperCase(),
+                        roughWeight: parseFloat(roughWeightStr), polishWeight,
+                        diameter: parseFloat(diameterStr), boxLabel: matchedRange.label,
+                    };
+                    
+                    dataStore.boxSorting.addPacket(newPacket);
+                };
+                
+                window.addEventListener('keydown', (e) => {
+                    if (document.querySelector('.tab-button[data-tab="box-sorting"]').classList.contains('active')) {
+                       if (e.key === 'Enter' && e.target.value) {
+                           e.preventDefault();
+                           sortPacket(e.target.value);
+                           e.target.value = '';
+                       }
+                    }
+                });
+
+                dataStore.boxSorting.getPackets(packets => {
+                    allPackets = packets;
+                    renderSummary();
+                });
+
+                summaryDiv.addEventListener('click', async (e) => {
+                    const target = e.target;
+                    // Delete Shape
+                    if(target.dataset.shapeDelete) {
+                        if (!confirm(`Delete all packets for shape ${target.dataset.shapeDelete}?`)) return;
+                        const packetsToDelete = allPackets.filter(p => p.shape === target.dataset.shapeDelete);
+                        for (const packet of packetsToDelete) {
+                            await dataStore.boxSorting.deletePacket(packet.id);
+                        }
+                    }
+                    // Delete Box
+                    if(target.dataset.shape && target.dataset.label) {
+                        if (!confirm(`Delete all packets in box ${target.dataset.label} for shape ${target.dataset.shape}?`)) return;
+                        const packetsToDelete = allPackets.filter(p => p.shape === target.dataset.shape && p.boxLabel === target.dataset.label);
+                        for (const packet of packetsToDelete) {
+                            await dataStore.boxSorting.deletePacket(packet.id);
+                        }
+                    }
+                    // View Box Details
+                    if(target.closest('.box-row')) {
+                        const row = target.closest('.box-row');
+                        const shape = row.dataset.shape;
+                        const label = row.dataset.label;
+                        const packetsInBox = allPackets.filter(p => p.shape === shape && p.boxLabel === label);
+                        
+                        dialogTitle.textContent = `Packets in ${shape} / Box ${label}`;
+                        let tableHtml = `<table><thead><tr><th>Packet #</th><th>Polish Wt.</th><th>Action</th></tr></thead><tbody>`;
+                        packetsInBox.forEach(p => {
+                            tableHtml += `<tr><td>${p.packetNumber}</td><td>${p.polishWeight.toFixed(3)}</td><td><button class="btn-danger btn-sm" data-packet-id="${p.id}">Del</button></td></tr>`;
+                        });
+                        tableHtml += '</tbody></table>';
+                        dialogBody.innerHTML = tableHtml;
+                        dialog.classList.remove('hidden');
+                    }
+                });
+                
+                dialog.addEventListener('click', async (e) => {
+                    if (e.target.id === 'dialog-close-btn' || e.target === dialog) {
+                        dialog.classList.add('hidden');
+                    }
+                    if (e.target.dataset.packetId) {
+                       await dataStore.boxSorting.deletePacket(e.target.dataset.packetId);
+                       // After deleting, we might need to refresh the dialog or close it.
+                       // For simplicity, we close it. The summary will update automatically.
+                       dialog.classList.add('hidden');
+                    }
                 });
             }
 
-            // --- Packet Verifier Feature ---
             function initPacketVerifier() {
-                 // Simplified logic inspired by the React component
                 const expectedListTextarea = document.getElementById('verifier-expected-list');
                 const lockListBtn = document.getElementById('verifier-lock-list');
                 const scanForm = document.getElementById('verifier-scan-form');
                 const scanInput = document.getElementById('verifier-scan-input');
                 const matchedList = document.getElementById('matched-list');
                 const missingList = document.getElementById('missing-list');
+                const extraList = document.getElementById('extra-list');
                 const matchedCount = document.getElementById('matched-count');
                 const missingCount = document.getElementById('missing-count');
+                const extraCount = document.getElementById('extra-count');
 
                 let expectedPackets = new Set();
                 let scannedPackets = new Set();
@@ -496,19 +589,21 @@
                 function updateVerifierResults() {
                     const matched = [...expectedPackets].filter(p => scannedPackets.has(p));
                     const missing = [...expectedPackets].filter(p => !scannedPackets.has(p));
+                    const extra = [...scannedPackets].filter(p => !expectedPackets.has(p));
                     
                     matchedList.innerHTML = matched.map(p => `<li class="matched">${p}</li>`).join('');
                     missingList.innerHTML = missing.map(p => `<li class="missing">${p}</li>`).join('');
+                    extraList.innerHTML = extra.map(p => `<li class="extra">${p}</li>`).join('');
                     
                     matchedCount.textContent = matched.length;
                     missingCount.textContent = missing.length;
+                    extraCount.textContent = extra.length;
                 }
 
                 lockListBtn.addEventListener('click', () => {
-                    const packets = expectedListTextarea.value.trim().split('\\n').filter(Boolean);
+                    const packets = expectedListTextarea.value.trim().split(/\s+/).filter(Boolean); // Split by any whitespace
                     if (packets.length === 0) {
-                        alert("Expected list cannot be empty.");
-                        return;
+                        alert("Expected list cannot be empty."); return;
                     }
                     expectedPackets = new Set(packets);
                     scannedPackets = new Set();
@@ -524,30 +619,31 @@
                     e.preventDefault();
                     const scannedValue = scanInput.value.trim();
                     if (!scannedValue) return;
-
                     scannedPackets.add(scannedValue);
                     updateVerifierResults();
                     scanInput.value = '';
                 });
             }
 
+            function initGlobalActions() {
+                document.getElementById('clear-data-btn').addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete ALL sorted packets and box settings? This cannot be undone.')) {
+                        dataStore.boxSorting.clearAll().then(() => {
+                           alert('All sorted packet data cleared from Firestore.');
+                        }).catch(err => alert("Failed to clear sorted packets: " + err.message));
+                        localStorage.removeItem(RANGES_KEY);
+                        alert('All box sorting ranges have been cleared.');
+                        window.location.reload();
+                    }
+                });
+            }
 
-            // --- General Actions ---
-            clearDataBtn.addEventListener('click', () => {
-                if (confirm('Are you sure you want to delete ALL data? This cannot be undone.')) {
-                    dataStore.sarin.clearAll().then(() => {
-                        console.log('All Sarin data cleared from Firestore.');
-                        // Add other clear functions here if needed
-                    }).catch(err => {
-                        console.error("Failed to clear data:", err);
-                        alert("Failed to clear data. Check console.");
-                    });
-                }
-            });
-
+            initTabs();
+            initSettings();
+            initBoxSorting();
+            initPacketVerifier();
+            initGlobalActions();
         });
     </script>
 </body>
 </html>
-
-    
