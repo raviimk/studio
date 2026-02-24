@@ -173,22 +173,15 @@
         </header>
 
         <main class="app-main">
-            <div id="auth-container">
-                <h2>Login Required</h2>
-                <p>Please log in with your Google account to sync data with the cloud.</p>
-                <button id="login-btn">Login with Google</button>
-            </div>
-
-            <div id="app-content" class="hidden">
+            <div id="app-content">
                  <div class="tab-nav">
-                    <button class="tab-button active" data-tab="sarin-entry">Sarin Entry</button>
-                    <button class="tab-button" data-tab="box-sorting">Box Sorting</button>
+                    <button class="tab-button" data-tab="sarin-entry">Sarin Entry</button>
+                    <button class="tab-button active" data-tab="box-sorting">Box Sorting</button>
                     <button class="tab-button" data-tab="packet-verifier">Packet Verifier</button>
-                    <button id="logout-btn" style="margin-left: auto;">Logout</button>
                 </div>
 
                 <!-- Sarin Entry Tab -->
-                <div id="sarin-entry" class="tab-content active">
+                <div id="sarin-entry" class="tab-content">
                     <div class="card">
                         <h2>Sarin Packet Entry</h2>
                         <form id="sarin-form">
@@ -214,7 +207,7 @@
                 </div>
 
                 <!-- Box Sorting Tab -->
-                <div id="box-sorting" class="tab-content">
+                <div id="box-sorting" class="tab-content active">
                     <div class="card">
                       <h2>Box Sorting</h2>
                       <p>Scan or enter packet details to automatically sort them into boxes based on weight ranges.</p>
@@ -277,13 +270,6 @@
         // Import Firebase SDKs from CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { 
-            getAuth, 
-            onAuthStateChanged,
-            GoogleAuthProvider,
-            signInWithPopup,
-            signOut
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { 
             getFirestore, 
             enableIndexedDbPersistence, 
             collection, 
@@ -306,10 +292,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
         const db = getFirestore(app);
-        let currentUserId = null; // To store the logged-in user's ID
-        let unsubscribeSarinEntries = () => {}; // To detach Firestore listener on logout
 
         // Enable offline persistence
         try {
@@ -324,24 +307,19 @@
         }
 
         // === 2. DATA STORE (FIRESTORE) ===
-        // Note: The dataStore is now a set of functions that interact with Firestore.
-        // All data is automatically user-specific.
-        
         const dataStore = {
             sarin: {
                 addEntry: (entry) => {
-                    if (!currentUserId) return Promise.reject("User not logged in");
-                    const path = `users/${currentUserId}/sarinEntries`;
+                    const path = `sarinEntries`;
                     return addDoc(collection(db, path), {
                         ...entry,
                         createdAt: serverTimestamp()
                     });
                 },
                 getEntries: (callback) => {
-                    if (!currentUserId) return;
-                    const path = `users/${currentUserId}/sarinEntries`;
+                    const path = `sarinEntries`;
                     const q = query(collection(db, path));
-                    unsubscribeSarinEntries = onSnapshot(q, (querySnapshot) => {
+                    onSnapshot(q, (querySnapshot) => {
                         const entries = [];
                         querySnapshot.forEach((doc) => {
                             entries.push({ id: doc.id, ...doc.data() });
@@ -350,8 +328,7 @@
                     });
                 },
                 clearAll: async () => {
-                   if (!currentUserId) return;
-                   const path = `users/${currentUserId}/sarinEntries`;
+                   const path = `sarinEntries`;
                    const querySnapshot = await getDocs(collection(db, path));
                    const batch = writeBatch(db);
                    querySnapshot.forEach(doc => batch.delete(doc.ref));
@@ -364,45 +341,9 @@
         // === 3. UI LOGIC ===
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global UI Elements & State ---
-            const authContainer = document.getElementById('auth-container');
-            const appContent = document.getElementById('app-content');
-            const loginBtn = document.getElementById('login-btn');
-            const logoutBtn = document.getElementById('logout-btn');
             const clearDataBtn = document.getElementById('clear-data-btn');
             const tabs = document.querySelectorAll('.tab-button');
             const tabContents = document.querySelectorAll('.tab-content');
-
-            // --- Authentication Logic ---
-            onAuthStateChanged(auth, user => {
-                if (user) {
-                    // User is signed in
-                    currentUserId = user.uid;
-                    authContainer.classList.add('hidden');
-                    appContent.classList.remove('hidden');
-                    console.log(`Logged in as ${user.displayName} (${user.uid})`);
-                    // Initial data load for all features
-                    initializeAppData();
-                } else {
-                    // User is signed out
-                    currentUserId = null;
-                    authContainer.classList.remove('hidden');
-                    appContent.classList.add('hidden');
-                    unsubscribeSarinEntries(); // Detach listener
-                    console.log('User logged out.');
-                }
-            });
-
-            loginBtn.addEventListener('click', () => {
-                const provider = new GoogleAuthProvider();
-                signInWithPopup(auth, provider).catch(error => {
-                    console.error("Login failed:", error);
-                    alert("Login failed. Please check the console for details.");
-                });
-            });
-
-            logoutBtn.addEventListener('click', () => {
-                signOut(auth);
-            });
             
             // --- Tab Navigation ---
             tabs.forEach(tab => {
@@ -416,13 +357,14 @@
                 });
             });
             
-            // --- App Initialization on Login ---
+            // --- App Initialization on Page Load ---
             function initializeAppData() {
-                // This function is called after a successful login
                 initSarinEntry();
                 initBoxSorting();
                 initPacketVerifier();
             }
+
+            initializeAppData();
 
             // --- Sarin Entry Feature ---
             function initSarinEntry() {
@@ -607,3 +549,5 @@
     </script>
 </body>
 </html>
+
+    
