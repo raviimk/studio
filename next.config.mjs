@@ -1,12 +1,4 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
-  assetPrefix: './',
-  output: 'export',              // ये सबसे important है
-  images: {
-    unoptimized: true,           // static export के लिए ज़रूरी
-  },
-  trailingSlash: true,           // links properly work करेंगे
-  distDir: 'out',                // default ही है, optional
-};
+const nextConfig = {};
 
 export default nextConfig;
