@@ -1,26 +1,9 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // By default, deny all reads and writes
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    // Allow public access to the 'chaluEntries' collection
-    match /chaluEntries/{chaluEntryId} {
-      allow read, write: if true;
-    }
-
-    // Allow public access to the 'kapans' collection
-    match /kapans/{kapanId} {
-      allow read, write: if true;
-    }
-    
-    // Allow public access to the 'jiramEntries' collection for the queue
-    match /jiramEntries/{jiramEntryId} {
-        allow read, write: if true;
     }
   }
 }
