@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { cn } from "@/lib/utils";
 
 // Dynamically import Lottie to avoid SSR issues
 const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
@@ -13,6 +14,7 @@ const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
 export function Header() {
   const [query, setQuery] = useState("");
   const [animationData, setAnimationData] = useState<any>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const router = useRouter();
 
   // Load animation data on mount
@@ -20,6 +22,15 @@ export function Header() {
     fetch("https://lottie.host/809c9f6d-368b-4a57-9d7a-8b1a43a01a35/7pS9P7N1mS.json")
       .then((res) => res.json())
       .then((data) => setAnimationData(data));
+  }, []);
+
+  // Handle Scroll logic
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -30,12 +41,26 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex flex-col items-center gap-6 py-6 px-4">
-        {/* Branding Block - Perfectly Centered */}
-        <Link href="/" className="flex items-center justify-center gap-3 group shrink-0 w-full">
+    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
+      <div className={cn(
+        "container mx-auto flex transition-all duration-500 ease-in-out px-4",
+        isScrolled 
+          ? "flex-row items-center justify-between py-2 gap-4" 
+          : "flex-col items-center py-6 gap-6"
+      )}>
+        {/* Branding Block */}
+        <Link 
+          href="/" 
+          className={cn(
+            "flex items-center gap-3 group shrink-0 transition-all duration-500 ease-in-out",
+            isScrolled ? "justify-start" : "justify-center w-full"
+          )}
+        >
           {/* Logo container */}
-          <div className="w-12 h-12 sm:w-16 sm:h-16 transition-transform duration-300 group-hover:scale-110 shrink-0">
+          <div className={cn(
+            "transition-all duration-500 ease-in-out group-hover:scale-110 shrink-0",
+            isScrolled ? "w-8 h-8 sm:w-10 sm:h-10" : "w-12 h-12 sm:w-16 sm:h-16"
+          )}>
             {animationData && (
               <Lottie 
                 animationData={animationData} 
@@ -46,20 +71,38 @@ export function Header() {
           </div>
           
           {/* Main Title */}
-          <span className="text-3xl font-black tracking-tighter sm:text-4xl md:text-5xl animate-text-shimmer group-hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all">
+          <span className={cn(
+            "font-black tracking-tighter animate-text-shimmer group-hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all duration-500 ease-in-out",
+            isScrolled ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl md:text-5xl"
+          )}>
             RV MOVIES
           </span>
 
-          {/* Symmetrical Spacer to keep text exactly centered */}
-          <div className="w-12 h-12 sm:w-16 sm:h-16 invisible shrink-0 hidden sm:block" aria-hidden="true" />
+          {/* Symmetrical Spacer to keep text exactly centered when NOT scrolled */}
+          {!isScrolled && (
+            <div className="w-12 h-12 sm:w-16 sm:h-16 invisible shrink-0 hidden sm:block" aria-hidden="true" />
+          )}
         </Link>
 
-        <form onSubmit={handleSearch} className="relative flex w-full max-w-xl">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        {/* Search Bar */}
+        <form 
+          onSubmit={handleSearch} 
+          className={cn(
+            "relative flex transition-all duration-500 ease-in-out",
+            isScrolled ? "w-40 sm:w-64 md:w-80" : "w-full max-w-xl"
+          )}
+        >
+          <Search className={cn(
+            "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-500",
+            isScrolled ? "h-4 w-4" : "h-5 w-5"
+          )} />
           <Input
             type="search"
-            placeholder="Search movies, series and more..."
-            className="w-full bg-white/5 border-white/10 pl-12 pr-4 focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all rounded-full h-12 text-base"
+            placeholder="Search..."
+            className={cn(
+              "w-full bg-white/5 border-white/10 pr-4 focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all duration-500 rounded-full",
+              isScrolled ? "h-9 pl-9 text-xs sm:text-sm" : "h-12 pl-12 text-base"
+            )}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
