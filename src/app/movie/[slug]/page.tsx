@@ -158,7 +158,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           {description && (
             <div className="prose prose-invert max-w-none text-left bg-white/5 p-6 rounded-2xl border border-white/10 mt-2">
               <h2 className="text-lg md:text-xl font-bold mb-3 text-primary flex items-center gap-2">
-                <FileText size={20} /> Storyline
+                <FileText size={20} /> Description
               </h2>
               <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
                 {description}
@@ -183,9 +183,9 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => {
-              // Construct proxied URL using raw_thumb as requested
+              // Use the requested proxy format
               const imageUrl = s.raw_thumb 
-                ? `${API_BASE}/img?u=${encodeURIComponent(s.raw_thumb)}` 
+                ? `${API_BASE}/img?u=${s.raw_thumb}` 
                 : null;
 
               if (!imageUrl) return null;
