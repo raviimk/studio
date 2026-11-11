@@ -6,6 +6,7 @@ import { Play, ChevronLeft, Zap, Tv, Languages, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import placeholders from "@/app/lib/placeholder-images.json";
 
 interface Screenshot {
   thumb: string;
@@ -26,7 +27,7 @@ interface LinkItem {
 interface MovieDetail {
   ok: boolean;
   title: string;
-  poster: string;
+  poster: string | null;
   qualities: string[];
   screenshots: Screenshot[];
   trailer: string | null;
@@ -55,7 +56,6 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
-  // Priority order: review (highest quality), storyline, description, synopsis
   const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
   
   for (const text of candidates) {
@@ -63,7 +63,6 @@ function getCleanDescription(movie: MovieDetail) {
     
     let clean = text.trim();
     
-    // Filter out technical site noise and generic navigation text
     if (
       clean.includes("HDHub4u Home") || 
       clean.includes("Search Here !!") || 
@@ -73,7 +72,6 @@ function getCleanDescription(movie: MovieDetail) {
       continue;
     }
 
-    // Remove common prefixes
     const descriptionPrefix = "DESCRIPTION:";
     if (clean.toUpperCase().includes(descriptionPrefix)) {
       clean = clean.substring(clean.toUpperCase().indexOf(descriptionPrefix) + descriptionPrefix.length).trim();
@@ -114,6 +112,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
   const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
   const sortedWatch = [...(movie.watch || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
+  const posterSrc = movie.poster || placeholders.moviePoster;
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-5xl mx-auto">
@@ -125,15 +124,15 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </Button>
       </div>
 
-      {/* Hero Section */}
       <div className="flex flex-col items-center text-center gap-6 px-4">
         <div className="relative w-64 md:w-80 aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl">
           <Image
-            src={movie.poster}
+            src={posterSrc}
             alt={movie.title}
             fill
             className="object-cover"
             unoptimized
+            data-ai-hint="movie poster"
           />
         </div>
 
@@ -170,7 +169,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Screenshots Gallery */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
@@ -178,7 +176,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => {
-              // Use requested proxy format: worker_base/img?u=raw_thumb_url
               const imageUrl = s.raw_thumb 
                 ? `${API_BASE}/img?u=${s.raw_thumb}` 
                 : null;
@@ -193,6 +190,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     unoptimized
+                    data-ai-hint="movie screenshot"
                   />
                 </div>
               );
@@ -201,7 +199,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Trailer */}
       {movie.trailer && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
@@ -218,7 +215,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Episodes Section for Series */}
       {movie.episodes && movie.episodes.length > 0 && (
         <section className="bg-black/40 border-y border-white/5 py-4">
           <div className="flex flex-col items-center gap-0">
@@ -246,7 +242,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Download Links Section */}
       {sortedDownloads.length > 0 && (
         <section className="bg-black/40 border-y border-white/5 py-4">
           <div className="flex flex-col items-center gap-0">
@@ -276,7 +271,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Watch Online Section */}
       {sortedWatch.length > 0 && (
         <section className="bg-black/40 border-y border-white/5 py-4">
           <div className="flex flex-col items-center gap-0">
@@ -286,7 +280,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
             
             <div className="w-full flex flex-col">
               {sortedWatch.map((link, idx) => {
-                // If label is "WATCH" and there are multiple links, treat as episodes
                 const label = link.label.toUpperCase() === "WATCH" && sortedWatch.length > 1 
                   ? `WATCH EP ${idx + 1}` 
                   : link.label;
