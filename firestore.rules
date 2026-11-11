@@ -5,28 +5,5 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
-<<<<<<< HEAD
-=======
-
-    // Allow public access to the 'chaluEntries' collection
-    match /chaluEntries/{chaluEntryId} {
-      allow read, write: if true;
-    }
-
-    // Allow public access to the 'kapans' collection
-    match /kapans/{kapanId} {
-      allow read, write: if true;
-    }
-    
-    // Allow public access to the 'jiramEntries' collection for the queue
-    match /jiramEntries/{jiramEntryId} {
-        allow read, write: if true;
-    }
-
-    // Allow public access to the 'minusScanEntries' collection for the queue
-    match /minusScanEntries/{minusScanEntryId} {
-        allow read, write: if true;
-    }
->>>>>>> 69219907bb2272da9ca06da9024b9ecf0f70ade4
   }
 }
