@@ -24,14 +24,19 @@ export function Header() {
       .then((data) => setAnimationData(data));
   }, []);
 
-  // Handle Scroll logic
+  // Handle Scroll logic with improved smoothness
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      // Use a smaller threshold for a more responsive "live" feel
+      const scrolled = window.scrollY > 10;
+      if (scrolled !== isScrolled) {
+        setIsScrolled(scrolled);
+      }
     };
-    window.addEventListener("scroll", handleScroll);
+    
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isScrolled]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,24 +46,29 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 transition-all duration-300">
+    <header className={cn(
+      "sticky top-0 z-50 w-full border-b border-white/5 transition-all duration-500 ease-out",
+      isScrolled 
+        ? "bg-background/95 backdrop-blur-2xl py-2 shadow-2xl" 
+        : "bg-background/0 py-6"
+    )}>
       <div className={cn(
-        "container mx-auto flex transition-all duration-500 ease-in-out px-4",
+        "container mx-auto flex transition-all duration-700 ease-in-out px-4 transform-gpu",
         isScrolled 
-          ? "flex-row items-center justify-between py-2 gap-4" 
-          : "flex-col items-center py-6 gap-6"
+          ? "flex-row items-center justify-between gap-4" 
+          : "flex-col items-center gap-6"
       )}>
         {/* Branding Block */}
         <Link 
           href="/" 
           className={cn(
-            "flex items-center gap-3 group shrink-0 transition-all duration-500 ease-in-out",
-            isScrolled ? "justify-start" : "justify-center w-full"
+            "flex items-center gap-3 group shrink-0 transition-all duration-700 ease-in-out transform-gpu",
+            isScrolled ? "justify-start scale-95" : "justify-center w-full scale-100"
           )}
         >
           {/* Logo container */}
           <div className={cn(
-            "transition-all duration-500 ease-in-out group-hover:scale-110 shrink-0",
+            "transition-all duration-700 ease-in-out group-hover:scale-110 shrink-0 transform-gpu",
             isScrolled ? "w-8 h-8 sm:w-10 sm:h-10" : "w-12 h-12 sm:w-16 sm:h-16"
           )}>
             {animationData && (
@@ -72,7 +82,7 @@ export function Header() {
           
           {/* Main Title */}
           <span className={cn(
-            "font-black tracking-tighter animate-text-shimmer group-hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all duration-500 ease-in-out",
+            "font-black tracking-tighter animate-text-shimmer transition-all duration-700 ease-in-out transform-gpu",
             isScrolled ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl md:text-5xl"
           )}>
             RV MOVIES
@@ -88,7 +98,7 @@ export function Header() {
         <form 
           onSubmit={handleSearch} 
           className={cn(
-            "relative flex transition-all duration-500 ease-in-out",
+            "relative flex transition-all duration-700 ease-in-out transform-gpu",
             isScrolled ? "w-40 sm:w-64 md:w-80" : "w-full max-w-xl"
           )}
         >
@@ -98,9 +108,9 @@ export function Header() {
           )} />
           <Input
             type="search"
-            placeholder="Search..."
+            placeholder="Search movies..."
             className={cn(
-              "w-full bg-white/5 border-white/10 pr-4 focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all duration-500 rounded-full",
+              "w-full bg-white/5 border-white/10 pr-4 focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all duration-700 rounded-full transform-gpu",
               isScrolled ? "h-9 pl-9 text-xs sm:text-sm" : "h-12 pl-12 text-base"
             )}
             value={query}
