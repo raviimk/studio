@@ -14,8 +14,7 @@ interface Movie {
 export function MovieCard({ movie }: { movie: Movie }) {
   return (
     <Link 
-      href={movie.page} 
-      target="_blank"
+      href={`/movie/${movie.slug}`} 
       className="group relative flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-2"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl border bg-muted shadow-lg">
