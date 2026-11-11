@@ -55,16 +55,18 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
-  // Use the prioritized field that isn't empty or "N/A"
   const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
   
   for (const text of candidates) {
     if (!text || text.trim() === "" || text.toLowerCase().startsWith("n/a")) continue;
     
-    // Simple check to avoid navigation/junk text
-    if (text.includes("HDHub4u Home") || text.includes("Search Here !!")) continue;
-    
     let clean = text.trim();
+    
+    // Filter out common site navigation noise
+    if (clean.includes("HDHub4u Home") || clean.includes("Search Here !!") || clean.includes("Categories Select Category")) {
+      continue;
+    }
+
     if (clean.includes("DESCRIPTION:")) {
       clean = clean.split("DESCRIPTION:")[1].trim().replace(/^[:\s]+/, '');
     }
@@ -110,7 +112,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </Button>
       </div>
 
-      {/* Hero Section: Poster -> Qualities -> Title -> Review/Storyline -> Audio */}
+      {/* Hero Section */}
       <div className="flex flex-col items-center text-center gap-6 px-4">
         <div className="relative w-64 md:w-80 aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl">
           <Image
@@ -152,7 +154,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Screenshots Gallery - Big Size */}
+      {/* Screenshots Gallery */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
@@ -160,10 +162,12 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => {
-              // Prioritize the proxied URLs as they handle hotlinking issues
-              const imageUrl = (s.full?.startsWith('/') ? `${API_BASE}${s.full}` : s.full) || 
-                               (s.thumb?.startsWith('/') ? `${API_BASE}${s.thumb}` : s.thumb) || 
-                               s.raw_thumb || s.raw_full;
+              // Construct proxied URL using raw_thumb as requested
+              const imageUrl = s.raw_thumb 
+                ? `${API_BASE}/img?u=${encodeURIComponent(s.raw_thumb)}` 
+                : (s.full?.startsWith('/') ? `${API_BASE}${s.full}` : s.full) || 
+                  (s.thumb?.startsWith('/') ? `${API_BASE}${s.thumb}` : s.thumb) || 
+                  s.raw_full;
 
               if (!imageUrl) return null;
 
