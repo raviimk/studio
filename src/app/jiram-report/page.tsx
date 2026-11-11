@@ -1,0 +1,515 @@
+
+'use client';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { JIRAM_REPORT_PACKETS_KEY, SARIN_PACKETS_KEY, MINUS_SCANS_KEY } from '@/lib/constants';
+import { JiramReportPacket, SarinPacket, MinusScanPacket } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import PageHeader from '@/components/PageHeader';
+import { v4 as uuidv4 } from 'uuid';
+import { Barcode, CheckCircle2, AlertTriangle, XCircle, Trash2, Check, CircleSlash, AlertCircle, Upload, Download, ChevronDown, Clock } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format, parseISO, startOfDay, differenceInDays } from 'date-fns';
+import { cn } from '@/lib/utils';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { deleteKapanData } from '@/lib/kapan-deleter';
+import { useCollection, useFirestore } from '@/firebase';
+import { addDoc, collection, serverTimestamp, query, where, getDocs, writeBatch, doc, setDoc } from 'firebase/firestore';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+
+type ScanMode = 'jiram' | 'minus';
+
+type KapanSummary = {
+  kapanNumber: string;
+  expected: number;
+  scanned: number;
+  minus: number;
+  status: 'match' | 'extra' | 'less';
+  extra: number;
+  missing: number;
+  daysSinceCreation: number;
+};
+
+type GroupedScans = {
+    date: string;
+    count: number;
+    packets: (JiramReportPacket | MinusScanPacket)[];
+};
+
+const KAPAN_COMPLETION_WAIT_DAYS = 20;
+
+
+export default function JiramReportPage() {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const [jiramPackets, setJiramPackets] = useLocalStorage<JiramReportPacket[]>(JIRAM_REPORT_PACKETS_KEY, []);
+  const [minusScans, setMinusScans] = useLocalStorage<MinusScanPacket[]>(MINUS_SCANS_KEY, []);
+  const [sarinPackets] = useLocalStorage<SarinPacket[]>(SARIN_PACKETS_KEY, []);
+  
+  const [scanMode, setScanMode] = useState<ScanMode>('jiram');
+  const [barcode, setBarcode] = useState('');
+  const [selectedKapan, setSelectedKapan] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+
+  const kapansQuery = useMemo(() => {
+      if (!firestore) return null;
+      return query(collection(firestore, 'kapans'));
+  }, [firestore]);
+  const { data: kapans } = useCollection(kapansQuery);
+
+  const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const [highlightedKapan, setHighlightedKapan] = useState<string | null>(null);
+  const [showSuccessTick, setShowSuccessTick] = useState(false);
+  const [lastScannedBarcodes, setLastScannedBarcodes] = useState<string[]>([]);
+
+
+  useEffect(() => {
+    barcodeInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (highlightedKapan) {
+      const timer = setTimeout(() => setHighlightedKapan(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedKapan]);
+  
+  useEffect(() => {
+    if (showSuccessTick) {
+      const timer = setTimeout(() => setShowSuccessTick(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessTick]);
+
+  const kapanSummary = useMemo((): KapanSummary[] => {
+    const kapanData: Record<string, { expected: number; scanned: number; minus: number; firstDate?: Date; }> = {};
+
+    sarinPackets.forEach(p => {
+      if (!kapanData[p.kapanNumber]) {
+        kapanData[p.kapanNumber] = { expected: 0, scanned: 0, minus: 0 };
+      }
+      if (p.jiramCount && p.jiramCount > 0) {
+        kapanData[p.kapanNumber].expected += p.jiramCount;
+      }
+      
+      const packetDate = parseISO(p.date);
+      if (!kapanData[p.kapanNumber].firstDate || packetDate < kapanData[p.kapanNumber].firstDate!) {
+          kapanData[p.kapanNumber].firstDate = packetDate;
+      }
+    });
+
+    jiramPackets.forEach(p => {
+      if (!kapanData[p.kapanNumber]) {
+        kapanData[p.kapanNumber] = { expected: 0, scanned: 0, minus: 0 };
+      }
+      kapanData[p.kapanNumber].scanned += 1;
+    });
+
+    minusScans.forEach(p => {
+        if (!kapanData[p.kapanNumber]) {
+            kapanData[p.kapanNumber] = { expected: 0, scanned: 0, minus: 0 };
+        }
+        kapanData[p.kapanNumber].minus += 1;
+    });
+
+    const today = startOfDay(new Date());
+
+    return Object.entries(kapanData).map(([kapanNumber, data]) => {
+      const diff = data.scanned - data.expected;
+      let status: KapanSummary['status'] = 'match';
+      if (diff > 0) status = 'extra';
+      if (diff < 0) status = 'less';
+      
+      const daysSinceCreation = data.firstDate ? differenceInDays(today, startOfDay(data.firstDate)) : 0;
+      
+      return {
+        kapanNumber,
+        ...data,
+        status,
+        extra: Math.max(0, diff),
+        missing: Math.max(0, -diff),
+        daysSinceCreation,
+      };
+    }).sort((a,b) => parseInt(a.kapanNumber) - parseInt(b.kapanNumber));
+  }, [sarinPackets, jiramPackets, minusScans]);
+
+  const handleBarcodeScan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barcode || !firestore) return;
+
+    const match = barcode.match(/^(?:R)?(\d+)-(\d+(?:-[A-Z])?)$/);
+    if (!match) {
+        toast({ variant: 'destructive', title: 'Invalid Barcode Format', description: 'Cannot extract Kapan number from barcode.' });
+        setBarcode('');
+        return;
+    }
+    const [, kapanNumber, packetIdentifier] = match;
+    const [, suffix] = packetIdentifier.split('-');
+
+    const currentPackets = scanMode === 'jiram' ? jiramPackets : minusScans;
+    if (currentPackets.some(p => p.barcode === barcode)) {
+        toast({ variant: 'destructive', title: 'Duplicate Scan', description: `This packet has already been scanned in ${scanMode} mode.` });
+        setBarcode('');
+        return;
+    }
+
+    const hasExpectedJiram = sarinPackets.some(p => p.kapanNumber === kapanNumber && (p.jiramCount || 0) > 0);
+    if(scanMode === 'jiram' && !hasExpectedJiram) {
+        toast({ variant: 'destructive', title: 'No Expected Jiram', description: `No Jiram entries found for Kapan ${kapanNumber} in the Sarin module.`});
+    }
+
+    const newPacket: JiramReportPacket | MinusScanPacket = {
+      id: uuidv4(),
+      barcode,
+      kapanNumber,
+      scanTime: new Date().toISOString(),
+    };
+    
+    if (scanMode === 'jiram') {
+        setJiramPackets(prev => [newPacket, ...prev]);
+    } else {
+        setMinusScans(prev => [newPacket, ...prev]);
+    }
+
+    try {
+        const collectionName = scanMode === 'jiram' ? 'jiramEntries' : 'minusScanEntries';
+        const docRef = doc(firestore, collectionName, barcode);
+        await setDoc(docRef, {
+            barcode: barcode,
+            kapanNumber: kapanNumber,
+            packetNumber: packetIdentifier,
+            suffix: suffix || '',
+            scanTime: serverTimestamp(),
+        });
+
+        const kapanExists = kapans?.some(k => k.kapanNumber === kapanNumber);
+        if (!kapanExists) {
+            await addDoc(collection(firestore, 'kapans'), { kapanNumber });
+        }
+        
+         toast({ title: `Packet Scanned (${scanMode})`, description: `Added ${barcode} to Kapan ${kapanNumber} for Chalu entry.` });
+    } catch(err) {
+        console.error(`Failed to save ${scanMode} scan to Firestore:`, err);
+        toast({ variant: 'destructive', title: 'Cloud Save Failed', description: 'Packet saved locally, but failed to queue for Chalu entry.'})
+    }
+    
+    setLastScannedBarcodes(prev => [barcode, ...prev].slice(0, 10));
+    setBarcode('');
+    setHighlightedKapan(kapanNumber);
+    setShowSuccessTick(true);
+  };
+
+  const handleDeletePacket = (id: string, mode: ScanMode) => {
+    if (mode === 'jiram') {
+        setJiramPackets(jiramPackets.filter(p => p.id !== id));
+    } else {
+        setMinusScans(minusScans.filter(p => p.id !== id));
+    }
+    toast({ title: 'Scan Deleted' });
+  }
+  
+  const handleCompleteKapan = (kapanNumber: string) => {
+    deleteKapanData(kapanNumber);
+
+    if (selectedKapan === kapanNumber) {
+        setSelectedKapan(null);
+    }
+    toast({ title: 'Kapan Completed', description: `All associated data for Kapan ${kapanNumber} has been permanently deleted.`});
+    
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleExport = () => {
+    const exportData = {
+        jiram: jiramPackets.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber})),
+        minus: minusScans.map(p => ({barcode: p.barcode, kapanNumber: p.kapanNumber}))
+    };
+    if (exportData.jiram.length === 0 && exportData.minus.length === 0) {
+      toast({ variant: 'destructive', title: 'No Data', description: 'There are no scanned packets to export.' });
+      return;
+    }
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'jiram-and-minus-scans.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: 'Export Successful', description: `${jiramPackets.length + minusScans.length} scans exported.` });
+  };
+
+
+  const groupedScans: GroupedScans[] = useMemo(() => {
+    const searchLower = searchTerm.toLowerCase();
+    const allScans = [...jiramPackets, ...minusScans];
+    const filteredPackets = allScans.filter(p => !searchLower || p.barcode.toLowerCase().includes(searchLower));
+
+    const groups: Record<string, (JiramReportPacket | MinusScanPacket)[]> = {};
+    filteredPackets.forEach(p => {
+        const date = format(startOfDay(parseISO(p.scanTime)), 'yyyy-MM-dd');
+        if (!groups[date]) {
+            groups[date] = [];
+        }
+        groups[date].push(p);
+    });
+
+    return Object.entries(groups)
+        .map(([date, packets]) => ({
+            date,
+            count: packets.length,
+            packets: packets.sort((a,b) => new Date(b.scanTime).getTime() - new Date(a.scanTime).getTime())
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  }, [jiramPackets, minusScans, searchTerm]);
+
+  
+  const getStatusIcon = (status: KapanSummary['status']) => {
+    switch (status) {
+      case 'match': return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+      case 'extra': return <XCircle className="h-5 w-5 text-red-600" />;
+      case 'less': return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+    }
+  };
+
+  return (
+    <TooltipProvider>
+      <div className="container mx-auto py-8 px-4 md:px-6 space-y-8">
+        <PageHeader title="Jiram Verification Report" description="Verify if created Jiram packets match the expected counts from Sarin entries." />
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Scan Packet</CardTitle>
+              <CardDescription>Select a mode, then scan the barcode of a packet. The Kapan number will be extracted automatically.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                   <Label>Scan Mode</Label>
+                    <RadioGroup value={scanMode} onValueChange={(v) => setScanMode(v as ScanMode)} className="flex gap-4 mt-1">
+                        <Label htmlFor="mode-jiram" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
+                            <RadioGroupItem value="jiram" id="mode-jiram" /> Jiram Scan (+)
+                        </Label>
+                        <Label htmlFor="mode-minus" className="flex items-center gap-2 border rounded-md p-3 cursor-pointer has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:border-primary">
+                            <RadioGroupItem value="minus" id="mode-minus" /> Minus Scan (-)
+                        </Label>
+                    </RadioGroup>
+                </div>
+
+                <form onSubmit={handleBarcodeScan} className="flex gap-2 max-w-sm relative">
+                    <Input
+                    ref={barcodeInputRef}
+                    placeholder="Scan packet barcode..."
+                    value={barcode}
+                    onChange={e => setBarcode(e.target.value)}
+                    />
+                    <Button type="submit" disabled={!barcode}>
+                    <Barcode className="mr-2 h-4 w-4" /> Scan
+                    </Button>
+                    {showSuccessTick && (
+                    <div className="absolute right-[-30px] top-1/2 -translate-y-1/2">
+                        <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    </div>
+                    )}
+                </form>
+              </div>
+               {lastScannedBarcodes.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm text-muted-foreground">Recent Scans:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {lastScannedBarcodes.map((b, i) => (
+                       <Badge key={i} variant={i === 0 ? 'default' : 'secondary'} className="font-mono">{b}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Chart</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={kapanSummary} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="kapanNumber" />
+                  <YAxis allowDecimals={false} />
+                  <RechartsTooltip />
+                  <Legend />
+                  <Bar dataKey="expected" fill="hsl(var(--primary))" name="Expected Jiram" />
+                  <Bar dataKey="scanned" fill="hsl(var(--chart-2))" name="Actual Scanned" />
+                  <Bar dataKey="minus" fill="hsl(var(--destructive))" name="Minus Scans" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="grid lg:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                  <CardTitle>Kapan-wise Summary</CardTitle>
+                  <Button variant="outline" size="sm" onClick={handleExport}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Export Scans
+                  </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Kapan</TableHead><TableHead>Expected</TableHead><TableHead>Scanned</TableHead><TableHead>Minus</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {kapanSummary.map(k => {
+                      const daysRemaining = KAPAN_COMPLETION_WAIT_DAYS - k.daysSinceCreation;
+                      const canComplete = daysRemaining <= 0;
+                      return (
+                      <TableRow key={k.kapanNumber} className={cn("group transition-colors", highlightedKapan === k.kapanNumber && 'bg-yellow-100 dark:bg-yellow-900/30')}>
+                        <TableCell className="font-bold">{k.kapanNumber}</TableCell>
+                        <TableCell>{k.expected}</TableCell>
+                        <TableCell>{k.scanned}</TableCell>
+                        <TableCell>{k.minus}</TableCell>
+                        <TableCell className="flex items-center gap-2">{getStatusIcon(k.status)} {k.status.charAt(0).toUpperCase() + k.status.slice(1)}</TableCell>
+                        <TableCell>
+                           <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <span tabIndex={0}> {/* Wrapper for disabled button */}
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm" disabled={!canComplete}>
+                                          <Check className="mr-2 h-4 w-4" /> Complete
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle className="flex items-center gap-2"><AlertCircle className="text-destructive"/>Are you absolutely sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This action will permanently delete all data associated with <strong>Kapan {k.kapanNumber}</strong> from the entire application, including Sarin, Laser, 4P, and Udhda entries. This is to free up storage and cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => handleCompleteKapan(k.kapanNumber)}>
+                                            Yes, Delete All Data for Kapan {k.kapanNumber}
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </span>
+                              </TooltipTrigger>
+                              {!canComplete && (
+                                <TooltipContent>
+                                  <p className="flex items-center gap-2"><Clock className="h-4 w-4" /> {daysRemaining} days remaining until completion is allowed.</p>
+                                </TooltipContent>
+                              )}
+                           </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    )})}
+                    {kapanSummary.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No Jiram data to display.</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Date-wise Scanned Packets</CardTitle>
+              <div className="pt-4">
+                <Input
+                  placeholder="Search by packet barcode..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="max-h-[400px] overflow-y-auto pr-2">
+              <div className="space-y-4">
+                  {groupedScans.map(group => (
+                    <Collapsible key={group.date} className="border-b">
+                      <CollapsibleTrigger className="flex justify-between items-center w-full py-2 font-semibold">
+                        <div className="flex items-center gap-2">
+                              {format(parseISO(group.date), 'PPP')}
+                              <Badge>{group.count}</Badge>
+                        </div>
+                        <ChevronDown className="h-4 w-4 transition-transform [&[data-state=open]>svg]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Barcode</TableHead>
+                                <TableHead>Kapan</TableHead>
+                                <TableHead>Mode</TableHead>
+                                <TableHead>Time</TableHead>
+                                <TableHead>Action</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {group.packets.map(p => {
+                                const mode: ScanMode = minusScans.some(ms => ms.id === p.id) ? 'minus' : 'jiram';
+                                return (
+                                <TableRow key={p.id}>
+                                  <TableCell className="font-mono">{p.barcode}</TableCell>
+                                  <TableCell>{p.kapanNumber}</TableCell>
+                                  <TableCell>
+                                     <Badge variant={mode === 'minus' ? 'destructive' : 'secondary'}>{mode}</Badge>
+                                  </TableCell>
+                                  <TableCell>{format(new Date(p.scanTime), 'p')}</TableCell>
+                                  <TableCell>
+                                    <Button variant="ghost" size="icon" onClick={() => handleDeletePacket(p.id, mode)}><Trash2 className="h-4 w-4" /></Button>
+                                  </TableCell>
+                                </TableRow>
+                              )})}
+                            </TableBody>
+                          </Table>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                  {groupedScans.length === 0 && (
+                    <p className="text-center text-muted-foreground py-8">No packets match your search.</p>
+                  )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}

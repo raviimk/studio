@@ -1,7 +1,172 @@
 {
+<<<<<<< HEAD
   "entities": {},
   "auth": {
     "providers": []
   },
   "firestore": {}
 }
+=======
+  "entities": {
+    "chaluEntry": {
+      "title": "Chalu Entry",
+      "description": "Represents a single chalu/running packet entry in the production log.",
+      "type": "object",
+      "properties": {
+        "kapanNumber": {
+          "type": "string",
+          "description": "The Kapan number for the entry."
+        },
+        "packetNumber": {
+          "type": "string",
+          "description": "The specific packet number."
+        },
+        "vajan": {
+          "type": "number",
+          "description": "The weight of the packet."
+        },
+        "originalPcs": {
+          "type": "number",
+          "description": "The original number of pieces."
+        },
+        "adjustment": {
+          "type": "number",
+          "description": "The adjustment quantity (+ or -)."
+        },
+        "suffix": {
+          "type": "string",
+          "description": "The calculated or manually entered suffix for adjustments."
+        },
+        "currentPcs": {
+          "type": "number",
+          "description": "The current number of pieces after adjustment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the entry was created."
+        },
+        "isReturned": {
+            "type": "boolean",
+            "description": "Whether the entry has been returned."
+        },
+        "returnedPackets": {
+            "type": "array",
+            "description": "List of barcodes scanned during the return process.",
+            "items": {
+                "type": "string"
+            }
+        }
+      },
+      "required": [
+        "kapanNumber",
+        "packetNumber",
+        "originalPcs",
+        "currentPcs",
+        "createdAt"
+      ]
+    },
+    "kapan": {
+      "title": "Kapan",
+      "description": "Represents a single Kapan (lot group).",
+      "type": "object",
+      "properties": {
+        "kapanNumber": {
+          "type": "string",
+          "description": "The unique Kapan number."
+        }
+      },
+      "required": [
+        "kapanNumber"
+      ]
+    },
+    "jiramEntry": {
+      "title": "Jiram Entry",
+      "description": "Represents a single packet scanned during Jiram verification, pending Chalu entry.",
+      "type": "object",
+      "properties": {
+        "barcode": {
+          "type": "string",
+          "description": "The full barcode scanned."
+        },
+        "kapanNumber": {
+          "type": "string",
+          "description": "The Kapan number extracted from the barcode."
+        },
+        "packetNumber": {
+          "type": "string",
+          "description": "The packet number part of the barcode."
+        },
+        "suffix": {
+          "type": "string",
+          "description": "The suffix part of the barcode, if any."
+        },
+        "scanTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the packet was scanned."
+        }
+      },
+      "required": ["barcode", "kapanNumber", "packetNumber", "scanTime"]
+    },
+    "minusScanEntry": {
+      "title": "Minus Scan Entry",
+      "description": "Represents a packet scanned to be marked as a 'minus' or reduction entry.",
+      "type": "object",
+      "properties": {
+        "barcode": {
+          "type": "string",
+          "description": "The full barcode scanned."
+        },
+        "kapanNumber": {
+          "type": "string",
+          "description": "The Kapan number extracted from the barcode."
+        },
+        "packetNumber": {
+          "type": "string",
+          "description": "The packet number part of the barcode."
+        },
+        "suffix": {
+          "type": "string",
+          "description": "The suffix part of the barcode, if any."
+        },
+        "scanTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the packet was scanned."
+        }
+      },
+      "required": ["barcode", "kapanNumber", "packetNumber", "scanTime"]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/chaluEntries/{chaluEntryId}": {
+      "schema": {
+        "$ref": "#/entities/chaluEntry"
+      },
+      "description": "Stores all the Chalu/Running packet entries."
+    },
+    "/kapans/{kapanId}": {
+      "schema": {
+        "$ref": "#/entities/kapan"
+      },
+      "description": "Stores the list of all available Kapan numbers."
+    },
+    "/jiramEntries/{jiramEntryId}": {
+      "schema": {
+        "$ref": "#/entities/jiramEntry"
+      },
+      "description": "Stores packets scanned during Jiram verification that are pending Chalu entry."
+    },
+    "/minusScanEntries/{minusScanEntryId}": {
+      "schema": {
+        "$ref": "#/entities/minusScanEntry"
+      },
+      "description": "Stores packets scanned for 'minus' adjustment."
+    }
+  }
+}
+>>>>>>> 69219907bb2272da9ca06da9024b9ecf0f70ade4

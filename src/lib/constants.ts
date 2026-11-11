@@ -23,6 +23,8 @@ export const UHDHA_SETTINGS_KEY = 'udhdhaSettings';
 
 // Jiram Report
 export const JIRAM_REPORT_PACKETS_KEY = 'jiramReportPackets';
+export const MINUS_SCANS_KEY = 'minusScans'; // New key for minus scans
+
 
 // Box Sorting
 export const BOX_SORTING_RANGES_KEY = 'boxSortingRanges';
@@ -41,6 +43,7 @@ export const PRODUCTION_HISTORY_KEY = 'productionHistory';
 export const AUTO_BACKUP_SETTINGS_KEY = 'autoBackupSettings';
 export const RETURN_SCAN_SETTINGS_KEY = 'returnScanSettings';
 export const SYSTEM_SETTINGS_KEY = 'systemSettings';
+export const STATION_NAME_KEY = 'stationName';
 
 
 // All keys for backup/restore
@@ -62,6 +65,7 @@ export const ALL_APP_KEYS = [
     UHDHA_PACKETS_KEY,
     UHDHA_SETTINGS_KEY,
     JIRAM_REPORT_PACKETS_KEY,
+    MINUS_SCANS_KEY, // Added for backup
     BOX_SORTING_RANGES_KEY,
     BOX_SORTING_PACKETS_KEY,
     DIAMETER_SORTING_RANGES_KEY,
@@ -71,6 +75,7 @@ export const ALL_APP_KEYS = [
     AUTO_BACKUP_SETTINGS_KEY,
     RETURN_SCAN_SETTINGS_KEY,
     SYSTEM_SETTINGS_KEY,
+    STATION_NAME_KEY,
 ];
 
     

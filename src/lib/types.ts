@@ -2,7 +2,6 @@
 
 export interface SarinPacket {
   id: string;
-  senderName: string;
   operator: string;
   machine: string;
   kapanNumber: string;
@@ -153,6 +152,9 @@ export interface JiramReportPacket {
     scanTime: string;
 }
 
+// New type for minus scans, identical for now
+export interface MinusScanPacket extends JiramReportPacket {}
+
 export interface BoxSortingRange {
     id: string;
     from: number;
@@ -211,6 +213,25 @@ export interface SystemSettings {
   autoCreateLaserLotDelay?: number;
 }
 
+// New type for ChaluEntry in chalu-entry/page.tsx
+export type ChaluEntry = {
+    id: string;
+    kapanNumber: string;
+    packetNumber: string;
+    vajan: number;
+    originalPcs: number;
+    adjustment: number;
+    suffix: string;
+    currentPcs: number;
+    isReturned?: boolean;
+    returnedPackets?: string[];
+    createdAt: any;
+    returnDate?: string;
+    pendingJiramId?: string;
+    pendingMinusScanId?: string;
+    createdByStation?: string;
+    returnedByStation?: string;
+};
     
 
     

@@ -11,42 +11,26 @@ import {
 import * as T from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DatePicker } from '@/components/ui/date-picker';
-import { startOfDay, endOfDay, isWithinInterval, parseISO, isAfter, isBefore, format } from 'date-fns';
+import { DatePickerWithRange } from '@/components/ui/date-picker-range';
+import type { DateRange } from "react-day-picker";
+import { startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Diamond, Gem, Puzzle, Sparkles } from 'lucide-react';
+import { Diamond, Gem, Puzzle, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 
 type LotDetail = {
     lotNumber: string;
     pcs: number;
     kapanNumber: string;
-    returnDate?: string;
 };
 
-
-type OperatorSarinData = {
-    operator: string;
-    returned: number;
-    chalu: number;
-    total: number;
-    returnedLots: LotDetail[];
-    chaluLots: LotDetail[];
-}
-type OperatorLaserData = {
+type OperatorData = {
     operator: string;
     pcs: number;
     lots: LotDetail[];
 }
 
-type OperatorFourPData = {
-    operator: string;
-    pcs: number;
-    lots: LotDetail[];
-}
-
-
-const DepartmentCard = ({ title, total, borderColor, children, icon: Icon, totalBreakdown }: { title: string, total: number | string, borderColor: string, children: React.ReactNode, icon: React.ElementType, totalBreakdown?: string }) => (
+const DepartmentCard = ({ title, total, borderColor, children, icon: Icon }: { title: string, total: number | string, borderColor: string, children: React.ReactNode, icon: React.ElementType }) => (
     <Card className={cn("overflow-hidden border-t-4", borderColor)}>
         <CardHeader className="flex flex-row items-start justify-between pb-4">
             <CardTitle className="text-lg font-medium flex items-center gap-2">
@@ -54,9 +38,8 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon, total
                  {title}
             </CardTitle>
             <div className="text-right">
-                <p className="text-xs text-muted-foreground">Today's Production</p>
+                <p className="text-xs text-muted-foreground">Total Production</p>
                 <p className="text-2xl font-bold">{total}</p>
-                {totalBreakdown && <p className="text-xs text-muted-foreground">{totalBreakdown}</p>}
             </div>
         </CardHeader>
         <CardContent>
@@ -65,288 +48,203 @@ const DepartmentCard = ({ title, total, borderColor, children, icon: Icon, total
     </Card>
 );
 
-const DetailDialog = ({ operator, department, lots, trigger }: { operator: string, department: string, lots: LotDetail[], trigger: React.ReactNode }) => {
-  const sortedLots = useMemo(() => {
-    return lots.sort((a, b) => {
-        if (!a.returnDate || !b.returnDate) return 0;
-        return parseISO(a.returnDate).getTime() - parseISO(b.returnDate).getTime();
-    })
-  }, [lots]);
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        {trigger}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{department} Details for {operator}</DialogTitle>
-          <DialogDescription>Breakdown of all lots contributing to the total.</DialogDescription>
-        </DialogHeader>
-        <div className="max-h-96 overflow-y-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kapan</TableHead>
-                <TableHead>Lot Number</TableHead>
-                <TableHead>Return Time</TableHead>
-                <TableHead className="text-right">PCS</TableHead>
+const DetailDialog = ({ operator, department, lots, trigger }: { operator: string, department: string, lots: LotDetail[], trigger: React.ReactNode }) => (
+  <Dialog>
+    <DialogTrigger asChild>
+      {trigger}
+    </DialogTrigger>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>{department} Details for {operator}</DialogTitle>
+        <DialogDescription>Breakdown of all lots contributing to the total.</DialogDescription>
+      </DialogHeader>
+      <div className="max-h-96 overflow-y-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Kapan</TableHead>
+              <TableHead>Lot Number</TableHead>
+              <TableHead className="text-right">PCS</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lots.map((lot, index) => (
+              <TableRow key={`${lot.lotNumber}-${index}`}>
+                <TableCell>{lot.kapanNumber}</TableCell>
+                <TableCell>{lot.lotNumber}</TableCell>
+                <TableCell className="text-right font-mono">{lot.pcs}</TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedLots.map((lot, index) => (
-                <TableRow key={`${lot.lotNumber}-${index}`}>
-                  <TableCell>{lot.kapanNumber}</TableCell>
-                  <TableCell>{lot.lotNumber}</TableCell>
-                  <TableCell>{lot.returnDate ? format(parseISO(lot.returnDate), 'p') : 'N/A'}</TableCell>
-                  <TableCell className="text-right font-mono">{lot.pcs}</TableCell>
-                </TableRow>
-              ))}
-               <TableRow className="bg-muted font-bold">
-                  <TableCell colSpan={3}>Total</TableCell>
-                  <TableCell className="text-right font-mono">{lots.reduce((sum, lot) => sum + lot.pcs, 0)}</TableCell>
-                </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
+            ))}
+             <TableRow className="bg-muted font-bold">
+                <TableCell colSpan={2}>Total</TableCell>
+                <TableCell className="text-right font-mono">{lots.reduce((sum, lot) => sum + lot.pcs, 0)}</TableCell>
+              </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </DialogContent>
+  </Dialog>
+);
 
 export default function DatewiseProductionReport() {
   const [sarinPackets] = useLocalStorage<T.SarinPacket[]>(SARIN_PACKETS_KEY, []);
   const [laserLots] = useLocalStorage<T.LaserLot[]>(LASER_LOTS_KEY, []);
   const [fourPTechingLots] = useLocalStorage<T.FourPLot[]>(FOURP_TECHING_LOTS_KEY, []);
 
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+      from: new Date(),
+      to: new Date(),
+  });
 
-  const sarinData = useMemo((): OperatorSarinData[] => {
-    if (!date) return [];
+  const { sarinData, laserData, fourPData, fourPTechingData } = useMemo(() => {
+    if (!dateRange?.from) return { sarinData: [], laserData: [], fourPData: [], fourPTechingData: [] };
     
-    const data: Record<string, { returned: number; chalu: number; returnedLots: LotDetail[]; chaluLots: LotDetail[] }> = {};
-    const selectedDateStart = startOfDay(date);
-    const selectedDateEnd = endOfDay(date);
-    const dateFilter = { start: selectedDateStart, end: selectedDateEnd };
+    const selectedDateStart = startOfDay(dateRange.from);
+    const selectedDateEnd = endOfDay(dateRange.to || dateRange.from);
+    const filterInterval = { start: selectedDateStart, end: selectedDateEnd };
 
-    const ensureOperator = (operator: string) => {
-        if (!data[operator]) {
-            data[operator] = { returned: 0, chalu: 0, returnedLots: [], chaluLots: [] };
-        }
-    }
-
+    // Process Sarin Data
+    const sarinSummary: Record<string, OperatorData> = {};
     sarinPackets.forEach(p => {
-        // Returned on the selected date
-        if (p.isReturned && p.returnDate && p.returnedBy && isWithinInterval(parseISO(p.returnDate), dateFilter)) {
-            ensureOperator(p.returnedBy);
-            data[p.returnedBy].returned += p.packetCount;
-            data[p.returnedBy].returnedLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
-        }
-
-        // Chalu (running) on the selected date
-        const entryDate = parseISO(p.date);
-        const isCreatedOnOrBeforeSelectedDate = isBefore(entryDate, selectedDateEnd);
-        const notYetReturned = !p.isReturned;
-        const returnedAfterSelectedDate = p.isReturned && p.returnDate && isAfter(parseISO(p.returnDate), selectedDateEnd);
-        
-        if (isCreatedOnOrBeforeSelectedDate && (notYetReturned || returnedAfterSelectedDate)) {
-             ensureOperator(p.operator);
-             data[p.operator].chalu += p.packetCount;
-             data[p.operator].chaluLots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber, returnDate: p.returnDate });
+        if (p.isReturned && p.returnDate && isWithinInterval(parseISO(p.returnDate), filterInterval) && p.returnedBy) {
+            if (!sarinSummary[p.returnedBy]) {
+                sarinSummary[p.returnedBy] = { operator: p.returnedBy, pcs: 0, lots: [] };
+            }
+            sarinSummary[p.returnedBy].pcs += p.packetCount;
+            sarinSummary[p.returnedBy].lots.push({ lotNumber: p.lotNumber, pcs: p.packetCount, kapanNumber: p.kapanNumber });
         }
     });
 
-    return Object.entries(data)
-        .filter(([,depts]) => depts.returned > 0 || depts.chalu > 0)
-        .map(([op, depts]) => ({
-            operator: op,
-            ...depts,
-            total: depts.returned // Only count returned in total
-        }))
-        .sort((a,b) => b.total - a.total);
-  }, [sarinPackets, date]);
-
-  const laserData = useMemo((): OperatorLaserData[] => {
-    if (!date) return [];
-    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
-
+    // Process Laser Data
+    const laserSummary: Record<string, OperatorData> = {};
     laserLots.forEach(l => {
-        if (l.isReturned && l.returnDate && l.returnedBy && isWithinInterval(parseISO(l.returnDate), dateFilter)) {
-            if (!data[l.returnedBy]) {
-                 data[l.returnedBy] = { pcs: 0, lots: [] };
+        if (l.isReturned && l.returnDate && isWithinInterval(parseISO(l.returnDate), filterInterval) && l.returnedBy) {
+            if (!laserSummary[l.returnedBy]) {
+                laserSummary[l.returnedBy] = { operator: l.returnedBy, pcs: 0, lots: [] };
             }
             const pcs = l.subPacketCount ?? l.packetCount;
-            data[l.returnedBy].pcs += pcs;
-            data[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs, kapanNumber: l.kapanNumber, returnDate: l.returnDate });
+            laserSummary[l.returnedBy].pcs += pcs;
+            laserSummary[l.returnedBy].lots.push({ lotNumber: l.lotNumber, pcs: pcs, kapanNumber: l.kapanNumber });
         }
     });
-     return Object.entries(data)
-        .map(([op, details]) => ({ operator: op, ...details }))
-        .sort((a,b) => b.pcs - a.pcs);
-  }, [laserLots, date]);
 
-
-  const fourPData = useMemo((): OperatorFourPData[] => {
-    if (!date) return [];
-    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
-
+    // Process 4P Data
+    const fourPSummary: Record<string, OperatorData> = {};
     fourPTechingLots.forEach(l => {
-         if (l.isReturnedToFourP && l.returnDate && isWithinInterval(parseISO(l.returnDate), dateFilter)) {
-            if (l.fourPData) { // New split data structure
-                l.fourPData.forEach(d => {
-                    if (!data[d.operator]) data[d.operator] = { pcs: 0, lots: [] };
-                    data[d.operator].pcs += d.pcs;
-                    data[d.operator].lots.push({ lotNumber: l.lot, pcs: d.pcs, kapanNumber: l.kapan, returnDate: l.returnDate });
-                });
-            } else if (l.fourPOperator) { // Legacy single operator
-                if (!data[l.fourPOperator]) data[l.fourPOperator] = { pcs: 0, lots: [] };
-                const pcs = l.finalPcs || 0;
-                data[l.fourPOperator].pcs += pcs;
-                data[l.fourPOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan, returnDate: l.returnDate });
+        if (l.isReturnedToFourP && l.returnDate && isWithinInterval(parseISO(l.returnDate), filterInterval)) {
+           const operators = l.fourPData ? l.fourPData : (l.fourPOperator ? [{ operator: l.fourPOperator, pcs: l.finalPcs, amount: l.fourPAmount || 0 }] : []);
+           operators.forEach(opData => {
+                if (!fourPSummary[opData.operator]) {
+                    fourPSummary[opData.operator] = { operator: opData.operator, pcs: 0, lots: [] };
+                }
+                fourPSummary[opData.operator].pcs += opData.pcs;
+                fourPSummary[opData.operator].lots.push({ lotNumber: l.lot, pcs: opData.pcs, kapanNumber: l.kapan });
+           });
+        }
+    });
+
+    // Process 4P Teching Data
+    const fourPTechingSummary: Record<string, OperatorData> = {};
+    fourPTechingLots.forEach(l => {
+        if (isWithinInterval(parseISO(l.entryDate), filterInterval)) {
+            const operator = l.techingOperator;
+            if (!fourPTechingSummary[operator]) {
+                fourPTechingSummary[operator] = { operator, pcs: 0, lots: [] };
             }
+            fourPTechingSummary[operator].pcs += l.finalPcs;
+            fourPTechingSummary[operator].lots.push({ lotNumber: l.lot, pcs: l.finalPcs, kapanNumber: l.kapan });
         }
     });
-    return Object.entries(data)
-        .map(([op, details]) => ({ operator: op, ...details }))
-        .sort((a,b) => b.pcs - a.pcs);
-  }, [fourPTechingLots, date]);
-  
-  const fourPTechingData = useMemo((): OperatorFourPData[] => {
-    if (!date) return [];
-    const data: Record<string, { pcs: number; lots: LotDetail[] }> = {};
-    const dateFilter = { start: startOfDay(date), end: endOfDay(date) };
 
-     fourPTechingLots.forEach(l => {
-        if (isWithinInterval(parseISO(l.entryDate), dateFilter)) {
-            if (!data[l.techingOperator]) data[l.techingOperator] = { pcs: 0, lots: [] };
-            const pcs = l.finalPcs || 0;
-            data[l.techingOperator].pcs += pcs;
-            data[l.techingOperator].lots.push({ lotNumber: l.lot, pcs, kapanNumber: l.kapan, returnDate: l.entryDate });
-        }
-    });
-    return Object.entries(data)
-        .map(([op, details]) => ({ operator: op, ...details }))
-        .sort((a,b) => b.pcs - a.pcs);
-  }, [fourPTechingLots, date]);
-
-  const totals = useMemo(() => {
-    return {
-        sarin: sarinData.reduce((sum, d) => sum + d.total, 0),
-        laser: laserData.reduce((sum, d) => sum + d.pcs, 0),
-        fourP: fourPData.reduce((sum, d) => sum + d.pcs, 0),
-        fourPTeching: fourPTechingData.reduce((sum, d) => sum + d.pcs, 0),
+    return { 
+        sarinData: Object.values(sarinSummary).sort((a,b) => b.pcs - a.pcs),
+        laserData: Object.values(laserSummary).sort((a,b) => b.pcs - a.pcs),
+        fourPData: Object.values(fourPSummary).sort((a,b) => b.pcs - a.pcs),
+        fourPTechingData: Object.values(fourPTechingSummary).sort((a,b) => b.pcs - a.pcs),
     };
-  }, [sarinData, laserData, fourPData, fourPTechingData]);
+  }, [sarinPackets, laserLots, fourPTechingLots, dateRange]);
 
+
+  const totalSarin = useMemo(() => sarinData.reduce((sum, d) => sum + d.pcs, 0), [sarinData]);
+  const totalLaser = useMemo(() => laserData.reduce((sum, d) => sum + d.pcs, 0), [laserData]);
+  const total4P = useMemo(() => fourPData.reduce((sum, d) => sum + d.pcs, 0), [fourPData]);
+  const total4PTeching = useMemo(() => fourPTechingData.reduce((sum, d) => sum + d.pcs, 0), [fourPTechingData]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Date-wise All Departments Report</CardTitle>
-        <CardDescription>View production for all operators across Sarin, Laser, and 4P for a selected date.</CardDescription>
+        <CardTitle>Date-wise Production</CardTitle>
+        <CardDescription>View production totals for all operators across all departments for the selected date range. Only includes returned/completed work.</CardDescription>
         <div className="pt-4">
-             <label className="text-sm font-medium">Select Date</label>
-             <DatePicker date={date} setDate={setDate} />
+             <label className="text-sm font-medium">Select Date Range</label>
+             <DatePickerWithRange date={dateRange} setDate={setDateRange} />
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
-            <DepartmentCard title="Sarin Department" total={totals.sarin} borderColor="border-orange-400" icon={Diamond} totalBreakdown={`Returned lots only`}>
+            <DepartmentCard title="Sarin Department" total={totalSarin} borderColor="border-orange-400" icon={Diamond}>
                 <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead>Returned</TableHead><TableHead>Chalu (For Info)</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {sarinData.map(d => (
                             <TableRow key={d.operator}>
                                 <TableCell>{d.operator}</TableCell>
-                                <TableCell>
-                                  <DetailDialog
-                                    operator={d.operator}
-                                    department="Sarin (Returned)"
-                                    lots={d.returnedLots}
-                                    trigger={<span className="cursor-pointer underline">{d.returned || '-'}</span>}
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                    <DetailDialog
-                                      operator={d.operator}
-                                      department="Sarin (Chalu)"
-                                      lots={d.chaluLots}
-                                      trigger={<span className="cursor-pointer underline">{d.chalu || '-'}</span>}
-                                    />
-                                </TableCell>
                                 <TableCell className="text-right font-bold text-orange-600">
-                                   <DetailDialog 
-                                        operator={d.operator}
-                                        department="Sarin (Returned)"
-                                        lots={d.returnedLots}
-                                        trigger={ <span className="cursor-pointer underline">{d.total}</span> }
-                                    />
+                                   <DetailDialog operator={d.operator} department="Sarin" lots={d.lots} trigger={<span className="cursor-pointer underline">{d.pcs}</span>} />
                                 </TableCell>
                             </TableRow>
                         ))}
-                        {sarinData.length === 0 && <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No Sarin data for this period.</TableCell></TableRow>}
+                        {sarinData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No Sarin data for this period.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </DepartmentCard>
-             <DepartmentCard title="Laser Department" total={totals.laser} borderColor="border-red-400" icon={Gem}>
-                <Table>
+            
+            <DepartmentCard title="Laser Department" total={totalLaser} borderColor="border-red-400" icon={Gem}>
+                 <Table>
                     <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {laserData.map(d => (
-                            <TableRow key={d.operator}><TableCell>{d.operator}</TableCell>
-                            <TableCell className="text-right font-bold text-red-600">
-                                <DetailDialog
-                                  operator={d.operator}
-                                  department="Laser"
-                                  lots={d.lots}
-                                  trigger={<span className="cursor-pointer underline">{d.pcs}</span>}
-                                />
-                            </TableCell>
+                            <TableRow key={d.operator}>
+                                <TableCell>{d.operator}</TableCell>
+                                <TableCell className="text-right font-bold text-red-600">
+                                     <DetailDialog operator={d.operator} department="Laser" lots={d.lots} trigger={<span className="cursor-pointer underline">{d.pcs}</span>} />
+                                </TableCell>
                             </TableRow>
                         ))}
                         {laserData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No Laser data for this period.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </DepartmentCard>
-             <DepartmentCard title="4P Department" total={totals.fourP} borderColor="border-green-400" icon={Puzzle}>
-                 <Table>
-                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                        {fourPData.map(d => (
-                             <TableRow key={d.operator}><TableCell>{d.operator}</TableCell>
-                             <TableCell className="text-right font-bold text-green-600">
-                                <DetailDialog
-                                  operator={d.operator}
-                                  department="4P"
-                                  lots={d.lots}
-                                  trigger={<span className="cursor-pointer underline">{d.pcs}</span>}
-                                />
-                             </TableCell>
-                             </TableRow>
-                        ))}
-                        {fourPData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No 4P data for this period.</TableCell></TableRow>}
-                    </TableBody>
-                </Table>
-            </DepartmentCard>
-            <DepartmentCard title="4P Teching" total={totals.fourPTeching} borderColor="border-blue-400" icon={Sparkles}>
+
+            <DepartmentCard title="4P Teching" total={total4PTeching} borderColor="border-blue-400" icon={Users}>
                  <Table>
                     <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
                     <TableBody>
                         {fourPTechingData.map(d => (
-                             <TableRow key={d.operator}><TableCell>{d.operator}</TableCell>
-                             <TableCell className="text-right font-bold text-blue-600">
-                                <DetailDialog
-                                  operator={d.operator}
-                                  department="4P Teching"
-                                  lots={d.lots}
-                                  trigger={<span className="cursor-pointer underline">{d.pcs}</span>}
-                                />
-                             </TableCell>
-                             </TableRow>
+                            <TableRow key={d.operator}>
+                                <TableCell>{d.operator}</TableCell>
+                                <TableCell className="text-right font-bold text-blue-600">
+                                     <DetailDialog operator={d.operator} department="4P Teching" lots={d.lots} trigger={<span className="cursor-pointer underline">{d.pcs}</span>} />
+                                </TableCell>
+                            </TableRow>
                         ))}
                         {fourPTechingData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No 4P Teching data for this period.</TableCell></TableRow>}
+                    </TableBody>
+                </Table>
+            </DepartmentCard>
+
+            <DepartmentCard title="4P Department" total={total4P} borderColor="border-green-400" icon={Puzzle}>
+                 <Table>
+                    <TableHeader><TableRow><TableHead>Operator</TableHead><TableHead className="text-right">Total PCS</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {fourPData.map(d => (
+                            <TableRow key={d.operator}>
+                                <TableCell>{d.operator}</TableCell>
+                                <TableCell className="text-right font-bold text-green-600">
+                                     <DetailDialog operator={d.operator} department="4P" lots={d.lots} trigger={<span className="cursor-pointer underline">{d.pcs}</span>} />
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {fourPData.length === 0 && <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No 4P data for this period.</TableCell></TableRow>}
                     </TableBody>
                 </Table>
             </DepartmentCard>
