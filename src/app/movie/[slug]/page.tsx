@@ -35,8 +35,9 @@ interface MovieDetail {
   episodes?: LinkItem[];
   other: LinkItem[];
   synopsis: string;
+  storyline?: string;
   review?: string;
-  audio_langs?: string;
+  audio_langs?: string | null;
 }
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
@@ -70,8 +71,8 @@ const getQualityRank = (label: string) => {
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
   
-  // Strictly prioritize review as the primary description to avoid noise in synopsis
-  const description = movie.review || movie.synopsis;
+  // Logic to determine the best description from available API fields
+  const description = movie.review || movie.storyline || movie.synopsis;
 
   const sortedDownloads = [...movie.downloads].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
   const sortedWatch = [...movie.watch].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
@@ -87,7 +88,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </Button>
       </div>
 
-      {/* Hero Section: Poster -> Qualities -> Title -> Description -> Audio */}
+      {/* Hero Section: Poster -> Qualities -> Title -> Storyline/Review -> Audio */}
       <div className="flex flex-col items-center text-center gap-6 px-4">
         <div className="relative w-64 md:w-80 aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl">
           <Image
