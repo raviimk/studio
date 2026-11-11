@@ -70,7 +70,7 @@ const getQualityRank = (label: string) => {
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
   
-  // Use review as description if available, otherwise use synopsis
+  // Strictly prioritize review as the primary description to avoid noise in synopsis
   const description = movie.review || movie.synopsis;
 
   const sortedDownloads = [...movie.downloads].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
