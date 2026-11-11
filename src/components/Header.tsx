@@ -89,8 +89,9 @@ export function Header() {
           </span>
 
           {/* Symmetrical Spacer to keep text exactly centered when NOT scrolled */}
+          {/* Removing hidden sm:block to ensure centering on mobile as well */}
           {!isScrolled && (
-            <div className="w-12 h-12 sm:w-16 sm:h-16 invisible shrink-0 hidden sm:block" aria-hidden="true" />
+            <div className="w-12 h-12 sm:w-16 sm:h-16 invisible shrink-0" aria-hidden="true" />
           )}
         </Link>
 
