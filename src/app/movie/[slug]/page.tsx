@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, ChevronLeft, Zap, Tv, Languages } from "lucide-react";
+import { Play, ChevronLeft, Zap, Tv, Languages, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -55,23 +55,41 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
-  const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
+  // Prioritize storyline field as requested, then review
+  const candidates = [movie.storyline, movie.review, movie.description, movie.synopsis];
   
   for (const text of candidates) {
-    if (!text || text.trim() === "" || text.toLowerCase().startsWith("n/a")) continue;
+    if (!text || text.trim() === "" || text.trim().toLowerCase() === "n/a") continue;
     
     let clean = text.trim();
     
-    // Filter out common site navigation noise
-    if (clean.includes("HDHub4u Home") || clean.includes("Search Here !!") || clean.includes("Categories Select Category")) {
+    // Filter out technical site noise and generic navigation text
+    if (
+      clean.includes("HDHub4u Home") || 
+      clean.includes("Search Here !!") || 
+      clean.includes("Categories Select Category") ||
+      clean.toLowerCase().includes("please watch and give reviews")
+    ) {
       continue;
     }
 
-    if (clean.includes("DESCRIPTION:")) {
-      clean = clean.split("DESCRIPTION:")[1].trim().replace(/^[:\s]+/, '');
+    // Remove common prefixes like "Movie Name (Year) : " or "DESCRIPTION:"
+    const descriptionPrefix = "DESCRIPTION:";
+    if (clean.toUpperCase().includes(descriptionPrefix)) {
+      clean = clean.substring(clean.toUpperCase().indexOf(descriptionPrefix) + descriptionPrefix.length).trim();
+    }
+
+    const separatorIdx = clean.indexOf(" : ");
+    if (separatorIdx !== -1 && separatorIdx < 120) {
+        clean = clean.substring(separatorIdx + 3).trim();
     }
     
-    if (clean.length > 20) return clean;
+    // Final check for "N/A" at the start of a cleaned string
+    if (clean.toLowerCase().startsWith("n/a")) {
+        clean = clean.replace(/^n\/a/i, '').trim().replace(/^[:\s-]+/, '');
+    }
+
+    if (clean.length > 10) return clean;
   }
   
   return null;
@@ -138,7 +156,10 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h1>
 
           {description && (
-            <div className="prose prose-invert max-w-none">
+            <div className="prose prose-invert max-w-none text-left bg-white/5 p-6 rounded-2xl border border-white/10 mt-2">
+              <h2 className="text-lg md:text-xl font-bold mb-3 text-primary flex items-center gap-2">
+                <FileText size={20} /> Storyline
+              </h2>
               <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
                 {description}
               </p>
@@ -165,9 +186,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
               // Construct proxied URL using raw_thumb as requested
               const imageUrl = s.raw_thumb 
                 ? `${API_BASE}/img?u=${encodeURIComponent(s.raw_thumb)}` 
-                : (s.full?.startsWith('/') ? `${API_BASE}${s.full}` : s.full) || 
-                  (s.thumb?.startsWith('/') ? `${API_BASE}${s.thumb}` : s.thumb) || 
-                  s.raw_full;
+                : null;
 
               if (!imageUrl) return null;
 
