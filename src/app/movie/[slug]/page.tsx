@@ -55,11 +55,11 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
-  // Prioritize storyline field as requested, then review
-  const candidates = [movie.storyline, movie.review, movie.description, movie.synopsis];
+  // Priority order: review (highest quality usually), storyline, synopsis, description
+  const candidates = [movie.review, movie.storyline, movie.synopsis, movie.description];
   
   for (const text of candidates) {
-    if (!text || text.trim() === "" || text.trim().toLowerCase() === "n/a") continue;
+    if (!text || text.trim() === "" || text.trim().toUpperCase() === "N/A") continue;
     
     let clean = text.trim();
     
@@ -73,7 +73,7 @@ function getCleanDescription(movie: MovieDetail) {
       continue;
     }
 
-    // Remove common prefixes like "Movie Name (Year) : " or "DESCRIPTION:"
+    // Remove common prefixes
     const descriptionPrefix = "DESCRIPTION:";
     if (clean.toUpperCase().includes(descriptionPrefix)) {
       clean = clean.substring(clean.toUpperCase().indexOf(descriptionPrefix) + descriptionPrefix.length).trim();
@@ -84,11 +84,6 @@ function getCleanDescription(movie: MovieDetail) {
         clean = clean.substring(separatorIdx + 3).trim();
     }
     
-    // Final check for "N/A" at the start of a cleaned string
-    if (clean.toLowerCase().startsWith("n/a")) {
-        clean = clean.replace(/^n\/a/i, '').trim().replace(/^[:\s-]+/, '');
-    }
-
     if (clean.length > 10) return clean;
   }
   
@@ -183,7 +178,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => {
-              // Use the requested proxy format
+              // Use requested proxy format: worker_base/img?u=raw_thumb_url
               const imageUrl = s.raw_thumb 
                 ? `${API_BASE}/img?u=${s.raw_thumb}` 
                 : null;
@@ -290,21 +285,28 @@ export default async function MoviePage({ params }: { params: { slug: string } }
             </h2>
             
             <div className="w-full flex flex-col">
-              {sortedWatch.map((link, idx) => (
-                <div key={idx} className="w-full">
-                  <Separator className="bg-white/10" />
-                  <Link 
-                    href={link.url} 
-                    target="_blank"
-                    className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
-                  >
-                    <span className={cn("flex items-center gap-2 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
-                      <Play size={16} fill="currentColor" />
-                      {link.label}
-                    </span>
-                  </Link>
-                </div>
-              ))}
+              {sortedWatch.map((link, idx) => {
+                // If label is "WATCH" and there are multiple links, treat as episodes
+                const label = link.label.toUpperCase() === "WATCH" && sortedWatch.length > 1 
+                  ? `WATCH EP ${idx + 1}` 
+                  : link.label;
+
+                return (
+                  <div key={idx} className="w-full">
+                    <Separator className="bg-white/10" />
+                    <Link 
+                      href={link.url} 
+                      target="_blank"
+                      className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
+                    >
+                      <span className={cn("flex items-center gap-2 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
+                        <Play size={16} fill="currentColor" />
+                        {label}
+                      </span>
+                    </Link>
+                  </div>
+                );
+              })}
               <Separator className="bg-white/10" />
             </div>
           </div>
