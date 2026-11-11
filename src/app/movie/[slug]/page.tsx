@@ -67,10 +67,30 @@ const getQualityRank = (label: string) => {
 
 const cleanSynopsis = (text: string) => {
   if (!text) return "";
-  // Remove technical prefixes and noise from API
-  let cleaned = text.replace(/^DESCRIPTION:\s*:\s*/i, "");
+  
+  let cleaned = text;
+
+  // Try to find the actual description marker
+  const descIndex = cleaned.toUpperCase().indexOf("DESCRIPTION:");
+  if (descIndex !== -1) {
+    // Take everything after "DESCRIPTION: :" or "DESCRIPTION:"
+    cleaned = cleaned.substring(descIndex).replace(/^DESCRIPTION:\s*:\s*/i, "").replace(/^DESCRIPTION:\s*/i, "");
+  }
+
+  // Remove technical noise and trailing script references
   cleaned = cleaned.split('document.addEventListener')[0];
   cleaned = cleaned.split('Avoid FAKE Copies')[0];
+  cleaned = cleaned.split('× Avoid FAKE')[0];
+  
+  // If the string starts with the menu noise, and we didn't find DESCRIPTION, 
+  // we try to cut off the known menu prefix
+  if (cleaned.includes("4K Movies HDHub4u Home")) {
+    const parts = cleaned.split("Search");
+    if (parts.length > 1) {
+      cleaned = parts[parts.length - 1];
+    }
+  }
+
   return cleaned.trim();
 };
 
@@ -233,7 +253,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
       )}
 
       {/* Screenshots Section */}
-      {movie.screenshots.length > 0 && (
+      {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
             Screenshots
