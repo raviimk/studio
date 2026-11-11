@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-blank-project",
+  "name": "rv-movies",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,7 +16,8 @@
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
-    "class-variance-authority": "^0.7.0"
+    "class-variance-authority": "^0.7.0",
+    "@radix-ui/react-slot": "^1.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.12",

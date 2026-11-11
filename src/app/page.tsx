@@ -1,10 +1,60 @@
-export default function Home() {
+import { MovieCard } from "@/components/MovieCard";
+import { Pagination } from "@/components/Pagination";
+
+interface Movie {
+  title: string;
+  slug: string;
+  page: string;
+  poster: string;
+  year: string | null;
+  quality: string[];
+}
+
+interface ApiResponse {
+  page: number;
+  via: string;
+  count: number;
+  items: Movie[];
+}
+
+async function getMovies(page: number): Promise<ApiResponse> {
+  const url = page === 1 
+    ? "https://rvmovies.deathmaniya.workers.dev" 
+    : `https://rvmovies.deathmaniya.workers.dev/api/page/${page}`;
+  
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) throw new Error("Failed to fetch data");
+  return res.json();
+}
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
+  const currentPage = parseInt(searchParams.page || "1");
+  const data = await getMovies(currentPage);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">New Project</h1>
-      <p className="mt-4 text-xl text-muted-foreground">
-        Start building your application here.
-      </p>
-    </main>
+    <div className="flex flex-col gap-8">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">Latest Uploads</h2>
+        <span className="text-sm text-muted-foreground">{data.count} items found</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
+        {data.items.map((movie) => (
+          <MovieCard key={movie.slug} movie={movie} />
+        ))}
+      </div>
+
+      {data.items.length === 0 && (
+        <div className="flex h-[40vh] items-center justify-center text-muted-foreground">
+          No movies found on this page.
+        </div>
+      )}
+
+      <Pagination currentPage={currentPage} />
+    </div>
   );
 }
