@@ -44,7 +44,6 @@ interface MovieDetail {
 const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
-  // Ensure we handle the slug correctly with the trailing slash if provided or needed
   const cleanSlug = slug.endsWith('/') ? slug : `${slug}/`;
   const res = await fetch(`${API_BASE}/api/movie?u=${cleanSlug}`, {
     next: { revalidate: 3600 }
@@ -56,20 +55,28 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
+  // Priority order for cleaner descriptions
   const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
   
   for (const text of candidates) {
-    if (!text || text === "N/A" || text.trim() === "") continue;
+    if (!text || text === "N/A" || text.trim() === "" || text.toLowerCase().startsWith("n/a please watch")) continue;
     
-    // Detect "junk" site navigation text
+    // Detect "junk" site navigation or menu text
     const isJunk = text.includes("HDHub4u Home") || 
                    text.includes("Categories Select Category") || 
                    text.includes("Search Here !!") ||
                    (text.length > 500 && text.includes("BollyWood") && text.includes("HollyWood"));
                    
     if (!isJunk) {
-      // Remove prefixes like "DESCRIPTION: :" if they exist
-      return text.replace(/^DESCRIPTION:\s*:\s*/i, '').trim();
+      let clean = text.trim();
+      // Specifically handle the "DESCRIPTION:" prefix seen in some API responses
+      if (clean.includes("DESCRIPTION:")) {
+          const parts = clean.split("DESCRIPTION:");
+          if (parts[1] && parts[1].trim().length > 10) {
+            clean = parts[1].trim().replace(/^[:\s]+/, '');
+          }
+      }
+      return clean;
     }
   }
   
@@ -103,7 +110,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-5xl mx-auto">
-      {/* Back Button */}
       <div className="px-4">
         <Button variant="ghost" asChild className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
           <Link href="/">
@@ -112,7 +118,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </Button>
       </div>
 
-      {/* Hero Section */}
       <div className="flex flex-col items-center text-center gap-6 px-4">
         <div className="relative w-64 md:w-80 aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl">
           <Image
@@ -146,7 +151,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           )}
 
           {movie.audio_langs && (
-            <div className="flex items-center justify-center gap-2 text-primary font-medium text-xs md:text-sm bg-primary/10 py-2 px-4 rounded-full border border-primary/20">
+            <div className="flex items-center justify-center gap-2 text-primary font-medium text-xs md:text-sm bg-primary/10 py-2 px-4 rounded-full border border-primary/20 mt-2">
               <Languages size={16} />
               {movie.audio_langs}
             </div>
@@ -154,7 +159,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Screenshots Section */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
@@ -162,10 +166,10 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => {
-              // Priority: if 'full' starts with '/', it's a proxy link on the worker
-              const imageUrl = s.full.startsWith('/') 
-                ? `${API_BASE}${s.full}` 
-                : (s.raw_full || s.raw_thumb);
+              // Try direct URL first, then proxy
+              const imageUrl = s.raw_full || s.raw_thumb || (s.full?.startsWith('/') ? `${API_BASE}${s.full}` : s.full) || (s.thumb?.startsWith('/') ? `${API_BASE}${s.thumb}` : s.thumb);
+
+              if (!imageUrl) return null;
 
               return (
                 <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-2xl">
@@ -183,7 +187,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Trailer Section */}
       {movie.trailer && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
@@ -200,7 +203,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Episodes Section (For Series) */}
       {movie.episodes && movie.episodes.length > 0 && (
         <section className="bg-black/40 border-y border-white/5 py-4">
           <div className="flex flex-col items-center gap-0">
@@ -228,7 +230,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Downloads Section */}
       {sortedDownloads.length > 0 && (
         <section className="bg-black/40 border-y border-white/5 py-4">
           <div className="flex flex-col items-center gap-0">
@@ -258,7 +259,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Watch Online Section */}
       {sortedWatch.length > 0 && (
         <section className="bg-black/40 border-y border-white/5 py-4">
           <div className="flex flex-col items-center gap-0">
