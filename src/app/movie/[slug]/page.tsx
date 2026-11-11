@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Download, ChevronLeft, Zap, Tv } from "lucide-react";
+import { Play, Download, ChevronLeft, Zap, Tv, Languages } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,8 @@ interface MovieDetail {
   episodes?: LinkItem[];
   other: LinkItem[];
   synopsis: string;
+  review?: string;
+  audio_langs?: string;
 }
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
@@ -65,38 +67,11 @@ const getQualityRank = (label: string) => {
   return 0;
 };
 
-const cleanSynopsis = (text: string) => {
-  if (!text) return "";
-  
-  let cleaned = text;
-
-  // Try to find the actual description marker
-  const descIndex = cleaned.toUpperCase().indexOf("DESCRIPTION:");
-  if (descIndex !== -1) {
-    // Take everything after "DESCRIPTION: :" or "DESCRIPTION:"
-    cleaned = cleaned.substring(descIndex).replace(/^DESCRIPTION:\s*:\s*/i, "").replace(/^DESCRIPTION:\s*/i, "");
-  }
-
-  // Remove technical noise and trailing script references
-  cleaned = cleaned.split('document.addEventListener')[0];
-  cleaned = cleaned.split('Avoid FAKE Copies')[0];
-  cleaned = cleaned.split('× Avoid FAKE')[0];
-  
-  // If the string starts with the menu noise, and we didn't find DESCRIPTION, 
-  // we try to cut off the known menu prefix
-  if (cleaned.includes("4K Movies HDHub4u Home")) {
-    const parts = cleaned.split("Search");
-    if (parts.length > 1) {
-      cleaned = parts[parts.length - 1];
-    }
-  }
-
-  return cleaned.trim();
-};
-
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
-  const synopsis = cleanSynopsis(movie.synopsis);
+  
+  // Use review as description if available, otherwise use synopsis
+  const description = movie.review || movie.synopsis;
 
   const sortedDownloads = [...movie.downloads].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
   const sortedWatch = [...movie.watch].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
@@ -104,7 +79,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-5xl mx-auto">
       {/* Back Button */}
-      <div>
+      <div className="px-4">
         <Button variant="ghost" asChild className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
           <Link href="/">
             <ChevronLeft size={20} /> Back to Home
@@ -112,8 +87,8 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </Button>
       </div>
 
-      {/* Hero Section */}
-      <div className="flex flex-col items-center text-center gap-6">
+      {/* Hero Section: Poster -> Qualities -> Title -> Description -> Audio */}
+      <div className="flex flex-col items-center text-center gap-6 px-4">
         <div className="relative w-64 md:w-80 aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl">
           <Image
             src={movie.poster}
@@ -125,10 +100,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
 
         <div className="flex flex-col gap-4 max-w-3xl">
-          <h1 className="text-xl md:text-3xl font-bold tracking-tight text-white leading-tight px-4">
-            {movie.title}
-          </h1>
-
           <div className="flex flex-wrap justify-center gap-2">
             {movie.qualities.map((q) => (
               <Badge key={q} variant="secondary" className="bg-primary/20 text-primary border-primary/30">
@@ -137,15 +108,65 @@ export default async function MoviePage({ params }: { params: { slug: string } }
             ))}
           </div>
 
-          {synopsis && (
-            <div className="prose prose-invert max-w-none px-4">
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight text-white leading-tight">
+            {movie.title}
+          </h1>
+
+          {description && (
+            <div className="prose prose-invert max-w-none">
               <p className="text-muted-foreground text-sm leading-relaxed">
-                {synopsis}
+                {description}
               </p>
+            </div>
+          )}
+
+          {movie.audio_langs && (
+            <div className="flex items-center justify-center gap-2 text-primary font-medium text-xs md:text-sm bg-primary/10 py-2 px-4 rounded-full border border-primary/20">
+              <Languages size={16} />
+              {movie.audio_langs}
             </div>
           )}
         </div>
       </div>
+
+      {/* Screenshots Section (Large) */}
+      {movie.screenshots && movie.screenshots.length > 0 && (
+        <section className="space-y-6 px-4">
+          <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
+            Screenshots
+          </h2>
+          <div className="flex flex-col gap-8">
+            {movie.screenshots.map((s, idx) => (
+              <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-2xl">
+                <Image
+                  src={s.raw_full || s.raw_thumb}
+                  alt={`Screenshot ${idx + 1}`}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  unoptimized
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Trailer Section */}
+      {movie.trailer && (
+        <section className="space-y-6 px-4">
+          <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
+            <Play size={24} className="text-primary" /> Official Trailer
+          </h2>
+          <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-lg">
+            <iframe
+              src={movie.trailer}
+              className="h-full w-full"
+              allowFullScreen
+              title="Movie Trailer"
+            />
+          </div>
+        </section>
+      )}
 
       {/* Episodes Section (For Series) */}
       {movie.episodes && movie.episodes.length > 0 && (
@@ -231,45 +252,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
               ))}
               <Separator className="bg-white/10" />
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* Trailer Section */}
-      {movie.trailer && (
-        <section className="space-y-6 px-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
-            <Play size={24} className="text-primary" /> Official Trailer
-          </h2>
-          <div className="aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black shadow-lg">
-            <iframe
-              src={movie.trailer}
-              className="h-full w-full"
-              allowFullScreen
-              title="Movie Trailer"
-            />
-          </div>
-        </section>
-      )}
-
-      {/* Screenshots Section */}
-      {movie.screenshots && movie.screenshots.length > 0 && (
-        <section className="space-y-6 px-4">
-          <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
-            Screenshots
-          </h2>
-          <div className="flex flex-col gap-8">
-            {movie.screenshots.map((s, idx) => (
-              <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-2xl">
-                <Image
-                  src={s.raw_full || s.raw_thumb}
-                  alt={`Screenshot ${idx + 1}`}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  unoptimized
-                />
-              </div>
-            ))}
           </div>
         </section>
       )}
