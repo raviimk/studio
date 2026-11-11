@@ -12,9 +12,6 @@ interface Movie {
 }
 
 export function MovieCard({ movie }: { movie: Movie }) {
-  // Clean up title to remove technical tags for a cleaner look if desired
-  // const cleanTitle = movie.title.split(' (')[0];
-
   return (
     <Link 
       href={movie.page} 
@@ -28,7 +25,7 @@ export function MovieCard({ movie }: { movie: Movie }) {
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
           className="object-cover transition-transform duration-500 group-hover:scale-110"
-          unoptimized // tmdb and external images usually fine
+          unoptimized 
         />
         <div className="movie-card-gradient absolute inset-0 flex flex-col justify-end p-3">
           <div className="flex flex-wrap gap-1.5 mt-auto">
@@ -45,8 +42,8 @@ export function MovieCard({ movie }: { movie: Movie }) {
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-1 px-1">
-        <h3 className="line-clamp-2 text-sm font-medium leading-snug text-foreground/90 group-hover:text-primary">
+      <div className="flex flex-col gap-1 p-2 rounded-lg animate-rainbow-bg transition-all duration-1000 ease-in-out">
+        <h3 className="text-sm font-medium leading-snug text-foreground/90 group-hover:text-primary transition-colors duration-300">
           {movie.title}
         </h3>
         {movie.year && (
