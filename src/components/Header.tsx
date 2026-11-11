@@ -25,7 +25,6 @@ export function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      // For now we navigate back to home with the query (home could handle filtering)
       router.push(`/?search=${encodeURIComponent(query)}`);
     }
   };
@@ -33,8 +32,10 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex flex-col items-center gap-6 py-6 px-4">
-        <Link href="/" className="flex items-center gap-2 group shrink-0">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 transition-transform duration-300 group-hover:scale-110">
+        {/* Branding Block - Perfectly Centered */}
+        <Link href="/" className="flex items-center justify-center gap-3 group shrink-0 w-full">
+          {/* Logo container */}
+          <div className="w-12 h-12 sm:w-16 sm:h-16 transition-transform duration-300 group-hover:scale-110 shrink-0">
             {animationData && (
               <Lottie 
                 animationData={animationData} 
@@ -43,9 +44,14 @@ export function Header() {
               />
             )}
           </div>
+          
+          {/* Main Title */}
           <span className="text-3xl font-black tracking-tighter sm:text-4xl md:text-5xl animate-text-shimmer group-hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.6)] transition-all">
             RV MOVIES
           </span>
+
+          {/* Symmetrical Spacer to keep text exactly centered */}
+          <div className="w-12 h-12 sm:w-16 sm:h-16 invisible shrink-0 hidden sm:block" aria-hidden="true" />
         </Link>
 
         <form onSubmit={handleSearch} className="relative flex w-full max-w-xl">

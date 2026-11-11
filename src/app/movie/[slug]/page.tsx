@@ -55,11 +55,11 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
-  // Priority order: review (highest quality usually), storyline, synopsis, description
-  const candidates = [movie.review, movie.storyline, movie.synopsis, movie.description];
+  // Priority order: review (highest quality), storyline, description, synopsis
+  const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
   
   for (const text of candidates) {
-    if (!text || text.trim() === "" || text.trim().toUpperCase() === "N/A") continue;
+    if (!text || text.trim() === "" || text.trim().toUpperCase() === "N/A" || text.toLowerCase().includes("please watch and give reviews")) continue;
     
     let clean = text.trim();
     
@@ -68,7 +68,7 @@ function getCleanDescription(movie: MovieDetail) {
       clean.includes("HDHub4u Home") || 
       clean.includes("Search Here !!") || 
       clean.includes("Categories Select Category") ||
-      clean.toLowerCase().includes("please watch and give reviews")
+      clean.length < 20
     ) {
       continue;
     }
