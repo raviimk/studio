@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, Download, ExternalLink, ChevronLeft, Tv, Zap } from "lucide-react";
+import { Play, Download, ChevronLeft, Zap, Tv } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ interface LinkItem {
   host: string;
   quality: string | null;
   size: string | null;
+  episode?: number;
 }
 
 interface MovieDetail {
@@ -31,6 +32,7 @@ interface MovieDetail {
   trailer: string | null;
   downloads: LinkItem[];
   watch: LinkItem[];
+  episodes?: LinkItem[];
   other: LinkItem[];
   synopsis: string;
 }
@@ -63,8 +65,18 @@ const getQualityRank = (label: string) => {
   return 0;
 };
 
+const cleanSynopsis = (text: string) => {
+  if (!text) return "";
+  // Remove technical prefixes and noise from API
+  let cleaned = text.replace(/^DESCRIPTION:\s*:\s*/i, "");
+  cleaned = cleaned.split('document.addEventListener')[0];
+  cleaned = cleaned.split('Avoid FAKE Copies')[0];
+  return cleaned.trim();
+};
+
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
+  const synopsis = cleanSynopsis(movie.synopsis);
 
   const sortedDownloads = [...movie.downloads].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
   const sortedWatch = [...movie.watch].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
@@ -105,71 +117,103 @@ export default async function MoviePage({ params }: { params: { slug: string } }
             ))}
           </div>
 
-          <div className="prose prose-invert max-w-none px-4">
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              {movie.synopsis.split('document.addEventListener')[0].substring(0, 400)}...
-            </p>
-          </div>
+          {synopsis && (
+            <div className="prose prose-invert max-w-none px-4">
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {synopsis}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Downloads Section */}
-      <section className="bg-black/40 border-y border-white/5 py-4">
-        <div className="flex flex-col items-center gap-0">
-          <h2 className="text-red-600 italic font-bold text-sm md:text-base tracking-widest uppercase mb-4">
-            : DOWNLOAD LINKS :
-          </h2>
-          
-          <div className="w-full flex flex-col">
-            {sortedDownloads.map((link, idx) => (
-              <div key={idx} className="w-full">
-                <Separator className="bg-white/10" />
-                <Link 
-                  href={link.url} 
-                  target="_blank"
-                  className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
-                >
-                  <span className={cn("flex items-center gap-2 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
-                    {link.label.toLowerCase().includes('480p') && <Zap size={16} fill="currentColor" />}
-                    {link.label}
-                  </span>
-                </Link>
-              </div>
-            ))}
-            <Separator className="bg-white/10" />
+      {/* Episodes Section (For Series) */}
+      {movie.episodes && movie.episodes.length > 0 && (
+        <section className="bg-black/40 border-y border-white/5 py-4">
+          <div className="flex flex-col items-center gap-0">
+            <h2 className="text-blue-400 font-bold text-sm md:text-base tracking-widest uppercase mb-4 flex items-center gap-2">
+              <Tv size={18} /> EPISODES
+            </h2>
+            <div className="w-full flex flex-col">
+              {movie.episodes.map((link, idx) => (
+                <div key={idx} className="w-full">
+                  <Separator className="bg-white/10" />
+                  <Link 
+                    href={link.url} 
+                    target="_blank"
+                    className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
+                  >
+                    <span className="text-white text-base md:text-lg font-bold flex items-center gap-2 transition-transform group-hover:scale-105">
+                      <Play size={16} fill="currentColor" /> {link.label}
+                    </span>
+                  </Link>
+                </div>
+              ))}
+              <Separator className="bg-white/10" />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* Downloads Section */}
+      {sortedDownloads.length > 0 && (
+        <section className="bg-black/40 border-y border-white/5 py-4">
+          <div className="flex flex-col items-center gap-0">
+            <h2 className="text-red-600 italic font-bold text-sm md:text-base tracking-widest uppercase mb-4">
+              : DOWNLOAD LINKS :
+            </h2>
+            
+            <div className="w-full flex flex-col">
+              {sortedDownloads.map((link, idx) => (
+                <div key={idx} className="w-full">
+                  <Separator className="bg-white/10" />
+                  <Link 
+                    href={link.url} 
+                    target="_blank"
+                    className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
+                  >
+                    <span className={cn("flex items-center gap-2 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
+                      {link.label.toLowerCase().includes('480p') && <Zap size={16} fill="currentColor" />}
+                      {link.label}
+                    </span>
+                  </Link>
+                </div>
+              ))}
+              <Separator className="bg-white/10" />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Watch Online Section */}
-      <section className="bg-black/40 border-y border-white/5 py-4">
-        <div className="flex flex-col items-center gap-0">
-          <h2 className="text-emerald-400 font-bold text-sm md:text-base tracking-widest uppercase mb-4">
-            WATCH ONLINE
-          </h2>
-          
-          <div className="w-full flex flex-col">
-            {sortedWatch.length > 0 ? sortedWatch.map((link, idx) => (
-              <div key={idx} className="w-full">
-                <Separator className="bg-white/10" />
-                <Link 
-                  href={link.url} 
-                  target="_blank"
-                  className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
-                >
-                  <span className={cn("flex items-center gap-2 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
-                    <Play size={16} fill="currentColor" />
-                    {link.label}
-                  </span>
-                </Link>
-              </div>
-            )) : (
-              <div className="py-4 text-muted-foreground text-sm italic">Online player coming soon...</div>
-            )}
-            <Separator className="bg-white/10" />
+      {sortedWatch.length > 0 && (
+        <section className="bg-black/40 border-y border-white/5 py-4">
+          <div className="flex flex-col items-center gap-0">
+            <h2 className="text-emerald-400 font-bold text-sm md:text-base tracking-widest uppercase mb-4">
+              WATCH ONLINE
+            </h2>
+            
+            <div className="w-full flex flex-col">
+              {sortedWatch.map((link, idx) => (
+                <div key={idx} className="w-full">
+                  <Separator className="bg-white/10" />
+                  <Link 
+                    href={link.url} 
+                    target="_blank"
+                    className="flex items-center justify-center py-5 hover:bg-white/5 transition-colors group"
+                  >
+                    <span className={cn("flex items-center gap-2 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
+                      <Play size={16} fill="currentColor" />
+                      {link.label}
+                    </span>
+                  </Link>
+                </div>
+              ))}
+              <Separator className="bg-white/10" />
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Trailer Section */}
       {movie.trailer && (
@@ -194,14 +238,14 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
             Screenshots
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => (
-              <div key={idx} className="relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-xl">
+              <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-2xl">
                 <Image
                   src={s.raw_full || s.raw_thumb}
                   alt={`Screenshot ${idx + 1}`}
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                   unoptimized
                 />
               </div>
