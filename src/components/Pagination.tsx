@@ -1,31 +1,57 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function Pagination({ currentPage }: { currentPage: number }) {
+interface PaginationProps {
+  currentPage: number;
+  totalPages?: number;
+}
+
+export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
   const prevPage = currentPage > 1 ? currentPage - 1 : null;
   const nextPage = currentPage + 1;
 
+  // Logic to show a few pages and an ellipsis
+  const getPages = () => {
+    const pages = [];
+    if (currentPage <= 3) {
+      pages.push(1, 2, 3, "...", totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, "...", currentPage, "...", totalPages);
+    }
+    return pages;
+  };
+
   return (
-    <div className="mt-12 flex items-center justify-center gap-4">
-      {prevPage && (
+    <div className="mt-16 flex items-center justify-center">
+      <div className="pagination-container shadow-2xl">
+        {getPages().map((page, idx) => (
+          <div key={idx}>
+            {page === "..." ? (
+              <span className="pagination-item text-muted-foreground">...</span>
+            ) : (
+              <Link
+                href={`/?page=${page}`}
+                className={cn(
+                  "pagination-item",
+                  currentPage === page && "pagination-item-active"
+                )}
+              >
+                {page}
+              </Link>
+            )}
+          </div>
+        ))}
+        
         <Link
-          href={`/?page=${prevPage}`}
-          className={cn(buttonVariants({ variant: "outline" }), "gap-2")}
+          href={`/?page=${nextPage}`}
+          className="pagination-next group"
         >
-          <ChevronLeft size={16} /> Previous
+          Next <ChevronRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />
         </Link>
-      )}
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold">
-        {currentPage}
       </div>
-      <Link
-        href={`/?page=${nextPage}`}
-        className={cn(buttonVariants({ variant: "outline" }), "gap-2")}
-      >
-        Next <ChevronRight size={16} />
-      </Link>
     </div>
   );
 }

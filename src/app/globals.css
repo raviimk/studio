@@ -10,8 +10,8 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 217 91% 60%; /* Vibrant Blue */
+    --primary-foreground: 0 0% 100%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
@@ -32,10 +32,61 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased relative overflow-x-hidden;
   }
 }
 
+/* Animated Background */
+.bg-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #000 100%);
+  overflow: hidden;
+}
+
+.bg-animation::before,
+.bg-animation::after {
+  content: "";
+  position: absolute;
+  width: 140vmax;
+  height: 140vmax;
+  top: -20vmax;
+  left: -20vmax;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 50%);
+  animation: move 30s infinite linear;
+}
+
+.bg-animation::after {
+  animation-delay: -15s;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.05) 0%, transparent 50%);
+}
+
+@keyframes move {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .movie-card-gradient {
-  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+}
+
+/* Pagination Box Styles */
+.pagination-container {
+  @apply flex items-center overflow-hidden border border-zinc-700 rounded-md;
+}
+
+.pagination-item {
+  @apply flex h-12 w-12 items-center justify-center border-r border-zinc-700 bg-zinc-900/80 text-sm font-medium transition-all duration-200 last:border-r-0 hover:bg-zinc-800;
+}
+
+.pagination-item-active {
+  @apply bg-blue-600 text-white hover:bg-blue-500;
+}
+
+.pagination-next {
+  @apply flex h-12 px-6 items-center justify-center bg-zinc-900/80 text-sm font-medium transition-all duration-200 hover:bg-zinc-800;
 }

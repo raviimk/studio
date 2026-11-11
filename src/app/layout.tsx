@@ -18,12 +18,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        <div className="flex min-h-screen flex-col">
+        <div className="bg-animation" />
+        <div className="flex min-h-screen flex-col relative z-10">
           <Header />
           <main className="flex-1 container mx-auto px-4 py-8">
             {children}
           </main>
-          <footer className="border-t py-6 text-center text-muted-foreground text-sm">
+          <footer className="border-t border-white/5 py-10 text-center text-muted-foreground text-sm backdrop-blur-sm">
             © {new Date().getFullYear()} RV MOVIES. All rights reserved.
           </footer>
         </div>
