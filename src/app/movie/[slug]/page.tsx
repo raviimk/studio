@@ -37,17 +37,43 @@ interface MovieDetail {
   synopsis: string;
   storyline?: string;
   review?: string;
+  description?: string;
   audio_langs?: string | null;
 }
 
+const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
+
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
-  const res = await fetch(`https://rvmovies.deathmaniya.workers.dev/api/movie?u=${slug}/`, {
+  // Ensure we handle the slug correctly with the trailing slash if provided or needed
+  const cleanSlug = slug.endsWith('/') ? slug : `${slug}/`;
+  const res = await fetch(`${API_BASE}/api/movie?u=${cleanSlug}`, {
     next: { revalidate: 3600 }
   });
   if (!res.ok) throw new Error("Failed to fetch movie details");
   const data = await res.json();
   if (!data.ok) notFound();
   return data;
+}
+
+function getCleanDescription(movie: MovieDetail) {
+  const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
+  
+  for (const text of candidates) {
+    if (!text || text === "N/A" || text.trim() === "") continue;
+    
+    // Detect "junk" site navigation text
+    const isJunk = text.includes("HDHub4u Home") || 
+                   text.includes("Categories Select Category") || 
+                   text.includes("Search Here !!") ||
+                   (text.length > 500 && text.includes("BollyWood") && text.includes("HollyWood"));
+                   
+    if (!isJunk) {
+      // Remove prefixes like "DESCRIPTION: :" if they exist
+      return text.replace(/^DESCRIPTION:\s*:\s*/i, '').trim();
+    }
+  }
+  
+  return null;
 }
 
 const getQualityStyles = (label: string) => {
@@ -70,12 +96,10 @@ const getQualityRank = (label: string) => {
 
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
-  
-  // Logic to determine the best description from available API fields
-  const description = movie.review || movie.storyline || movie.synopsis;
+  const description = getCleanDescription(movie);
 
-  const sortedDownloads = [...movie.downloads].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
-  const sortedWatch = [...movie.watch].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
+  const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
+  const sortedWatch = [...(movie.watch || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-5xl mx-auto">
@@ -88,7 +112,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </Button>
       </div>
 
-      {/* Hero Section: Poster -> Qualities -> Title -> Storyline/Review -> Audio */}
+      {/* Hero Section */}
       <div className="flex flex-col items-center text-center gap-6 px-4">
         <div className="relative w-64 md:w-80 aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl">
           <Image
@@ -102,7 +126,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
         <div className="flex flex-col gap-4 max-w-3xl">
           <div className="flex flex-wrap justify-center gap-2">
-            {movie.qualities.map((q) => (
+            {(movie.qualities || []).map((q) => (
               <Badge key={q} variant="secondary" className="bg-primary/20 text-primary border-primary/30">
                 {q}
               </Badge>
@@ -115,7 +139,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
           {description && (
             <div className="prose prose-invert max-w-none">
-              <p className="text-muted-foreground text-sm leading-relaxed">
+              <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
                 {description}
               </p>
             </div>
@@ -130,24 +154,31 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Screenshots Section (Large) */}
+      {/* Screenshots Section */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-bold flex items-center gap-2 justify-center md:justify-start">
             Screenshots
           </h2>
           <div className="flex flex-col gap-8">
-            {movie.screenshots.map((s, idx) => (
-              <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-2xl">
-                <Image
-                  src={s.raw_full || s.raw_thumb}
-                  alt={`Screenshot ${idx + 1}`}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                  unoptimized
-                />
-              </div>
-            ))}
+            {movie.screenshots.map((s, idx) => {
+              // Priority: if 'full' starts with '/', it's a proxy link on the worker
+              const imageUrl = s.full.startsWith('/') 
+                ? `${API_BASE}${s.full}` 
+                : (s.raw_full || s.raw_thumb);
+
+              return (
+                <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group cursor-zoom-in shadow-2xl">
+                  <Image
+                    src={imageUrl}
+                    alt={`Screenshot ${idx + 1}`}
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    unoptimized
+                  />
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
