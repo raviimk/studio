@@ -24,10 +24,9 @@ export function Header() {
       .then((data) => setAnimationData(data));
   }, []);
 
-  // Handle Scroll logic with improved smoothness
+  // Handle Scroll logic for background effects
   useEffect(() => {
     const handleScroll = () => {
-      // Use a smaller threshold for a more responsive "live" feel
       const scrolled = window.scrollY > 10;
       if (scrolled !== isScrolled) {
         setIsScrolled(scrolled);
@@ -47,30 +46,19 @@ export function Header() {
 
   return (
     <header className={cn(
-      "sticky top-0 z-50 w-full border-b border-white/5 transition-all duration-500 ease-out",
+      "sticky top-0 z-50 w-full border-b border-white/5 transition-all duration-300 ease-out py-2",
       isScrolled 
-        ? "bg-background/95 backdrop-blur-2xl py-2 shadow-2xl" 
-        : "bg-background/0 py-6"
+        ? "bg-background/95 backdrop-blur-2xl shadow-2xl" 
+        : "bg-background/80 backdrop-blur-xl"
     )}>
-      <div className={cn(
-        "container mx-auto flex transition-all duration-700 ease-in-out px-4 transform-gpu",
-        isScrolled 
-          ? "flex-row items-center justify-between gap-4" 
-          : "flex-col items-center gap-6"
-      )}>
-        {/* Branding Block */}
+      <div className="container mx-auto flex items-center justify-between gap-4 px-4 transform-gpu">
+        {/* Branding Block - Always Compact and Left-Aligned */}
         <Link 
           href="/" 
-          className={cn(
-            "flex items-center gap-3 group shrink-0 transition-all duration-700 ease-in-out transform-gpu",
-            isScrolled ? "justify-start scale-95" : "justify-center w-full scale-100"
-          )}
+          className="flex items-center gap-2 group shrink-0 transition-all duration-300 transform-gpu scale-95"
         >
           {/* Logo container */}
-          <div className={cn(
-            "transition-all duration-700 ease-in-out group-hover:scale-110 shrink-0 transform-gpu",
-            isScrolled ? "w-8 h-8 sm:w-10 sm:h-10" : "w-12 h-12 sm:w-16 sm:h-16"
-          )}>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 group-hover:scale-110 shrink-0 transform-gpu">
             {animationData && (
               <Lottie 
                 animationData={animationData} 
@@ -81,39 +69,21 @@ export function Header() {
           </div>
           
           {/* Main Title */}
-          <span className={cn(
-            "font-black tracking-tighter animate-text-shimmer transition-all duration-700 ease-in-out transform-gpu",
-            isScrolled ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl md:text-5xl"
-          )}>
+          <span className="font-black tracking-tighter animate-text-shimmer transition-all duration-300 text-xl sm:text-2xl">
             RV MOVIES
           </span>
-
-          {/* Symmetrical Spacer to keep text exactly centered when NOT scrolled */}
-          {/* Removing hidden sm:block to ensure centering on mobile as well */}
-          {!isScrolled && (
-            <div className="w-12 h-12 sm:w-16 sm:h-16 invisible shrink-0" aria-hidden="true" />
-          )}
         </Link>
 
-        {/* Search Bar */}
+        {/* Search Bar - Always Compact and Right-Aligned */}
         <form 
           onSubmit={handleSearch} 
-          className={cn(
-            "relative flex transition-all duration-700 ease-in-out transform-gpu",
-            isScrolled ? "w-40 sm:w-64 md:w-80" : "w-full max-w-xl"
-          )}
+          className="relative flex transition-all duration-300 transform-gpu w-40 sm:w-64 md:w-80"
         >
-          <Search className={cn(
-            "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-all duration-500",
-            isScrolled ? "h-4 w-4" : "h-5 w-5"
-          )} />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             type="search"
             placeholder="Search movies..."
-            className={cn(
-              "w-full bg-white/5 border-white/10 pr-4 focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all duration-700 rounded-full transform-gpu",
-              isScrolled ? "h-9 pl-9 text-xs sm:text-sm" : "h-12 pl-12 text-base"
-            )}
+            className="w-full bg-white/5 border-white/10 pr-3 h-9 pl-8 text-xs sm:text-sm focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all duration-300 rounded-full transform-gpu"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
