@@ -27,7 +27,6 @@ const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
   
-  // Set revalidate to 0 to disable caching and always fetch fresh data
   const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
@@ -36,7 +35,6 @@ async function getMovies(page: number): Promise<ApiResponse> {
 async function getSearchResults(query: string): Promise<ApiResponse> {
   const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}`;
   
-  // Set revalidate to 0 to disable caching and always fetch fresh data
   const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) throw new Error("Failed to fetch search results");
   const data = await res.json();
@@ -76,9 +74,9 @@ export default async function Home({
           {isSearching ? `Search Results: ${searchQuery}` : "Latest Uploads"}
         </h2>
         <div className="flex flex-col items-end gap-1">
-          {data.base && !isSearching && (
+          {data.base && (
             <span className="text-xs font-medium text-primary animate-pulse">
-              Live from {data.base.replace('https://', '')}
+              {isSearching ? `Via ${data.base}` : `Live from ${data.base.replace('https://', '')}`}
             </span>
           )}
           <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
@@ -99,7 +97,6 @@ export default async function Home({
         </div>
       )}
 
-      {/* Set total pages to 975 as per user request, hide on search */}
       {!isSearching && (
         <Pagination currentPage={currentPage} totalPages={975} />
       )}

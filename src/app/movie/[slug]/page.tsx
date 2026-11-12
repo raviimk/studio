@@ -48,7 +48,6 @@ const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
   const res = await fetch(`${API_BASE}/api/movie/${slug}`, {
-    // Set revalidate to 0 to disable caching and always fetch fresh data
     next: { revalidate: 0 }
   });
   if (!res.ok) throw new Error("Failed to fetch movie details");
@@ -75,7 +74,6 @@ const getQualityRank = (label: string) => {
   return 0;
 };
 
-// Helper to separate Quality Name from [Size] for better printing/formatting
 const parseLinkLabel = (label: string) => {
   const match = label.match(/(.*?)(\[.*?\])/);
   if (match) {
@@ -106,7 +104,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[350px,1fr] gap-8 px-4 items-start">
-        {/* Poster Block */}
         <div className="flex flex-col gap-4">
           <div className="relative aspect-[2/3] overflow-hidden rounded-2xl border-4 border-white/10 bg-muted shadow-2xl transition-transform hover:scale-[1.02] duration-500">
             <Image
@@ -129,7 +126,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           )}
         </div>
 
-        {/* Info Block */}
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap gap-2">
@@ -188,7 +184,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Downloads Section */}
       {sortedDownloads.length > 0 && (
         <section className="bg-red-950/20 border-y border-red-500/10 py-10">
           <div className="flex flex-col items-center">
@@ -222,7 +217,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Watch Online Section */}
       {movie.watch && movie.watch.length > 0 && (
         <section className="bg-emerald-950/20 border-y border-emerald-500/10 py-10">
           <div className="flex flex-col items-center">
@@ -256,12 +250,10 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Trailer Section */}
       {movie.trailer && (
         <TrailerPlayer embedUrl={movie.trailer.embed} title={movie.title} />
       )}
 
-      {/* Screenshots Section */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">

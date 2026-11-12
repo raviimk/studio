@@ -21,7 +21,10 @@ function extractQualityFromTitle(title: string): string[] {
 }
 
 export function MovieCard({ movie }: { movie: Movie }) {
-  const rawPoster = movie.poster || movie.img;
+  // Search API uses 'poster', main API uses 'img' or 'poster' or 'posterBig'
+  const rawPoster = movie.posterBig || movie.poster || movie.img;
+  
+  // Normalize the poster URL: if it's a relative path (like /img?u=...), prepend API_BASE
   const posterSrc = rawPoster 
     ? (rawPoster.startsWith('/') ? `${API_BASE}${rawPoster}` : rawPoster)
     : placeholders.moviePoster;
