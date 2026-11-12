@@ -9,17 +9,24 @@ import { useRouter } from "next/navigation";
 interface PaginationProps {
   currentPage: number;
   totalPages?: number;
+  category?: string;
 }
 
-export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
+export function Pagination({ currentPage, totalPages = 975, category }: PaginationProps) {
   const [inputValue, setInputValue] = useState("");
   const router = useRouter();
+
+  const getBaseUrl = (page: number | string) => {
+    let url = `/?page=${page}`;
+    if (category) url += `&category=${category}`;
+    return url;
+  };
 
   const handleGo = (e: React.FormEvent) => {
     e.preventDefault();
     const pageNum = parseInt(inputValue);
     if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
-      router.push(`/?page=${pageNum}`);
+      router.push(getBaseUrl(pageNum));
       setInputValue("");
     }
   };
@@ -29,12 +36,16 @@ export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
   // Logic to show a few pages and an ellipsis
   const getPages = () => {
     const pages = [];
-    if (currentPage <= 3) {
-      pages.push(1, 2, 3, "...", totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages);
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
-      pages.push(1, "...", currentPage, "...", totalPages);
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, "...", totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage, "...", totalPages);
+      }
     }
     return pages;
   };
@@ -49,7 +60,7 @@ export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
               <span className="pagination-item text-muted-foreground">...</span>
             ) : (
               <Link
-                href={`/?page=${page}`}
+                href={getBaseUrl(page)}
                 className={cn(
                   "pagination-item",
                   currentPage === page && "pagination-item-active"
@@ -62,7 +73,7 @@ export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
         ))}
         
         <Link
-          href={`/?page=${nextPage}`}
+          href={getBaseUrl(nextPage)}
           className="pagination-next group"
         >
           Next <ChevronRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />

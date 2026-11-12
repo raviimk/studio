@@ -1,5 +1,7 @@
 import { MovieCard } from "@/components/MovieCard";
 import { Pagination } from "@/components/Pagination";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -25,22 +27,38 @@ interface ApiResponse {
 
 const MOVIE_API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
+const CATEGORY_API_BASE = "https://rvmct.deathmaniya.workers.dev";
+
+const CATEGORIES = [
+  { label: "Latest", slug: null },
+  { label: "Bollywood", slug: "bollywood-movies" },
+  { label: "Hollywood", slug: "hollywood-movies" },
+  { label: "Hindi Dubbed", slug: "hindi-dubbed" },
+  { label: "South Hindi", slug: "south-hindi-movies" },
+  { label: "Web Series", slug: "web-series" },
+  { label: "Action", slug: "action-movies" },
+  { label: "Adult", slug: "adult" },
+];
 
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
-  
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 }
 
+async function getCategoryMovies(category: string, page: number): Promise<ApiResponse> {
+  const url = `${CATEGORY_API_BASE}/api/category/${category}?page=${page}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error("Failed to fetch category data");
+  return res.json();
+}
+
 async function getSearchResults(query: string): Promise<ApiResponse> {
   const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}`;
-  
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch search results");
   const data = await res.json();
-  
   return {
     count: data.items?.length || 0,
     items: data.items || [],
@@ -51,17 +69,25 @@ async function getSearchResults(query: string): Promise<ApiResponse> {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams: { page?: string; search?: string; category?: string };
 }) {
   const searchQuery = searchParams.search;
+  const currentCategory = searchParams.category;
   const currentPage = parseInt(searchParams.page || "1");
   
   const isSearching = !!searchQuery;
-  const data = isSearching 
-    ? await getSearchResults(searchQuery)
-    : await getMovies(currentPage);
+  const isCategory = !!currentCategory;
 
-  // Filter out unwanted items: APKs, meta-links (groups/requests), and items without posters
+  let data: ApiResponse;
+  if (isSearching) {
+    data = await getSearchResults(searchQuery);
+  } else if (isCategory) {
+    data = await getCategoryMovies(currentCategory, currentPage);
+  } else {
+    data = await getMovies(currentPage);
+  }
+
+  // Filter out unwanted items and sanitize branding
   const filteredItems = (data.items || [])
     .filter(item => {
       const title = (item.title || "").toLowerCase();
@@ -77,18 +103,16 @@ export default async function Home({
     })
     .map(item => ({
       ...item,
-      // Replace site branding with RV MOVIES
       title: (item.title || "").replace(/HDHub4u/gi, "RV MOVIES")
     }));
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Enhanced Hero Section with Mascot and About Info */}
+      {/* Enhanced Hero Section */}
       <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md shadow-2xl relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
         <div className="flex items-center gap-6 relative z-10">
-          {/* Scor rat mascot */}
           <div className="scor-slot shrink-0">
             <div className="scor">
               <div className="scor-head">
@@ -136,22 +160,44 @@ export default async function Home({
           
           <div className="flex flex-col gap-1">
             <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none">
-              {isSearching ? `Results` : "Uploads"}
+              {isSearching ? `Results` : isCategory ? CATEGORIES.find(c => c.slug === currentCategory)?.label : "Uploads"}
             </h2>
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-80">
-              {isSearching ? searchQuery : "LATEST DISCOVERIES"}
+              {isSearching ? searchQuery : isCategory ? "CATEGORY EXPLORER" : "LATEST DISCOVERIES"}
             </p>
           </div>
         </div>
 
-        {/* Right-aligned About Us Section */}
         <div className="max-w-md text-center md:text-right flex flex-col gap-3 relative z-10">
           <h3 className="text-xs font-black text-white/90 tracking-widest uppercase border-b border-primary/30 pb-2 inline-block md:ml-auto">
             ABOUT RV MOVIES
           </h3>
           <p className="text-[13px] text-muted-foreground leading-relaxed font-medium">
-            Welcome to <span className="text-primary font-bold">RV MOVIES</span>, your ultimate platform to download and watch the latest movies online. We provide high-speed links for 4K, 1080p, 720p, and 480p quality, ensuring a premium streaming and downloading experience for every cinema lover.
+            Welcome to <span className="text-primary font-bold">RV MOVIES</span>, your ultimate platform to download and watch the latest movies online. We provide high-speed links for 4K, 1080p, 720p, and 480p quality.
           </p>
+        </div>
+      </div>
+
+      {/* Categories Buttons Section */}
+      <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex items-center gap-3 min-w-max px-1">
+          {CATEGORIES.map((cat) => {
+            const isActive = currentCategory === cat.slug || (!currentCategory && cat.slug === null);
+            return (
+              <Link
+                key={cat.label}
+                href={cat.slug ? `/?category=${cat.slug}` : "/"}
+                className={cn(
+                  "px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border shadow-lg hover:scale-105 active:scale-95",
+                  isActive 
+                    ? "bg-gradient-to-r from-primary to-blue-600 text-white border-primary/50 shadow-primary/20" 
+                    : "bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                {cat.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -161,19 +207,23 @@ export default async function Home({
           <MovieCard 
             key={movie.slug} 
             movie={movie} 
-            baseApi={isSearching ? SEARCH_API_BASE : MOVIE_API_BASE}
+            baseApi={isSearching ? SEARCH_API_BASE : isCategory ? CATEGORY_API_BASE : MOVIE_API_BASE}
           />
         ))}
       </div>
 
       {filteredItems.length === 0 && (
-        <div className="flex h-[40vh] items-center justify-center text-muted-foreground">
-          {isSearching ? "No results found for your search." : "No movies found on this page."}
+        <div className="flex h-[40vh] items-center justify-center text-muted-foreground font-black uppercase tracking-widest">
+          {isSearching ? "No results found for your search." : "No movies found in this section."}
         </div>
       )}
 
       {!isSearching && (
-        <Pagination currentPage={currentPage} totalPages={975} />
+        <Pagination 
+          currentPage={currentPage} 
+          totalPages={data.lastPage || 975} 
+          category={currentCategory || undefined}
+        />
       )}
     </div>
   );
