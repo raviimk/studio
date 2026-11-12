@@ -87,7 +87,11 @@ export default async function Home({
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
         {filteredItems.map((movie) => (
-          <MovieCard key={movie.slug} movie={movie} />
+          <MovieCard 
+            key={movie.slug} 
+            movie={movie} 
+            baseApi={isSearching ? SEARCH_API_BASE : MOVIE_API_BASE}
+          />
         ))}
       </div>
 

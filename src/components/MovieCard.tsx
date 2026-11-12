@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import placeholders from "@/app/lib/placeholder-images.json";
 import { Movie } from "@/app/page";
 
-const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
+const DEFAULT_API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 function extractQualityFromTitle(title: string): string[] {
   const qualities = [];
@@ -20,13 +20,16 @@ function extractQualityFromTitle(title: string): string[] {
   return qualities;
 }
 
-export function MovieCard({ movie }: { movie: Movie }) {
+export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }) {
+  // Use the provided baseApi (e.g. from search) or fall back to default
+  const effectiveBase = baseApi || DEFAULT_API_BASE;
+  
   // Search API uses 'poster', main API uses 'img' or 'poster' or 'posterBig'
   const rawPoster = movie.posterBig || movie.poster || movie.img;
   
-  // Normalize the poster URL: if it's a relative path (like /img?u=...), prepend API_BASE
+  // Normalize the poster URL: if it's a relative path, prepend the correct effective base
   const posterSrc = rawPoster 
-    ? (rawPoster.startsWith('/') ? `${API_BASE}${rawPoster}` : rawPoster)
+    ? (rawPoster.startsWith('/') ? `${effectiveBase}${rawPoster}` : rawPoster)
     : placeholders.moviePoster;
     
   // Use quality from API if available, otherwise attempt to extract from title
