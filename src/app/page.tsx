@@ -1,5 +1,8 @@
+
 import { MovieCard } from "@/components/MovieCard";
 import { Pagination } from "@/components/Pagination";
+
+export const dynamic = 'force-dynamic';
 
 export interface Movie {
   title: string;
@@ -27,7 +30,6 @@ const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
   
-  // Use cache: 'no-store' to ensure we never get cached or stuck data
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
@@ -36,7 +38,6 @@ async function getMovies(page: number): Promise<ApiResponse> {
 async function getSearchResults(query: string): Promise<ApiResponse> {
   const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}`;
   
-  // Use cache: 'no-store' to ensure fresh search results every time
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch search results");
   const data = await res.json();
@@ -61,7 +62,6 @@ export default async function Home({
     ? await getSearchResults(searchQuery)
     : await getMovies(currentPage);
 
-  // Filter out APK files and other non-movie software items
   const filteredItems = (data.items || []).filter(item => {
     const isApk = 
       item.title?.toLowerCase().includes('.apk') || 

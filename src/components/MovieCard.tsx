@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -20,22 +21,19 @@ function extractQualityFromTitle(title: string): string[] {
   return qualities;
 }
 
+const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
+  if (!url) return placeholders.moviePoster;
+  if (url.startsWith('http')) return url;
+  const cleanBase = base.replace(/\/+$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${cleanBase}${cleanPath}`;
+};
+
 export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }) {
   const effectiveBase = baseApi || DEFAULT_API_BASE;
   
-  // Prefer posterBig, then poster, then img
-  const rawPoster = movie.posterBig || movie.poster || movie.img;
-  
-  let posterSrc = placeholders.moviePoster;
-  if (rawPoster) {
-    if (rawPoster.startsWith('http')) {
-      posterSrc = rawPoster;
-    } else {
-      const cleanBase = effectiveBase.replace(/\/+$/, '');
-      const cleanPath = rawPoster.startsWith('/') ? rawPoster : `/${rawPoster}`;
-      posterSrc = `${cleanBase}${cleanPath}`;
-    }
-  }
+  // Use exact same logic as movie detail page
+  const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster || movie.img, effectiveBase);
     
   const qualities = (movie.quality && movie.quality.length > 0) 
     ? movie.quality 

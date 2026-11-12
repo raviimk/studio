@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,8 @@ import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import placeholders from "@/app/lib/placeholder-images.json";
 import { TrailerPlayer } from "@/components/TrailerPlayer";
+
+export const dynamic = 'force-dynamic';
 
 interface LinkItem {
   label: string;
