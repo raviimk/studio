@@ -48,7 +48,7 @@ const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
   const res = await fetch(`${API_BASE}/api/movie/${slug}`, {
-    next: { revalidate: 0 }
+    cache: 'no-store' // Strictly clear cache for movie details
   });
   if (!res.ok) throw new Error("Failed to fetch movie details");
   const data = await res.json();
@@ -82,16 +82,20 @@ const parseLinkLabel = (label: string) => {
   return { name: label, size: "" };
 };
 
+const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
+  if (!url) return placeholders.moviePoster;
+  if (url.startsWith('http')) return url;
+  const cleanBase = base.replace(/\/+$/, '');
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  return `${cleanBase}${cleanPath}`;
+};
+
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
 
   const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(b.label) - getQualityRank(a.label));
   
-  const posterSrc = movie.posterBig 
-    ? (movie.posterBig.startsWith('/') ? `${API_BASE}${movie.posterBig}` : movie.posterBig)
-    : movie.poster 
-      ? (movie.poster.startsWith('/') ? `${API_BASE}${movie.poster}` : movie.poster)
-      : placeholders.moviePoster;
+  const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-6xl mx-auto">
@@ -261,7 +265,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {movie.screenshots.map((s, idx) => {
-              const imageUrl = s.startsWith('/') ? `${API_BASE}${s}` : s;
+              const imageUrl = normalizeProxyUrl(s, API_BASE);
 
               return (
                 <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group shadow-xl">

@@ -27,7 +27,8 @@ const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
   
-  const res = await fetch(url, { next: { revalidate: 0 } });
+  // Use cache: 'no-store' to ensure we never get cached or stuck data
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 }
@@ -35,7 +36,8 @@ async function getMovies(page: number): Promise<ApiResponse> {
 async function getSearchResults(query: string): Promise<ApiResponse> {
   const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}`;
   
-  const res = await fetch(url, { next: { revalidate: 0 } });
+  // Use cache: 'no-store' to ensure fresh search results every time
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch search results");
   const data = await res.json();
   
