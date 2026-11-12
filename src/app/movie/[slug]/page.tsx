@@ -56,6 +56,7 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 }
 
 function getCleanDescription(movie: MovieDetail) {
+  // Prioritize review field as it often contains the actual movie description
   const candidates = [movie.review, movie.storyline, movie.description, movie.synopsis];
   
   for (const text of candidates) {
@@ -63,6 +64,7 @@ function getCleanDescription(movie: MovieDetail) {
     
     let clean = text.trim();
     
+    // Skip known junk text
     if (
       clean.includes("HDHub4u Home") || 
       clean.includes("Search Here !!") || 
@@ -112,7 +114,10 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
   const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
   const sortedWatch = [...(movie.watch || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
-  const posterSrc = movie.poster || placeholders.moviePoster;
+  
+  const posterSrc = movie.poster 
+    ? (movie.poster.startsWith('/') ? `${API_BASE}${movie.poster}` : movie.poster)
+    : placeholders.moviePoster;
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-5xl mx-auto">
@@ -176,8 +181,9 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           </h2>
           <div className="flex flex-col gap-8">
             {movie.screenshots.map((s, idx) => {
+              // Use raw_thumb URL through our proxy as requested
               const imageUrl = s.raw_thumb 
-                ? `${API_BASE}/img?u=${s.raw_thumb}` 
+                ? `${API_BASE}/img?u=${encodeURIComponent(s.raw_thumb)}` 
                 : null;
 
               if (!imageUrl) return null;

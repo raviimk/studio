@@ -1,18 +1,20 @@
 import { MovieCard } from "@/components/MovieCard";
 import { Pagination } from "@/components/Pagination";
 
-interface Movie {
+export interface Movie {
   title: string;
   slug: string;
-  page: string;
-  poster: string;
-  year: string | null;
-  quality: string[];
+  poster: string | null;
+  img?: string | null;
+  year?: string | null;
+  quality?: string[];
+  url?: string;
+  host?: string;
 }
 
 interface ApiResponse {
   page: number;
-  via: string;
+  base: string;
   count: number;
   items: Movie[];
 }

@@ -2,18 +2,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import placeholders from "@/app/lib/placeholder-images.json";
+import { Movie } from "@/app/page";
 
-interface Movie {
-  title: string;
-  slug: string;
-  page: string;
-  poster: string | null;
-  year: string | null;
-  quality: string[];
-}
+const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 export function MovieCard({ movie }: { movie: Movie }) {
-  const posterSrc = movie.poster || placeholders.moviePoster;
+  const rawPoster = movie.poster || movie.img;
+  const posterSrc = rawPoster 
+    ? (rawPoster.startsWith('/') ? `${API_BASE}${rawPoster}` : rawPoster)
+    : placeholders.moviePoster;
+    
   const qualities = movie.quality || [];
 
   return (
