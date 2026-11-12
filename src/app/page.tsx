@@ -70,10 +70,7 @@ export default async function Home({
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold tracking-tight">
-          {isSearching ? `Search Results: ${searchQuery}` : "Latest Uploads"}
-        </h2>
+      <div className="flex items-center gap-4">
         {/* Scor rat mascot */}
         <div className="scor-slot">
           <div className="scor">
@@ -119,6 +116,9 @@ export default async function Home({
             </div>
           </div>
         </div>
+        <h2 className="text-2xl font-bold tracking-tight">
+          {isSearching ? `Search Results: ${searchQuery}` : "Latest Uploads"}
+        </h2>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
