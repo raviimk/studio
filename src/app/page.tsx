@@ -61,12 +61,25 @@ export default async function Home({
     ? await getSearchResults(searchQuery)
     : await getMovies(currentPage);
 
-  const filteredItems = (data.items || []).filter(item => {
-    const isApk = 
-      item.title?.toLowerCase().includes('.apk') || 
-      item.slug?.toLowerCase().includes('.apk');
-    return !isApk;
-  });
+  // Filter out unwanted items: APKs, meta-links (groups/requests), and items without posters
+  const filteredItems = (data.items || [])
+    .filter(item => {
+      const title = (item.title || "").toLowerCase();
+      const isApk = title.includes('.apk') || item.slug?.toLowerCase().includes('.apk');
+      const isMetaLink = 
+        title.includes('join our group') || 
+        title.includes('request a movie') || 
+        title.includes('how to download') ||
+        title.includes('contact us');
+      const hasNoPoster = !item.poster && !item.posterBig && !item.img;
+      
+      return !isApk && !isMetaLink && !hasNoPoster;
+    })
+    .map(item => ({
+      ...item,
+      // Replace site branding with RV MOVIES
+      title: (item.title || "").replace(/HDHub4u/gi, "RV MOVIES")
+    }));
 
   return (
     <div className="flex flex-col gap-8">

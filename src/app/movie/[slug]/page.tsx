@@ -1,4 +1,3 @@
-
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +55,17 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
   if (!res.ok) throw new Error("Failed to fetch movie details");
   const data = await res.json();
   if (!data || !data.title) notFound();
-  return data;
+  
+  // Sanitize data by replacing HDHub4u with RV MOVIES
+  const sanitize = (str: string) => (str || "").replace(/HDHub4u/gi, "RV MOVIES");
+  
+  return {
+    ...data,
+    title: sanitize(data.title),
+    description: sanitize(data.description),
+    downloads: (data.downloads || []).map((d: any) => ({ ...d, label: sanitize(d.label) })),
+    watch: (data.watch || []).map((w: any) => ({ ...w, label: sanitize(w.label) }))
+  };
 }
 
 const getQualityStyles = (label: string) => {
