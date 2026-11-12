@@ -38,6 +38,14 @@ export default async function Home({
   const currentPage = parseInt(searchParams.page || "1");
   const data = await getMovies(currentPage);
 
+  // Filter out APK files and other non-movie software items
+  const filteredItems = (data.items || []).filter(item => {
+    const isApk = 
+      item.title?.toLowerCase().includes('.apk') || 
+      item.slug?.toLowerCase().includes('.apk');
+    return !isApk;
+  });
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
@@ -49,18 +57,18 @@ export default async function Home({
             </span>
           )}
           <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-            {data.items?.length || 0} items on this page
+            {filteredItems.length} items on this page
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
-        {data.items?.map((movie) => (
+        {filteredItems.map((movie) => (
           <MovieCard key={movie.slug} movie={movie} />
         ))}
       </div>
 
-      {(!data.items || data.items.length === 0) && (
+      {filteredItems.length === 0 && (
         <div className="flex h-[40vh] items-center justify-center text-muted-foreground">
           No movies found on this page.
         </div>
