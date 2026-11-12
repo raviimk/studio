@@ -70,57 +70,79 @@ export default async function Home({
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center gap-4">
-        {/* Scor rat mascot */}
-        <div className="scor-slot">
-          <div className="scor">
-            <div className="scor-head">
-              <div className="scor-face">
-                <div className="scor-eye scor-eye-left" />
-                <div className="scor-eye scor-eye-right" />
-                <div className="scor-face-lower">
-                  <div className="scor-nose" />
-                  <div className="scor-mouth">
-                    <div className="scor-mouth-outer" />
-                    <div className="scor-mouth-inner" />
+      {/* Enhanced Hero Section with Mascot and About Info */}
+      <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md shadow-2xl relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        <div className="flex items-center gap-6 relative z-10">
+          {/* Scor rat mascot */}
+          <div className="scor-slot shrink-0">
+            <div className="scor">
+              <div className="scor-head">
+                <div className="scor-face">
+                  <div className="scor-eye scor-eye-left" />
+                  <div className="scor-eye scor-eye-right" />
+                  <div className="scor-face-lower">
+                    <div className="scor-nose" />
+                    <div className="scor-mouth">
+                      <div className="scor-mouth-outer" />
+                      <div className="scor-mouth-inner" />
+                    </div>
+                    <div className="scor-mouth-line" />
                   </div>
-                  <div className="scor-mouth-line" />
+                  <div className="scor-blush scor-blush-left" />
+                  <div className="scor-blush scor-blush-right" />
                 </div>
-                <div className="scor-blush scor-blush-left" />
-                <div className="scor-blush scor-blush-right" />
-              </div>
-              <div className="scor-face-fluff scor-face-fluff-left" />
-              <div className="scor-face-fluff scor-face-fluff-right" />
-              <div className="scor-ear scor-ear-left" />
-              <div className="scor-ear-right-wrap">
-                <div className="scor-ear scor-ear-right" />
-                <div className="scor-ear-right-fluff" />
-              </div>
-            </div>
-            <div className="scor-body">
-              <div className="scor-tail" />
-              <div className="scor-torso" />
-              <div className="scor-neck" />
-              <div className="scor-arm scor-arm-left" />
-              <div className="scor-arm scor-arm-right" />
-              <div className="scor-leg scor-leg-left">
-                <div className="scor-leg-foot">
-                  <div className="scor-leg-foot-pad" />
+                <div className="scor-face-fluff scor-face-fluff-left" />
+                <div className="scor-face-fluff scor-face-fluff-right" />
+                <div className="scor-ear scor-ear-left" />
+                <div className="scor-ear-right-wrap">
+                  <div className="scor-ear scor-ear-right" />
+                  <div className="scor-ear-right-fluff" />
                 </div>
               </div>
-              <div className="scor-leg scor-leg-right">
-                <div className="scor-leg-foot">
-                  <div className="scor-leg-foot-pad" />
+              <div className="scor-body">
+                <div className="scor-tail" />
+                <div className="scor-torso" />
+                <div className="scor-neck" />
+                <div className="scor-arm scor-arm-left" />
+                <div className="scor-arm scor-arm-right" />
+                <div className="scor-leg scor-leg-left">
+                  <div className="scor-leg-foot">
+                    <div className="scor-leg-foot-pad" />
+                  </div>
+                </div>
+                <div className="scor-leg scor-leg-right">
+                  <div className="scor-leg-foot">
+                    <div className="scor-leg-foot-pad" />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          
+          <div className="flex flex-col gap-1">
+            <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none">
+              {isSearching ? `Results` : "Uploads"}
+            </h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-80">
+              {isSearching ? searchQuery : "LATEST DISCOVERIES"}
+            </p>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {isSearching ? `Search Results: ${searchQuery}` : "Latest Uploads"}
-        </h2>
+
+        {/* Right-aligned About Us Section */}
+        <div className="max-w-md text-center md:text-right flex flex-col gap-3 relative z-10">
+          <h3 className="text-xs font-black text-white/90 tracking-widest uppercase border-b border-primary/30 pb-2 inline-block md:ml-auto">
+            ABOUT RV MOVIES
+          </h3>
+          <p className="text-[13px] text-muted-foreground leading-relaxed font-medium">
+            Welcome to <span className="text-primary font-bold">RV MOVIES</span>, your ultimate platform to download and watch the latest movies online. We provide high-speed links for 4K, 1080p, 720p, and 480p quality, ensuring a premium streaming and downloading experience for every cinema lover.
+          </p>
+        </div>
       </div>
 
+      {/* Movie Grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
         {filteredItems.map((movie) => (
           <MovieCard 
