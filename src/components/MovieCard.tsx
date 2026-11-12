@@ -14,6 +14,7 @@ interface Movie {
 
 export function MovieCard({ movie }: { movie: Movie }) {
   const posterSrc = movie.poster || placeholders.moviePoster;
+  const qualities = movie.quality || [];
 
   return (
     <Link 
@@ -32,14 +33,14 @@ export function MovieCard({ movie }: { movie: Movie }) {
         />
         <div className="movie-card-gradient absolute inset-0 flex flex-col justify-end p-3">
           <div className="flex flex-wrap gap-1.5 mt-auto">
-            {movie.quality.slice(0, 2).map((q) => (
+            {qualities.slice(0, 2).map((q) => (
               <Badge key={q} variant="secondary" className="bg-black/60 text-[10px] text-white border-none backdrop-blur-sm">
                 {q}
               </Badge>
             ))}
-            {movie.quality.length > 2 && (
+            {qualities.length > 2 && (
               <Badge variant="secondary" className="bg-black/60 text-[10px] text-white border-none backdrop-blur-sm">
-                +{movie.quality.length - 2}
+                +{qualities.length - 2}
               </Badge>
             )}
           </div>
