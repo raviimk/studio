@@ -22,11 +22,9 @@ interface ApiResponse {
 }
 
 async function getMovies(page: number): Promise<ApiResponse> {
-  const url = page === 1 
-    ? "https://rvmovies.deathmaniya.workers.dev" 
-    : `https://rvmovies.deathmaniya.workers.dev/api/page/${page}`;
+  // Use the pattern requested by the user for all pages
+  const url = `https://rvmovies.deathmaniya.workers.dev/api/page/${page}`;
   
-  // Reduced revalidate to 60 seconds to ensure the UI updates quickly when the API changes
   const res = await fetch(url, { next: { revalidate: 60 } });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
@@ -46,7 +44,6 @@ export default async function Home({
         <h2 className="text-2xl font-bold tracking-tight">Latest Uploads</h2>
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs font-medium text-primary animate-pulse">Live from {data.base.replace('https://', '')}</span>
-          {/* Use data.items.length to ensure the number shown exactly matches the items rendered on the grid */}
           <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{data.items.length} items on this page</span>
         </div>
       </div>
@@ -63,7 +60,8 @@ export default async function Home({
         </div>
       )}
 
-      <Pagination currentPage={currentPage} totalPages={data.lastPage > 0 ? data.lastPage : 1000} />
+      {/* Set total pages to 975 as per user request */}
+      <Pagination currentPage={currentPage} totalPages={975} />
     </div>
   );
 }
