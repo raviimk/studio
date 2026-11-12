@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface PaginationProps {
   currentPage: number;
@@ -8,8 +12,19 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
-  const prevPage = currentPage > 1 ? currentPage - 1 : null;
-  const nextPage = currentPage + 1;
+  const [inputValue, setInputValue] = useState("");
+  const router = useRouter();
+
+  const handleGo = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pageNum = parseInt(inputValue);
+    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) {
+      router.push(`/?page=${pageNum}`);
+      setInputValue("");
+    }
+  };
+
+  const nextPage = currentPage < totalPages ? currentPage + 1 : totalPages;
 
   // Logic to show a few pages and an ellipsis
   const getPages = () => {
@@ -25,7 +40,8 @@ export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
   };
 
   return (
-    <div className="mt-16 flex items-center justify-center">
+    <div className="mt-16 flex flex-col items-center gap-6">
+      {/* Visual Pagination Bar */}
       <div className="pagination-container shadow-2xl">
         {getPages().map((page, idx) => (
           <div key={idx}>
@@ -52,6 +68,29 @@ export function Pagination({ currentPage, totalPages = 975 }: PaginationProps) {
           Next <ChevronRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />
         </Link>
       </div>
+
+      {/* Manual Page Jump */}
+      <form onSubmit={handleGo} className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Jump to</span>
+        <div className="relative">
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={currentPage.toString()}
+            className="w-14 bg-transparent border-b border-white/20 px-1 py-0.5 text-center text-sm font-bold focus:outline-none focus:border-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+        </div>
+        <button 
+          type="submit"
+          className="bg-primary/20 text-primary hover:bg-primary hover:text-white p-1.5 rounded-full transition-all duration-300"
+          aria-label="Go to page"
+        >
+          <ArrowRight size={14} />
+        </button>
+      </form>
     </div>
   );
 }
