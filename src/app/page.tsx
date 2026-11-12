@@ -5,6 +5,7 @@ export interface Movie {
   title: string;
   slug: string;
   poster: string | null;
+  posterBig?: string | null;
   img?: string | null;
   year?: string | null;
   quality?: string[];
@@ -14,6 +15,7 @@ export interface Movie {
 
 interface ApiResponse {
   page: number;
+  lastPage: number;
   base: string;
   count: number;
   items: Movie[];
@@ -41,7 +43,10 @@ export default async function Home({
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Latest Uploads</h2>
-        <span className="text-sm text-muted-foreground">{data.count} items found</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs font-medium text-primary animate-pulse">Live from {data.base.replace('https://', '')}</span>
+          <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{data.count} items on this page</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
@@ -56,7 +61,7 @@ export default async function Home({
         </div>
       )}
 
-      <Pagination currentPage={currentPage} />
+      <Pagination currentPage={currentPage} totalPages={data.lastPage > 0 ? data.lastPage : 1000} />
     </div>
   );
 }

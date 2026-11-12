@@ -6,20 +6,37 @@ import { Movie } from "@/app/page";
 
 const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
+function extractQualityFromTitle(title: string): string[] {
+  const qualities = [];
+  const lowerTitle = title.toLowerCase();
+  
+  if (lowerTitle.includes('4k') || lowerTitle.includes('2160p')) qualities.push('4K UHD');
+  if (lowerTitle.includes('1080p')) qualities.push('1080p');
+  if (lowerTitle.includes('720p')) qualities.push('720p');
+  if (lowerTitle.includes('480p')) qualities.push('480p');
+  if (lowerTitle.includes('hdtc') || lowerTitle.includes('hdtv')) qualities.push('HDTC');
+  if (lowerTitle.includes('web-dl') || lowerTitle.includes('webrip')) qualities.push('WEB-DL');
+  
+  return qualities;
+}
+
 export function MovieCard({ movie }: { movie: Movie }) {
   const rawPoster = movie.poster || movie.img;
   const posterSrc = rawPoster 
     ? (rawPoster.startsWith('/') ? `${API_BASE}${rawPoster}` : rawPoster)
     : placeholders.moviePoster;
     
-  const qualities = movie.quality || [];
+  // Use quality from API if available, otherwise attempt to extract from title
+  const qualities = (movie.quality && movie.quality.length > 0) 
+    ? movie.quality 
+    : extractQualityFromTitle(movie.title);
 
   return (
     <Link 
       href={`/movie/${movie.slug}`} 
-      className="group relative flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-2"
+      className="group relative flex flex-col gap-3 transition-all duration-300 hover:-translate-y-2"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border bg-muted shadow-lg">
+      <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-muted shadow-lg group-hover:border-primary/30 group-hover:shadow-primary/10">
         <Image
           src={posterSrc}
           alt={movie.title}
@@ -29,27 +46,27 @@ export function MovieCard({ movie }: { movie: Movie }) {
           unoptimized 
           data-ai-hint="movie poster"
         />
-        <div className="movie-card-gradient absolute inset-0 flex flex-col justify-end p-3">
+        <div className="movie-card-gradient absolute inset-0 flex flex-col justify-end p-3 opacity-90 group-hover:opacity-100 transition-opacity">
           <div className="flex flex-wrap gap-1.5 mt-auto">
             {qualities.slice(0, 2).map((q) => (
-              <Badge key={q} variant="secondary" className="bg-black/60 text-[10px] text-white border-none backdrop-blur-sm">
+              <Badge key={q} variant="secondary" className="bg-primary/80 text-[9px] text-white border-none backdrop-blur-md font-bold">
                 {q}
               </Badge>
             ))}
             {qualities.length > 2 && (
-              <Badge variant="secondary" className="bg-black/60 text-[10px] text-white border-none backdrop-blur-sm">
+              <Badge variant="secondary" className="bg-black/60 text-[9px] text-white border-none backdrop-blur-md">
                 +{qualities.length - 2}
               </Badge>
             )}
           </div>
         </div>
       </div>
-      <div className="flex flex-col gap-1 p-2 rounded-lg animate-rainbow-bg transition-all duration-1000 ease-in-out">
-        <h3 className="text-sm font-medium leading-snug text-foreground/90 group-hover:text-primary transition-colors duration-300">
+      <div className="flex flex-col gap-1 p-1 rounded-lg transition-all duration-300">
+        <h3 className="text-xs sm:text-sm font-semibold leading-tight text-foreground/90 group-hover:text-primary line-clamp-2 transition-colors">
           {movie.title}
         </h3>
         {movie.year && (
-          <span className="text-xs text-muted-foreground">{movie.year}</span>
+          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">{movie.year}</span>
         )}
       </div>
     </Link>
