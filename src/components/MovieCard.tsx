@@ -1,4 +1,3 @@
-
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +68,7 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
         </div>
       </div>
       <div className="flex flex-col gap-1 p-1 rounded-lg transition-all duration-300">
-        <h3 className="text-xs sm:text-sm font-semibold leading-tight text-foreground/90 group-hover:text-primary line-clamp-2 transition-colors">
+        <h3 className="text-xs sm:text-sm font-semibold leading-tight text-foreground/90 group-hover:text-primary transition-colors">
           {movie.title}
         </h3>
         {movie.year && (
