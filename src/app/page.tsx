@@ -26,7 +26,8 @@ async function getMovies(page: number): Promise<ApiResponse> {
     ? "https://rvmovies.deathmaniya.workers.dev" 
     : `https://rvmovies.deathmaniya.workers.dev/api/page/${page}`;
   
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  // Reduced revalidate to 60 seconds to ensure the UI updates quickly when the API changes
+  const res = await fetch(url, { next: { revalidate: 60 } });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 }
@@ -45,7 +46,8 @@ export default async function Home({
         <h2 className="text-2xl font-bold tracking-tight">Latest Uploads</h2>
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs font-medium text-primary animate-pulse">Live from {data.base.replace('https://', '')}</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{data.count} items on this page</span>
+          {/* Use data.items.length to ensure the number shown exactly matches the items rendered on the grid */}
+          <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{data.items.length} items on this page</span>
         </div>
       </div>
 
