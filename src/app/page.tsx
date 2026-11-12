@@ -74,45 +74,47 @@ export default async function Home({
         <h2 className="text-2xl font-bold tracking-tight">
           {isSearching ? `Search Results: ${searchQuery}` : "Latest Uploads"}
         </h2>
-        {/* Scor (Scorbunny) Character */}
-        <div className="scor">
-          <div className="scor-head">
-            <div className="scor-face">
-              <div className="scor-eye scor-eye-left"></div>
-              <div className="scor-eye scor-eye-right"></div>
-              <div className="scor-face-lower">
-                <div className="scor-nose"></div>
-                <div className="scor-mouth">
-                  <div className="scor-mouth-outer"></div>
-                  <div className="scor-mouth-inner"></div>
+        {/* Scor rat mascot */}
+        <div className="scor-slot">
+          <div className="scor">
+            <div className="scor-head">
+              <div className="scor-face">
+                <div className="scor-eye scor-eye-left" />
+                <div className="scor-eye scor-eye-right" />
+                <div className="scor-face-lower">
+                  <div className="scor-nose" />
+                  <div className="scor-mouth">
+                    <div className="scor-mouth-outer" />
+                    <div className="scor-mouth-inner" />
+                  </div>
+                  <div className="scor-mouth-line" />
                 </div>
-                <div className="scor-mouth-line"></div>
+                <div className="scor-blush scor-blush-left" />
+                <div className="scor-blush scor-blush-right" />
               </div>
-              <div className="scor-blush scor-blush-left"></div>
-              <div className="scor-blush scor-blush-right"></div>
-            </div>
-            <div className="scor-face-fluff scor-face-fluff-left"></div>
-            <div className="scor-face-fluff scor-face-fluff-right"></div>
-            <div className="scor-ear scor-ear-left"></div>
-            <div className="scor-ear-right-wrap">
-              <div className="scor-ear scor-ear-right"></div>
-              <div className="scor-ear-right-fluff"></div>
-            </div>
-          </div>
-          <div className="scor-body">
-            <div className="scor-tail"></div>
-            <div className="scor-torso"></div>
-            <div className="scor-neck"></div>
-            <div className="scor-arm scor-arm-left"></div>
-            <div className="scor-arm scor-arm-right"></div>
-            <div className="scor-leg scor-leg-left">
-              <div className="scor-leg-foot">
-                <div className="scor-leg-foot-pad"></div>
+              <div className="scor-face-fluff scor-face-fluff-left" />
+              <div className="scor-face-fluff scor-face-fluff-right" />
+              <div className="scor-ear scor-ear-left" />
+              <div className="scor-ear-right-wrap">
+                <div className="scor-ear scor-ear-right" />
+                <div className="scor-ear-right-fluff" />
               </div>
             </div>
-            <div className="scor-leg scor-leg-right">
-              <div className="scor-leg-foot">
-                <div className="scor-leg-foot-pad"></div>
+            <div className="scor-body">
+              <div className="scor-tail" />
+              <div className="scor-torso" />
+              <div className="scor-neck" />
+              <div className="scor-arm scor-arm-left" />
+              <div className="scor-arm scor-arm-right" />
+              <div className="scor-leg scor-leg-left">
+                <div className="scor-leg-foot">
+                  <div className="scor-leg-foot-pad" />
+                </div>
+              </div>
+              <div className="scor-leg scor-leg-right">
+                <div className="scor-leg-foot">
+                  <div className="scor-leg-foot-pad" />
+                </div>
               </div>
             </div>
           </div>
