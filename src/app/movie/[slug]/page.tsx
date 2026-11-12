@@ -48,7 +48,7 @@ const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
   const res = await fetch(`${API_BASE}/api/movie/${slug}`, {
-    cache: 'no-store' // Strictly clear cache for movie details
+    cache: 'no-store'
   });
   if (!res.ok) throw new Error("Failed to fetch movie details");
   const data = await res.json();

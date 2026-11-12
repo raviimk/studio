@@ -23,23 +23,20 @@ function extractQualityFromTitle(title: string): string[] {
 export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }) {
   const effectiveBase = baseApi || DEFAULT_API_BASE;
   
-  // Search API uses 'poster', main API uses 'img' or 'poster' or 'posterBig'
+  // Prefer posterBig, then poster, then img
   const rawPoster = movie.posterBig || movie.poster || movie.img;
   
-  // Enhanced normalization logic to ensure proxy URLs work correctly
   let posterSrc = placeholders.moviePoster;
   if (rawPoster) {
     if (rawPoster.startsWith('http')) {
       posterSrc = rawPoster;
     } else {
-      // Prepend base API and handle relative slash
       const cleanBase = effectiveBase.replace(/\/+$/, '');
       const cleanPath = rawPoster.startsWith('/') ? rawPoster : `/${rawPoster}`;
       posterSrc = `${cleanBase}${cleanPath}`;
     }
   }
     
-  // Use quality from API if available, otherwise attempt to extract from title
   const qualities = (movie.quality && movie.quality.length > 0) 
     ? movie.quality 
     : extractQualityFromTitle(movie.title);
@@ -54,7 +51,6 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
           src={posterSrc}
           alt={movie.title}
           fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
           className="object-cover transition-transform duration-500 group-hover:scale-110"
           unoptimized 
           data-ai-hint="movie poster"
