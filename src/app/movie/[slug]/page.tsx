@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, ChevronLeft, Zap, Tv, Languages, FileText, Download, Star, Users, Clapperboard, Film } from "lucide-react";
+import { Play, ChevronLeft, Zap, Tv, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid } from "lucide-react";
 import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import placeholders from "@/app/lib/placeholder-images.json";
@@ -28,6 +28,7 @@ interface MovieDetail {
   url: string;
   host: string;
   poster: string | null;
+  posterBig?: string | null;
   description: string;
   downloads: LinkItem[];
   watch: LinkItem[];
@@ -57,11 +58,11 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
 
 const getQualityStyles = (label: string) => {
   const l = label.toLowerCase();
-  if (l.includes('4k') || l.includes('2160')) return "text-blue-500 text-lg md:text-xl font-black tracking-tight";
-  if (l.includes('1080')) return "text-blue-400 text-base md:text-lg font-bold";
-  if (l.includes('720')) return "text-sky-400 text-sm md:text-base font-semibold";
-  if (l.includes('480')) return "text-yellow-400 text-sm md:text-base font-semibold";
-  return "text-foreground text-sm font-medium";
+  if (l.includes('4k') || l.includes('2160')) return "text-blue-500";
+  if (l.includes('1080')) return "text-blue-400";
+  if (l.includes('720')) return "text-sky-400";
+  if (l.includes('480')) return "text-yellow-400";
+  return "text-foreground";
 };
 
 const getQualityRank = (label: string) => {
@@ -73,14 +74,25 @@ const getQualityRank = (label: string) => {
   return 0;
 };
 
+// Helper to separate Quality Name from [Size] for better printing/formatting
+const parseLinkLabel = (label: string) => {
+  const match = label.match(/(.*?)(\[.*?\])/);
+  if (match) {
+    return { name: match[1].trim(), size: match[2].trim() };
+  }
+  return { name: label, size: "" };
+};
+
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
 
-  const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(a.label) - getQualityRank(b.label));
+  const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(b.label) - getQualityRank(a.label));
   
-  const posterSrc = movie.poster 
-    ? (movie.poster.startsWith('/') ? `${API_BASE}${movie.poster}` : movie.poster)
-    : placeholders.moviePoster;
+  const posterSrc = movie.posterBig 
+    ? (movie.posterBig.startsWith('/') ? `${API_BASE}${movie.posterBig}` : movie.posterBig)
+    : movie.poster 
+      ? (movie.poster.startsWith('/') ? `${API_BASE}${movie.poster}` : movie.poster)
+      : placeholders.moviePoster;
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-6xl mx-auto">
@@ -175,70 +187,41 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Trailer Section - Relocated here */}
-      {movie.trailer && (
-        <TrailerPlayer embedUrl={movie.trailer.embed} title={movie.title} />
-      )}
-
-      {/* Screenshots Section */}
-      {movie.screenshots && movie.screenshots.length > 0 && (
-        <section className="space-y-6 px-4 mt-8">
-          <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">
-            <Zap size={24} className="text-yellow-400 fill-yellow-400" /> SCREENSHOTS
-          </h2>
-          <div className="flex flex-col gap-8">
-            {movie.screenshots.map((s, idx) => {
-              const imageUrl = s.startsWith('/') ? `${API_BASE}${s}` : s;
-
-              return (
-                <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group shadow-2xl">
-                  <Image
-                    src={imageUrl}
-                    alt={`Screenshot ${idx + 1}`}
-                    fill
-                    className="object-cover transition-transform duration-1000 group-hover:scale-105"
-                    unoptimized
-                    data-ai-hint="movie screenshot"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <span className="text-white text-xs font-bold uppercase tracking-widest">Screenshot {idx + 1}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* Downloads Section */}
+      {/* Downloads Section - Moved up for better access */}
       {sortedDownloads.length > 0 && (
-        <section className="bg-red-950/20 border-y border-red-500/10 py-10 mt-8">
+        <section className="bg-red-950/20 border-y border-red-500/10 py-10">
           <div className="flex flex-col items-center">
             <h2 className="text-red-500 font-black text-sm md:text-lg tracking-[0.2em] uppercase mb-8 flex items-center gap-3">
               <Download size={24} /> DOWNLOAD LINKS
             </h2>
             
             <div className="w-full flex flex-col max-w-4xl mx-auto px-4 gap-4">
-              {sortedDownloads.map((link, idx) => (
-                <Link 
-                  key={idx}
-                  href={link.url} 
-                  target="_blank"
-                  className="flex items-center justify-between py-5 px-8 bg-white/5 hover:bg-white/10 transition-all group rounded-2xl border border-white/5 hover:border-red-500/30"
-                >
-                  <span className={cn("flex items-center gap-3 transition-transform group-hover:scale-105", getQualityStyles(link.label))}>
-                    {link.label.toLowerCase().includes('480p') && <Zap size={20} fill="currentColor" />}
-                    {link.label}
-                  </span>
-                  <span className="text-[10px] font-black uppercase text-muted-foreground group-hover:text-red-400 transition-colors tracking-[0.2em]">{link.host}</span>
-                </Link>
-              ))}
+              {sortedDownloads.map((link, idx) => {
+                const { name, size } = parseLinkLabel(link.label);
+                return (
+                  <Link 
+                    key={idx}
+                    href={link.url} 
+                    target="_blank"
+                    className="flex items-center justify-between py-4 px-6 bg-white/5 hover:bg-white/10 transition-all group rounded-2xl border border-white/5 hover:border-red-500/30"
+                  >
+                    <div className="flex flex-col gap-0.5 transition-transform group-hover:scale-105">
+                      <span className={cn("text-base md:text-xl font-black flex items-center gap-2", getQualityStyles(name))}>
+                        {name.toLowerCase().includes('480p') && <Zap size={18} fill="currentColor" />}
+                        {name}
+                      </span>
+                      {size && <span className="text-[10px] text-muted-foreground font-black tracking-widest">{size}</span>}
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-muted-foreground group-hover:text-red-400 transition-colors tracking-[0.2em]">{link.host}</span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
       )}
 
-      {/* Watch Online Section */}
+      {/* Watch Online Section - Moved up for better access */}
       {movie.watch && movie.watch.length > 0 && (
         <section className="bg-emerald-950/20 border-y border-emerald-500/10 py-10">
           <div className="flex flex-col items-center">
@@ -259,7 +242,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                     target="_blank"
                     className="flex items-center justify-between py-5 px-8 bg-white/5 hover:bg-white/10 transition-all group rounded-2xl border border-white/5 hover:border-emerald-500/30"
                   >
-                    <span className={cn("flex items-center gap-3 transition-transform group-hover:scale-105 font-bold text-white")}>
+                    <span className={cn("flex items-center gap-3 transition-transform group-hover:scale-105 font-bold text-white uppercase text-sm md:text-base")}>
                       <Play size={20} fill="currentColor" className="text-emerald-400" />
                       {label}
                     </span>
@@ -268,6 +251,41 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                 );
               })}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Trailer Section */}
+      {movie.trailer && (
+        <TrailerPlayer embedUrl={movie.trailer.embed} title={movie.title} />
+      )}
+
+      {/* Screenshots Section - Grid view for compact display */}
+      {movie.screenshots && movie.screenshots.length > 0 && (
+        <section className="space-y-6 px-4">
+          <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">
+            <LayoutGrid size={24} className="text-yellow-400" /> SCREENSHOTS
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {movie.screenshots.map((s, idx) => {
+              const imageUrl = s.startsWith('/') ? `${API_BASE}${s}` : s;
+
+              return (
+                <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group shadow-xl">
+                  <Image
+                    src={imageUrl}
+                    alt={`Screenshot ${idx + 1}`}
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                    unoptimized
+                    data-ai-hint="movie screenshot"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                    <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] opacity-60 group-hover:opacity-100 transition-opacity">Screenshot {idx + 1}</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
