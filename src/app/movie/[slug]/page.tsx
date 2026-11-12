@@ -6,6 +6,7 @@ import { Play, ChevronLeft, Zap, Tv, Languages, FileText, Download, Star, Users,
 import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import placeholders from "@/app/lib/placeholder-images.json";
+import { TrailerPlayer } from "@/components/TrailerPlayer";
 
 interface LinkItem {
   label: string;
@@ -174,6 +175,11 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
+      {/* Trailer Section - Relocated here */}
+      {movie.trailer && (
+        <TrailerPlayer embedUrl={movie.trailer.embed} title={movie.title} />
+      )}
+
       {/* Screenshots Section */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4 mt-8">
@@ -262,24 +268,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                 );
               })}
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* Trailer Section */}
-      {movie.trailer && (
-        <section className="px-4 mt-8 space-y-6">
-          <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">
-            <Film size={24} className="text-primary" /> Official Trailer
-          </h2>
-          <div className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-            <iframe
-              src={movie.trailer.embed}
-              title={`${movie.title} Trailer`}
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
           </div>
         </section>
       )}
