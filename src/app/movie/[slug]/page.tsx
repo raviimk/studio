@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, ChevronLeft, Zap, Tv, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid } from "lucide-react";
+import { Play, ChevronLeft, Zap, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid } from "lucide-react";
 import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import placeholders from "@/app/lib/placeholder-images.json";
@@ -48,7 +48,8 @@ const API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
 async function getMovieDetails(slug: string): Promise<MovieDetail> {
   const res = await fetch(`${API_BASE}/api/movie/${slug}`, {
-    next: { revalidate: 3600 }
+    // Set revalidate to 0 to disable caching and always fetch fresh data
+    next: { revalidate: 0 }
   });
   if (!res.ok) throw new Error("Failed to fetch movie details");
   const data = await res.json();
@@ -187,7 +188,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {/* Downloads Section - Moved up for better access */}
+      {/* Downloads Section */}
       {sortedDownloads.length > 0 && (
         <section className="bg-red-950/20 border-y border-red-500/10 py-10">
           <div className="flex flex-col items-center">
@@ -221,7 +222,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </section>
       )}
 
-      {/* Watch Online Section - Moved up for better access */}
+      {/* Watch Online Section */}
       {movie.watch && movie.watch.length > 0 && (
         <section className="bg-emerald-950/20 border-y border-emerald-500/10 py-10">
           <div className="flex flex-col items-center">
@@ -260,7 +261,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         <TrailerPlayer embedUrl={movie.trailer.embed} title={movie.title} />
       )}
 
-      {/* Screenshots Section - Grid view for compact display */}
+      {/* Screenshots Section */}
       {movie.screenshots && movie.screenshots.length > 0 && (
         <section className="space-y-6 px-4">
           <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">

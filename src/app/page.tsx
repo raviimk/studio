@@ -25,10 +25,10 @@ const MOVIE_API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
 
 async function getMovies(page: number): Promise<ApiResponse> {
-  // Use the pattern requested by the user for all pages
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
   
-  const res = await fetch(url, { next: { revalidate: 60 } });
+  // Set revalidate to 0 to disable caching and always fetch fresh data
+  const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 }
@@ -36,7 +36,8 @@ async function getMovies(page: number): Promise<ApiResponse> {
 async function getSearchResults(query: string): Promise<ApiResponse> {
   const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}`;
   
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  // Set revalidate to 0 to disable caching and always fetch fresh data
+  const res = await fetch(url, { next: { revalidate: 0 } });
   if (!res.ok) throw new Error("Failed to fetch search results");
   const data = await res.json();
   
