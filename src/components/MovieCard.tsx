@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import placeholders from "@/app/lib/placeholder-images.json";
 import { Movie } from "@/app/page";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 
@@ -51,8 +52,9 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
   return (
     <Link 
       href={`/movie/${movie.slug}`} 
-      className="group relative flex flex-col gap-3 transition-all duration-300 hover:-translate-y-2"
+      className="group relative flex flex-col gap-2 transition-all duration-300 hover:-translate-y-2"
     >
+      {/* Clean Poster Container */}
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-muted shadow-lg group-hover:border-primary/30 group-hover:shadow-primary/10">
         <Image
           src={posterSrc}
@@ -62,28 +64,39 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
           unoptimized 
           data-ai-hint="movie poster"
         />
-        <div className="movie-card-gradient absolute inset-0 flex flex-col justify-end p-3 opacity-90 group-hover:opacity-100 transition-opacity">
-          <div className="flex flex-wrap gap-1.5 mt-auto">
-            {qualities.slice(0, 2).map((q) => (
-              <Badge key={q} variant="secondary" className="bg-primary/80 text-[9px] text-white border-none backdrop-blur-md font-bold">
+      </div>
+
+      {/* Info Section */}
+      <div className="flex flex-col gap-2 p-1">
+        {/* Quality Badges - Now outside poster */}
+        <div className="flex flex-wrap gap-1">
+          {qualities.map((q) => {
+            const is4K = q.toLowerCase().includes('4k') || q.toLowerCase().includes('2160');
+            return (
+              <Badge 
+                key={q} 
+                variant="secondary" 
+                className={cn(
+                  "text-[8px] sm:text-[9px] border-none font-black uppercase tracking-tighter px-1.5 py-0 leading-none h-4",
+                  is4K 
+                    ? "bg-blue-600 text-white animate-pulse shadow-[0_0_10px_rgba(37,99,235,0.4)]" 
+                    : "bg-white/10 text-muted-foreground"
+                )}
+              >
                 {q}
               </Badge>
-            ))}
-            {qualities.length > 2 && (
-              <Badge variant="secondary" className="bg-black/60 text-[9px] text-white border-none backdrop-blur-md">
-                +{qualities.length - 2}
-              </Badge>
-            )}
-          </div>
+            );
+          })}
         </div>
-      </div>
-      <div className="flex flex-col gap-1 p-1 rounded-lg transition-all duration-300">
-        <h3 className="text-xs sm:text-sm font-semibold leading-tight text-foreground/90 group-hover:text-primary transition-colors">
-          {movie.title}
-        </h3>
-        {movie.year && (
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-tighter">{movie.year}</span>
-        )}
+
+        <div className="flex flex-col gap-0.5">
+          <h3 className="text-xs sm:text-sm font-bold leading-tight text-foreground/90 group-hover:text-primary transition-colors">
+            {movie.title}
+          </h3>
+          {movie.year && (
+            <span className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-widest">{movie.year}</span>
+          )}
+        </div>
       </div>
     </Link>
   );
