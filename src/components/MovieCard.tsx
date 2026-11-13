@@ -22,10 +22,20 @@ function extractQualityFromTitle(title: string): string[] {
 
 const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
   if (!url) return placeholders.moviePoster;
-  if (url.startsWith('http')) return url;
-  const cleanBase = base.replace(/\/+$/, '');
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${cleanBase}${cleanPath}`;
+  
+  let finalUrl = url;
+  if (!url.startsWith('http')) {
+    const cleanBase = base.replace(/\/+$/, '');
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    finalUrl = `${cleanBase}${cleanPath}`;
+  }
+
+  // Prioritize catimages.org over catimages.co
+  if (finalUrl.includes('catimages.co')) {
+    return finalUrl.replace('catimages.co', 'catimages.org');
+  }
+  
+  return finalUrl;
 };
 
 export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }) {

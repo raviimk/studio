@@ -98,10 +98,20 @@ const parseLinkLabel = (label: string) => {
 
 const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
   if (!url) return placeholders.moviePoster;
-  if (url.startsWith('http')) return url;
-  const cleanBase = base.replace(/\/+$/, '');
-  const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  return `${cleanBase}${cleanPath}`;
+  
+  let finalUrl = url;
+  if (!url.startsWith('http')) {
+    const cleanBase = base.replace(/\/+$/, '');
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    finalUrl = `${cleanBase}${cleanPath}`;
+  }
+
+  // Prioritize catimages.org over catimages.co for high-res screenshots
+  if (finalUrl.includes('catimages.co')) {
+    return finalUrl.replace('catimages.co', 'catimages.org');
+  }
+  
+  return finalUrl;
 };
 
 export default async function MoviePage({ params }: { params: { slug: string } }) {
