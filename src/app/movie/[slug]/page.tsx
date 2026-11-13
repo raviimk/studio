@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Play, ChevronLeft, Zap, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid } from "lucide-react";
+import { Play, ChevronLeft, Zap, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid, Layers } from "lucide-react";
 import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import placeholders from "@/app/lib/placeholder-images.json";
@@ -16,6 +16,8 @@ interface LinkItem {
   host: string;
   res?: string;
   size?: string;
+  episode?: number;
+  quality?: string;
 }
 
 interface Trailer {
@@ -56,7 +58,6 @@ async function getMovieDetails(slug: string): Promise<MovieDetail> {
   const data = await res.json();
   if (!data || !data.title) notFound();
   
-  // Sanitize data by replacing HDHub4u with RV MOVIES
   const sanitize = (str: string) => (str || "").replace(/HDHub4u/gi, "RV MOVIES");
   
   return {
@@ -89,7 +90,6 @@ const getQualityRank = (label: string) => {
 const parseLinkLabel = (label: string) => {
   const match = label.match(/(.*?)(\[.*?\])/);
   if (match) {
-    // Extract size and remove brackets
     const s = match[2].trim().replace(/[\[\]]/g, '');
     return { name: match[1].trim(), size: s };
   }
@@ -107,9 +107,45 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
 export default async function MoviePage({ params }: { params: { slug: string } }) {
   const movie = await getMovieDetails(params.slug);
 
-  const sortedDownloads = [...(movie.downloads || [])].sort((a, b) => getQualityRank(b.label) - getQualityRank(a.label));
-  
   const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
+
+  // Separate single episode links from pack/full downloads
+  const singleEpisodeLinks = (movie.downloads || []).filter(link => 
+    link.episode !== undefined || /EP\d+/i.test(link.label)
+  );
+  
+  const packDownloads = (movie.downloads || []).filter(link => 
+    !singleEpisodeLinks.some(sel => sel.url === link.url)
+  ).sort((a, b) => getQualityRank(b.label) - getQualityRank(a.label));
+
+  // Group single episodes: Episode # -> Quality -> Host -> URL
+  const episodeGroups: Record<number, Record<string, Record<string, string>>> = {};
+  
+  singleEpisodeLinks.forEach(link => {
+    let epNum = link.episode;
+    if (epNum === undefined) {
+      const match = link.label.match(/EP(\d+)/i);
+      if (match) epNum = parseInt(match[1]);
+    }
+    if (epNum === undefined) return;
+
+    let q = link.quality;
+    if (!q) {
+      const match = link.label.match(/(\d+p)/i);
+      if (match) q = match[1];
+    }
+    q = q || "Unknown Quality";
+
+    let hostName = link.host;
+    if (hostName.toLowerCase().includes('cloud')) hostName = 'Drive';
+    if (hostName.toLowerCase().includes('cdn') || hostName.toLowerCase().includes('wiki') || hostName.toLowerCase().includes('instant')) hostName = 'Instant';
+
+    if (!episodeGroups[epNum]) episodeGroups[epNum] = {};
+    if (!episodeGroups[epNum][q]) episodeGroups[epNum][q] = {};
+    episodeGroups[epNum][q][hostName] = link.url;
+  });
+
+  const episodeNumbers = Object.keys(episodeGroups).map(Number).sort((a, b) => a - b);
 
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-6xl mx-auto">
@@ -202,7 +238,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
         </div>
       </div>
 
-      {sortedDownloads.length > 0 && (
+      {packDownloads.length > 0 && (
         <section className="bg-red-950/20 border-y border-red-500/10 py-10">
           <div className="flex flex-col items-center">
             <h2 className="text-red-500 font-black text-sm md:text-lg tracking-[0.2em] uppercase mb-8 flex items-center gap-3">
@@ -210,7 +246,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
             </h2>
             
             <div className="w-full flex flex-col max-w-4xl mx-auto px-4 gap-4">
-              {sortedDownloads.map((link, idx) => {
+              {packDownloads.map((link, idx) => {
                 const { name, size: parsedSize } = parseLinkLabel(link.label);
                 const displaySize = link.size || parsedSize;
                 return (
@@ -232,6 +268,48 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                   </Link>
                 );
               })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {episodeNumbers.length > 0 && (
+        <section className="bg-blue-950/20 border-y border-blue-500/10 py-10">
+          <div className="flex flex-col items-center">
+            <h2 className="text-blue-400 font-black text-sm md:text-lg tracking-[0.2em] uppercase mb-8 flex items-center gap-3">
+              <Layers size={24} /> : Single Episode x264 Links :
+            </h2>
+            
+            <div className="w-full flex flex-col max-w-4xl mx-auto px-4 gap-6">
+              {episodeNumbers.map((epNum) => (
+                <div key={epNum} className="flex flex-col gap-3 bg-white/5 p-6 rounded-3xl border border-white/5">
+                  <h3 className="text-xl font-black text-white italic tracking-tighter uppercase">
+                    EPiSODE {epNum}
+                  </h3>
+                  <div className="flex flex-col gap-2 pl-2">
+                    {Object.entries(episodeGroups[epNum]).map(([quality, hosts]) => (
+                      <div key={quality} className="flex items-center gap-2">
+                        <span className={cn("font-bold text-sm min-w-[60px]", getQualityStyles(quality))}>{quality}</span>
+                        <span className="text-muted-foreground opacity-50">–</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {Object.entries(hosts).map(([host, url], hIdx, arr) => (
+                            <div key={host} className="flex items-center">
+                              <Link 
+                                href={url} 
+                                target="_blank"
+                                className="text-sm font-bold text-white hover:text-blue-400 hover:underline transition-colors"
+                              >
+                                {host}
+                              </Link>
+                              {hIdx < arr.length - 1 && <span className="mx-2 text-muted-foreground opacity-30">|</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
