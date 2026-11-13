@@ -89,7 +89,9 @@ const getQualityRank = (label: string) => {
 const parseLinkLabel = (label: string) => {
   const match = label.match(/(.*?)(\[.*?\])/);
   if (match) {
-    return { name: match[1].trim(), size: match[2].trim() };
+    // Extract size and remove brackets
+    const s = match[2].trim().replace(/[\[\]]/g, '');
+    return { name: match[1].trim(), size: s };
   }
   return { name: label, size: "" };
 };
@@ -209,7 +211,8 @@ export default async function MoviePage({ params }: { params: { slug: string } }
             
             <div className="w-full flex flex-col max-w-4xl mx-auto px-4 gap-4">
               {sortedDownloads.map((link, idx) => {
-                const { name, size } = parseLinkLabel(link.label);
+                const { name, size: parsedSize } = parseLinkLabel(link.label);
+                const displaySize = link.size || parsedSize;
                 return (
                   <Link 
                     key={idx}
@@ -222,9 +225,10 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                         {name.toLowerCase().includes('480p') && <Zap size={18} fill="currentColor" />}
                         {name}
                       </span>
-                      {size && <span className="text-[10px] text-muted-foreground font-black tracking-widest">{size}</span>}
                     </div>
-                    <span className="text-[10px] font-black uppercase text-muted-foreground group-hover:text-red-400 transition-colors tracking-[0.2em]">{link.host}</span>
+                    <span className="text-[10px] font-black uppercase text-muted-foreground group-hover:text-red-400 transition-colors tracking-[0.2em]">
+                      {displaySize || link.host}
+                    </span>
                   </Link>
                 );
               })}
