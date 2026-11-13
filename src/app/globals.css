@@ -114,6 +114,16 @@
   animation: text-shimmer 3s linear infinite;
 }
 
+@keyframes play-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0)); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.6)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(16, 185, 129, 0)); }
+}
+
+.animate-play-pulse {
+  animation: play-pulse 2s infinite ease-in-out;
+}
+
 @keyframes rainbow-bg {
   0% { background-color: rgba(255, 0, 0, 0.08); }
   16% { background-color: rgba(255, 165, 0, 0.08); }
@@ -147,6 +157,11 @@
 
 .pagination-next {
   @apply flex h-12 px-6 items-center justify-center bg-zinc-900/80 text-sm font-medium transition-all duration-200 hover:bg-zinc-800;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
 }
 
 /* ==========================================================================
