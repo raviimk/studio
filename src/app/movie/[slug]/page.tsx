@@ -109,7 +109,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
   const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
 
-  // Separate single episode links from pack/full downloads
   const singleEpisodeLinks = (movie.downloads || []).filter(link => 
     link.episode !== undefined || /EP\d+/i.test(link.label)
   );
@@ -118,7 +117,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
     !singleEpisodeLinks.some(sel => sel.url === link.url)
   ).sort((a, b) => getQualityRank(b.label) - getQualityRank(a.label));
 
-  // Group single episodes: Episode # -> Quality -> Host -> URL
   const episodeGroups: Record<number, Record<string, Record<string, string>>> = {};
   
   singleEpisodeLinks.forEach(link => {
@@ -274,34 +272,47 @@ export default async function MoviePage({ params }: { params: { slug: string } }
       )}
 
       {episodeNumbers.length > 0 && (
-        <section className="bg-blue-950/20 border-y border-blue-500/10 py-10">
-          <div className="flex flex-col items-center">
-            <h2 className="text-blue-400 font-black text-sm md:text-lg tracking-[0.2em] uppercase mb-8 flex items-center gap-3">
-              <Layers size={24} /> : Single Episode x264 Links :
+        <section className="bg-blue-950/20 border-y border-blue-500/10 py-12 relative overflow-hidden">
+          {/* Subtle Background Glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
+
+          <div className="flex flex-col items-center relative z-10">
+            <h2 className="text-blue-400 font-black text-sm md:text-lg tracking-[0.3em] uppercase mb-12 flex flex-col items-center gap-2">
+              <Layers size={28} className="animate-pulse" />
+              <span className="text-center">: Single Episode x264 Links :</span>
             </h2>
             
-            <div className="w-full flex flex-col max-w-4xl mx-auto px-4 gap-6">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto px-4 gap-6">
               {episodeNumbers.map((epNum) => (
-                <div key={epNum} className="flex flex-col gap-3 bg-white/5 p-6 rounded-3xl border border-white/5">
-                  <h3 className="text-xl font-black text-white italic tracking-tighter uppercase">
-                    EPiSODE {epNum}
-                  </h3>
-                  <div className="flex flex-col gap-2 pl-2">
+                <div 
+                  key={epNum} 
+                  className="flex flex-col items-center gap-4 bg-white/5 p-8 rounded-[2.5rem] border border-white/5 hover:border-blue-500/40 transition-all duration-500 group hover:bg-white/[0.07] hover:-translate-y-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-500"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[10px] font-black text-blue-400 tracking-[0.4em] uppercase opacity-60">Season 01</span>
+                    <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic group-hover:scale-110 transition-transform duration-500">
+                      EP {epNum}
+                    </h3>
+                  </div>
+                  
+                  <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-1" />
+
+                  <div className="flex flex-col gap-4 w-full">
                     {Object.entries(episodeGroups[epNum]).map(([quality, hosts]) => (
-                      <div key={quality} className="flex items-center gap-2">
-                        <span className={cn("font-bold text-sm min-w-[60px]", getQualityStyles(quality))}>{quality}</span>
-                        <span className="text-muted-foreground opacity-50">–</span>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {Object.entries(hosts).map(([host, url], hIdx, arr) => (
+                      <div key={quality} className="flex flex-col items-center gap-2">
+                        <Badge variant="outline" className={cn("border-none text-xs font-black tracking-widest px-0 uppercase", getQualityStyles(quality))}>
+                          {quality}
+                        </Badge>
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                          {Object.entries(hosts).map(([host, url]) => (
                             <div key={host} className="flex items-center">
                               <Link 
                                 href={url} 
                                 target="_blank"
-                                className="text-sm font-bold text-white hover:text-blue-400 hover:underline transition-colors"
+                                className="text-sm font-black text-white/80 hover:text-blue-400 hover:scale-105 active:scale-95 transition-all py-1 px-3 bg-white/5 rounded-full border border-white/5 hover:border-blue-500/30"
                               >
                                 {host}
                               </Link>
-                              {hIdx < arr.length - 1 && <span className="mx-2 text-muted-foreground opacity-30">|</span>}
                             </div>
                           ))}
                         </div>
