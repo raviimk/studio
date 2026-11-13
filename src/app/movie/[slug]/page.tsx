@@ -327,19 +327,17 @@ export default async function MoviePage({ params }: { params: { slug: string } }
       )}
 
       {movie.watch && movie.watch.length > 0 && (
-        <section className="bg-emerald-950/20 border-y border-emerald-500/10 py-16 relative overflow-hidden">
+        <section className="bg-emerald-950/20 border-y border-emerald-500/10 py-10 relative overflow-hidden">
           {/* Emerald background aura */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[150px] pointer-events-none" />
 
           <div className="flex flex-col items-center relative z-10">
-            <h2 className="text-emerald-400 font-black text-sm md:text-lg tracking-[0.3em] uppercase mb-12 flex flex-col items-center gap-2">
-              <div className="bg-emerald-500/20 p-3 rounded-full animate-play-pulse">
-                <Play size={32} fill="currentColor" className="text-emerald-400" />
-              </div>
-              <span className="mt-2">: WATCH ONLINE :</span>
+            <h2 className="text-emerald-400 font-black text-xs md:text-sm tracking-[0.3em] uppercase mb-8 flex items-center gap-3">
+              <Play size={18} fill="currentColor" className="text-emerald-400" />
+              <span>WATCH ONLINE</span>
             </h2>
             
-            <div className="w-full flex flex-col max-w-4xl mx-auto px-4 gap-6">
+            <div className="w-full flex flex-col max-w-2xl mx-auto px-4 gap-3">
               {movie.watch.map((link, idx) => {
                 const label = (link.label.toUpperCase() === "WATCH" || link.label.toUpperCase() === "WATCH ONLINE") && movie.watch.length > 1 
                   ? `STREAM PLAYER ${idx + 1}` 
@@ -350,19 +348,19 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                     key={idx}
                     href={link.url} 
                     target="_blank"
-                    className="flex flex-col items-center justify-center py-8 px-10 bg-white/5 hover:bg-emerald-500/10 transition-all group rounded-[2.5rem] border border-white/5 hover:border-emerald-500/40 hover:-translate-y-1.5 hover:shadow-[0_25px_60px_-15px_rgba(16,185,129,0.3)] active:scale-95 relative overflow-hidden backdrop-blur-md"
+                    className="flex items-center gap-4 py-3 px-5 bg-white/5 hover:bg-emerald-500/10 transition-all group rounded-2xl border border-white/5 hover:border-emerald-500/40 active:scale-[0.98] relative overflow-hidden backdrop-blur-md"
                   >
                     {/* Animated Shimmer Flare */}
                     <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/5 opacity-40 group-hover:animate-[shimmer_2.5s_infinite]" />
 
-                    <div className="flex flex-col items-center gap-4 relative z-10">
-                      <div className="bg-emerald-500/20 p-5 rounded-full group-hover:bg-emerald-500/30 transition-all group-hover:scale-110">
-                        <Play size={40} fill="currentColor" className="text-emerald-400 animate-play-pulse" />
-                      </div>
-                      <span className="font-black text-white uppercase tracking-[0.3em] text-center text-sm md:text-xl transition-all group-hover:text-emerald-300">
-                        {label}
-                      </span>
-                      <div className="h-0.5 w-12 bg-emerald-500/40 rounded-full group-hover:w-20 transition-all duration-500" />
+                    <div className="bg-emerald-500/20 p-2.5 rounded-full group-hover:bg-emerald-500/30 transition-all group-hover:scale-110 shrink-0">
+                      <Play size={18} fill="currentColor" className="text-emerald-400 animate-play-pulse" />
+                    </div>
+                    <span className="font-black text-white uppercase tracking-widest text-xs md:text-sm transition-all group-hover:text-emerald-300 truncate">
+                      {label}
+                    </span>
+                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Zap size={14} className="text-emerald-400 animate-pulse" />
                     </div>
                   </Link>
                 );
