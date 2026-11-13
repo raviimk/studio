@@ -286,30 +286,30 @@ export default async function MoviePage({ params }: { params: { slug: string } }
               {episodeNumbers.map((epNum) => (
                 <div 
                   key={epNum} 
-                  className="flex flex-col items-center gap-4 bg-white/5 p-8 rounded-[2.5rem] border border-white/5 hover:border-blue-500/40 transition-all duration-500 group hover:bg-white/[0.07] hover:-translate-y-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-500"
+                  className="flex flex-col items-center gap-3 bg-white/5 p-5 rounded-[2rem] border border-white/5 hover:border-blue-500/40 transition-all duration-500 group hover:bg-white/[0.07] hover:-translate-y-2 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-500"
                 >
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[10px] font-black text-blue-400 tracking-[0.4em] uppercase opacity-60">Season 01</span>
-                    <h3 className="text-3xl font-black text-white tracking-tighter uppercase italic group-hover:scale-110 transition-transform duration-500">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-black text-blue-400 tracking-[0.4em] uppercase opacity-60">Season 01</span>
+                    <h3 className="text-2xl font-black text-white tracking-tighter uppercase italic group-hover:scale-110 transition-transform duration-500">
                       EP {epNum}
                     </h3>
                   </div>
                   
                   <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-1" />
 
-                  <div className="flex flex-col gap-4 w-full">
+                  <div className="flex flex-col gap-3 w-full">
                     {Object.entries(episodeGroups[epNum]).map(([quality, hosts]) => (
-                      <div key={quality} className="flex flex-col items-center gap-2">
-                        <Badge variant="outline" className={cn("border-none text-xs font-black tracking-widest px-0 uppercase", getQualityStyles(quality))}>
+                      <div key={quality} className="flex flex-col items-center gap-1.5">
+                        <Badge variant="outline" className={cn("border-none text-[10px] font-black tracking-widest px-0 uppercase", getQualityStyles(quality))}>
                           {quality}
                         </Badge>
-                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                        <div className="flex items-center justify-center gap-2 flex-wrap">
                           {Object.entries(hosts).map(([host, url]) => (
                             <div key={host} className="flex items-center">
                               <Link 
                                 href={url} 
                                 target="_blank"
-                                className="text-sm font-black text-white/80 hover:text-blue-400 hover:scale-105 active:scale-95 transition-all py-1 px-3 bg-white/5 rounded-full border border-white/5 hover:border-blue-500/30"
+                                className="text-xs font-black text-white/80 hover:text-blue-400 hover:scale-105 active:scale-95 transition-all py-1 px-3 bg-white/5 rounded-full border border-white/5 hover:border-blue-500/30"
                               >
                                 {host}
                               </Link>
