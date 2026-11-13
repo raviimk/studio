@@ -1,6 +1,6 @@
 import { MovieCard } from "@/components/MovieCard";
 import { Pagination } from "@/components/Pagination";
-import Link from "next/link";
+import { CategoryList } from "@/components/CategoryList";
 import { cn } from "@/lib/utils";
 
 export const dynamic = 'force-dynamic';
@@ -87,7 +87,6 @@ export default async function Home({
     data = await getMovies(currentPage);
   }
 
-  // Filter out unwanted items and sanitize branding
   const filteredItems = (data.items || [])
     .filter(item => {
       const title = (item.title || "").toLowerCase();
@@ -178,28 +177,8 @@ export default async function Home({
         </div>
       </div>
 
-      {/* Categories Buttons Section */}
-      <div className="w-full overflow-x-auto pb-2 scrollbar-hide">
-        <div className="flex items-center gap-3 min-w-max px-1">
-          {CATEGORIES.map((cat) => {
-            const isActive = currentCategory === cat.slug || (!currentCategory && cat.slug === null);
-            return (
-              <Link
-                key={cat.label}
-                href={cat.slug ? `/?category=${cat.slug}` : "/"}
-                className={cn(
-                  "px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 border shadow-lg hover:scale-105 active:scale-95",
-                  isActive 
-                    ? "bg-gradient-to-r from-primary to-blue-600 text-white border-primary/50 shadow-primary/20" 
-                    : "bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 hover:text-white"
-                )}
-              >
-                {cat.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      {/* Categories Buttons Section - Using Client Component for Scroll Management */}
+      <CategoryList categories={CATEGORIES} currentCategory={currentCategory} />
 
       {/* Movie Grid */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">

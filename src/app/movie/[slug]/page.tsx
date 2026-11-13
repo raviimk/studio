@@ -1,12 +1,12 @@
 import Image from "next/image";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Play, ChevronLeft, Zap, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid, Layers } from "lucide-react";
+import { Play, Zap, Languages, FileText, Download, Star, Users, Clapperboard, Film, LayoutGrid, Layers } from "lucide-react";
 import { notFound } from "next/navigation";
 import { cn } from "@/lib/utils";
 import placeholders from "@/app/lib/placeholder-images.json";
 import { TrailerPlayer } from "@/components/TrailerPlayer";
+import { BackButton } from "@/components/BackButton";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
@@ -106,7 +106,6 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
     finalUrl = `${cleanBase}${cleanPath}`;
   }
 
-  // Prioritize catimages.org over catimages.co for high-res screenshots
   if (finalUrl.includes('catimages.co')) {
     return finalUrl.replace('catimages.co', 'catimages.org');
   }
@@ -158,11 +157,7 @@ export default async function MoviePage({ params }: { params: { slug: string } }
   return (
     <div className="flex flex-col gap-10 pb-20 max-w-6xl mx-auto">
       <div className="px-4">
-        <Button variant="ghost" asChild className="gap-2 -ml-2 text-muted-foreground hover:text-foreground">
-          <Link href="/">
-            <ChevronLeft size={20} /> Back to Home
-          </Link>
-        </Button>
+        <BackButton />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[350px,1fr] gap-8 px-4 items-start">
@@ -174,7 +169,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
               fill
               className="object-cover"
               unoptimized
-              data-ai-hint="movie poster"
             />
           </div>
           
@@ -283,7 +277,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
       {episodeNumbers.length > 0 && (
         <section className="bg-blue-950/20 border-y border-blue-500/10 py-12 relative overflow-hidden">
-          {/* Subtle Background Glow */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
 
           <div className="flex flex-col items-center relative z-10">
@@ -338,7 +331,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
 
       {movie.watch && movie.watch.length > 0 && (
         <section className="bg-emerald-950/20 border-y border-emerald-500/10 py-10 relative overflow-hidden">
-          {/* Emerald background aura */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[150px] pointer-events-none" />
 
           <div className="flex flex-col items-center relative z-10">
@@ -360,7 +352,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                     target="_blank"
                     className="flex items-center gap-4 py-3 px-5 bg-white/5 hover:bg-emerald-500/10 transition-all group rounded-2xl border border-white/5 hover:border-emerald-500/40 active:scale-[0.98] relative overflow-hidden backdrop-blur-md"
                   >
-                    {/* Animated Shimmer Flare */}
                     <div className="absolute top-0 -inset-full h-full w-1/2 z-5 block transform -skew-x-12 bg-gradient-to-r from-transparent to-white/5 opacity-40 group-hover:animate-[shimmer_2.5s_infinite]" />
 
                     <div className="bg-emerald-500/20 p-2.5 rounded-full group-hover:bg-emerald-500/30 transition-all group-hover:scale-110 shrink-0">
@@ -392,7 +383,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {movie.screenshots.map((s, idx) => {
               const imageUrl = normalizeProxyUrl(s, API_BASE);
-
               return (
                 <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group shadow-xl">
                   <Image
@@ -401,7 +391,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     unoptimized
-                    data-ai-hint="movie screenshot"
                   />
                 </div>
               );
