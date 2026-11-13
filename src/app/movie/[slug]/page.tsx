@@ -403,9 +403,6 @@ export default async function MoviePage({ params }: { params: { slug: string } }
                     unoptimized
                     data-ai-hint="movie screenshot"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
-                    <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] opacity-60 group-hover:opacity-100 transition-opacity">Screenshot {idx + 1}</span>
-                  </div>
                 </div>
               );
             })}
