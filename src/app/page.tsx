@@ -49,7 +49,8 @@ async function getMovies(page: number): Promise<ApiResponse> {
 }
 
 async function getCategoryMovies(category: string, page: number): Promise<ApiResponse> {
-  const url = `${CATEGORY_API_BASE}/api/category/${category}?page=${page}`;
+  // Updated to use path parameter for page as per request: /api/category/slug/page
+  const url = `${CATEGORY_API_BASE}/api/category/${category}/${page}`;
   const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error("Failed to fetch category data");
   return res.json();
@@ -119,7 +120,6 @@ export default async function Home({
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 relative z-10 w-full md:w-auto">
           <GhostLoader />
           
-          {/* Hidden on mobile to keep hero section compact, padding-right added to prevent italic clipping */}
           <div className="hidden sm:flex flex-col gap-1 items-center sm:items-start text-center sm:text-left">
             <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none truncate max-w-[200px] sm:max-w-none pr-2">
               {isSearching ? `Results` : isCategory ? CATEGORIES.find(c => c.slug === currentCategory)?.label : "Uploads"}

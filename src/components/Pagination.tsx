@@ -17,6 +17,7 @@ export function Pagination({ currentPage, totalPages = 975, category }: Paginati
   const router = useRouter();
 
   const getBaseUrl = (page: number | string) => {
+    // App URL structure remains standard query params
     let url = `/?page=${page}`;
     if (category) url += `&category=${category}`;
     return url;
@@ -33,7 +34,6 @@ export function Pagination({ currentPage, totalPages = 975, category }: Paginati
 
   const nextPage = currentPage < totalPages ? currentPage + 1 : totalPages;
 
-  // Logic to show a few pages and an ellipsis
   const getPages = () => {
     const pages = [];
     if (totalPages <= 5) {
