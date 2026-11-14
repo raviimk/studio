@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
+import { Suspense } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <div className="bg-animation" />
         <div className="flex min-h-screen flex-col relative z-10">
-          <Header />
+          <Suspense fallback={<div className="h-14" />}>
+            <Header />
+          </Suspense>
           <main className="flex-1 container mx-auto px-4 py-8">
             {children}
           </main>
