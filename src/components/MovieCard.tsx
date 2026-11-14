@@ -49,6 +49,7 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
   return (
     <Link 
       href={`/movie/${movie.slug}?poster=${encodeURIComponent(posterSrc)}`} 
+      scroll={true}
       className="group relative flex flex-col gap-2 transition-all duration-300 hover:-translate-y-2"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-muted shadow-lg group-hover:border-primary/30 group-hover:shadow-primary/10">

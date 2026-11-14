@@ -41,16 +41,22 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isScrolled]);
 
-  // Reset loading state when navigation completes
+  // Reset loading state and force scroll to top for new pages
   useEffect(() => {
     setIsLoading(false);
+    
+    // Only scroll to top automatically if we are moving to a detail page or search results
+    // We avoid forcing scroll on '/' to allow browser restoration when going back
+    if (pathname !== '/') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   }, [pathname, searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
       setIsLoading(true);
-      router.push(`/?search=${encodeURIComponent(query)}`);
+      router.push(`/?search=${encodeURIComponent(query)}`, { scroll: true });
     }
   };
 
@@ -64,13 +70,12 @@ export function Header() {
           : "bg-background/80 backdrop-blur-xl"
       )}>
         <div className="container mx-auto flex items-center justify-between gap-4 px-4 transform-gpu">
-          {/* Branding Block - Always Compact and Left-Aligned */}
+          {/* Branding Block */}
           <Link 
             href="/" 
             className="flex items-center gap-2 group shrink-0 transition-all duration-300 transform-gpu scale-95"
             onClick={() => setIsLoading(true)}
           >
-            {/* Logo container */}
             <div className="w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 group-hover:scale-110 shrink-0 transform-gpu">
               {animationData && (
                 <Lottie 
@@ -81,13 +86,12 @@ export function Header() {
               )}
             </div>
             
-            {/* Main Title */}
             <span className="font-black tracking-tighter animate-text-shimmer transition-all duration-300 text-xl sm:text-2xl">
               RV MOVIES
             </span>
           </Link>
 
-          {/* Search Bar - Always Compact and Right-Aligned */}
+          {/* Search Bar */}
           <form 
             onSubmit={handleSearch} 
             className="relative flex transition-all duration-300 transform-gpu w-40 sm:w-64 md:w-80"

@@ -124,7 +124,6 @@ export default async function MoviePage({
 
   let posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
   
-  // Fallback to listing poster if detail API returns nothing
   if ((!movie.posterBig && !movie.poster) && searchParams.poster) {
     posterSrc = searchParams.poster;
   }
@@ -180,6 +179,7 @@ export default async function MoviePage({
               fill
               className="object-cover"
               unoptimized
+              priority
             />
           </div>
           
