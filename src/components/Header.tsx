@@ -46,7 +46,6 @@ export function Header() {
     setIsLoading(false);
     
     // Only scroll to top automatically if we are moving to a detail page or search results
-    // We avoid forcing scroll on '/' to allow browser restoration when going back
     if (pathname !== '/') {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
@@ -56,7 +55,19 @@ export function Header() {
     e.preventDefault();
     if (query.trim()) {
       setIsLoading(true);
+      // Instant keyboard dismissal on mobile
+      if (typeof window !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
       router.push(`/?search=${encodeURIComponent(query)}`, { scroll: true });
+    }
+  };
+
+  const handleHomeClick = () => {
+    setIsLoading(true);
+    // Dismiss keyboard if user clicks home while searching
+    if (typeof window !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
     }
   };
 
@@ -74,7 +85,7 @@ export function Header() {
           <Link 
             href="/" 
             className="flex items-center gap-2 group shrink-0 transition-all duration-300 transform-gpu scale-95"
-            onClick={() => setIsLoading(true)}
+            onClick={handleHomeClick}
           >
             <div className="w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 group-hover:scale-110 shrink-0 transform-gpu">
               {animationData && (
