@@ -359,6 +359,12 @@
   box-shadow: none;
 }
 
+@media (max-width: 768px) {
+  .ghost-loader {
+    --loader-width: 140px;
+  }
+}
+
 .ghost-loader__scene {
   display: block;
   width: 100%;

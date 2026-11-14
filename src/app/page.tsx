@@ -116,14 +116,14 @@ export default async function Home({
       <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md shadow-2xl relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
-        <div className="flex items-center gap-6 relative z-10">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 relative z-10 w-full md:w-auto">
           <GhostLoader />
           
-          <div className="flex flex-col gap-1">
-            <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none">
+          <div className="flex flex-col gap-1 items-center sm:items-start text-center sm:text-left">
+            <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none truncate max-w-[200px] sm:max-w-none">
               {isSearching ? `Results` : isCategory ? CATEGORIES.find(c => c.slug === currentCategory)?.label : "Uploads"}
             </h2>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-80">
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-80 truncate max-w-[200px] sm:max-w-none">
               {isSearching ? searchQuery : isCategory ? "CATEGORY EXPLORER" : "LATEST DISCOVERIES"}
             </p>
           </div>
