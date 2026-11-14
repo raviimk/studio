@@ -363,7 +363,7 @@
   display: block;
   width: 100%;
   height: auto;
-  overflow: hidden;
+  overflow: visible;
   background: transparent;
 }
 
@@ -495,6 +495,12 @@
 @keyframes ghost-loader-floor-travel {
   from { stroke-dashoffset: 0; }
   to { stroke-dashoffset: 380; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost-loader * { animation: none; }
+  .ghost-loader__ghost { transform: translateY(var(--ghost-rest-height)); }
+  .ghost-loader__bat-travel { transform: translateX(365px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
