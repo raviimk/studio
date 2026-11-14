@@ -106,16 +106,20 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
     finalUrl = finalUrl.replace('catimages.co', 'catimages.org');
   }
 
-  // 2. Handle relative paths (e.g., /img?u=...)
+  // 2. Swap myimg.bid to myimg.click
+  if (finalUrl.includes('myimg.bid')) {
+    finalUrl = finalUrl.replace('myimg.bid', 'myimg.click');
+  }
+
+  // 3. Handle relative paths (e.g., /img?u=...)
   if (!finalUrl.startsWith('http')) {
     const cleanBase = base.replace(/\/+$/, '');
     const cleanPath = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
     return `${cleanBase}${cleanPath}`;
   }
 
-  // 3. Robust Fallback: If it's a direct URL to a known external host (like myimg.bid),
-  // wrap it in the proxy to bypass potential blocks/403s.
-  const externalHosts = ['myimg.bid', 'catimages', 'postimg', 'image.tmdb.org'];
+  // 4. Robust Fallback: Wrap in proxy to bypass potential blocks/403s
+  const externalHosts = ['myimg.click', 'myimg.bid', 'catimages', 'postimg', 'image.tmdb.org'];
   const needsProxy = externalHosts.some(host => finalUrl.includes(host));
   
   if (needsProxy && !finalUrl.includes('?u=')) {
