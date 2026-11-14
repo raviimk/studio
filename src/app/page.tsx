@@ -1,9 +1,12 @@
+
 import { MovieCard } from "@/components/MovieCard";
 import { Pagination } from "@/components/Pagination";
 import { CategoryList } from "@/components/CategoryList";
 import { cn } from "@/lib/utils";
 
-export const dynamic = 'force-dynamic';
+// Removed force-dynamic to allow Next.js to use partial caching for speed
+// and added revalidate for fresh content
+export const revalidate = 3600; // Revalidate every hour
 
 export interface Movie {
   title: string;
@@ -42,21 +45,21 @@ const CATEGORIES = [
 
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 }
 
 async function getCategoryMovies(category: string, page: number): Promise<ApiResponse> {
   const url = `${CATEGORY_API_BASE}/api/category/${category}?page=${page}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) throw new Error("Failed to fetch category data");
   return res.json();
 }
 
 async function getSearchResults(query: string): Promise<ApiResponse> {
   const url = `${SEARCH_API_BASE}/api/search?q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url, { cache: 'no-store' }); // Search always fresh
   if (!res.ok) throw new Error("Failed to fetch search results");
   const data = await res.json();
   return {
@@ -79,12 +82,16 @@ export default async function Home({
   const isCategory = !!currentCategory;
 
   let data: ApiResponse;
-  if (isSearching) {
-    data = await getSearchResults(searchQuery);
-  } else if (isCategory) {
-    data = await getCategoryMovies(currentCategory, currentPage);
-  } else {
-    data = await getMovies(currentPage);
+  try {
+    if (isSearching) {
+      data = await getSearchResults(searchQuery);
+    } else if (isCategory) {
+      data = await getCategoryMovies(currentCategory, currentPage);
+    } else {
+      data = await getMovies(currentPage);
+    }
+  } catch (error) {
+    throw error; // Let Next.js handle with error.tsx
   }
 
   const filteredItems = (data.items || [])
@@ -108,7 +115,7 @@ export default async function Home({
   return (
     <div className="flex flex-col gap-8">
       {/* Enhanced Hero Section */}
-      <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md shadow-2xl relative overflow-hidden group">
+      <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md shadow-2xl relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-700">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
         <div className="flex items-center gap-6 relative z-10">
@@ -177,11 +184,11 @@ export default async function Home({
         </div>
       </div>
 
-      {/* Categories Buttons Section - Using Client Component for Scroll Management */}
+      {/* Categories Buttons Section */}
       <CategoryList categories={CATEGORIES} currentCategory={currentCategory} />
 
       {/* Movie Grid */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
         {filteredItems.map((movie) => (
           <MovieCard 
             key={movie.slug} 
