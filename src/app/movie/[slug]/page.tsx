@@ -399,21 +399,22 @@ export default async function MoviePage({
       )}
 
       {movie.screenshots && movie.screenshots.length > 0 && (
-        <section className="space-y-6 px-4">
-          <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">
-            <LayoutGrid size={24} className="text-yellow-400" /> SCREENSHOTS
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section className="space-y-8 px-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">
+              <LayoutGrid size={24} className="text-yellow-400" /> SCREENSHOTS
+            </h2>
+          </div>
+          <div className="flex flex-col gap-6 max-w-4xl mx-auto">
             {movie.screenshots.map((s, idx) => {
               const imageUrl = normalizeProxyUrl(s, API_BASE);
               return (
-                <div key={idx} className="relative w-full aspect-video overflow-hidden rounded-2xl border border-white/10 bg-muted group shadow-xl">
-                  <Image
+                <div key={idx} className="relative w-full rounded-2xl border border-white/10 bg-muted group shadow-2xl overflow-hidden transition-all duration-500 hover:border-primary/30">
+                  <img
                     src={imageUrl}
                     alt={`Screenshot ${idx + 1}`}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    unoptimized
+                    className="w-full h-auto block transition-transform duration-1000 group-hover:scale-[1.01]"
+                    loading="lazy"
                   />
                 </div>
               );
