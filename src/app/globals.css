@@ -349,7 +349,7 @@
   --ghost-big-rise: -44px;
   --ghost-small-rise: -14px;
   --hem-speed: 2.4s;
-  --bat-travel-speed: 5.4s;
+  --bat-travel-speed: 10s; /* Slower, smoother travel across full container */
   --bat-flap-speed: 0.38s;
   --floor-speed: 2.7s;
   width: var(--loader-width);
@@ -363,7 +363,7 @@
   display: block;
   width: 100%;
   height: auto;
-  overflow: visible;
+  overflow: visible; /* Allow bat to travel outside SVG viewBox into card */
   background: transparent;
 }
 
@@ -447,8 +447,8 @@
 }
 
 @keyframes ghost-loader-bat-travel {
-  from { transform: translateX(600px); }
-  to { transform: translateX(-160px); }
+  from { transform: translateX(3000px); } /* Start far beyond right edge of parent card */
+  to { transform: translateX(-1500px); } /* End far beyond left edge of parent card */
 }
 
 .ghost-loader__bat-bob {
