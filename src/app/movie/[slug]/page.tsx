@@ -113,10 +113,21 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
   return finalUrl;
 };
 
-export default async function MoviePage({ params }: { params: { slug: string } }) {
+export default async function MoviePage({ 
+  params,
+  searchParams
+}: { 
+  params: { slug: string },
+  searchParams: { poster?: string }
+}) {
   const movie = await getMovieDetails(params.slug);
 
-  const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
+  let posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
+  
+  // Fallback to listing poster if detail API returns nothing
+  if ((!movie.posterBig && !movie.poster) && searchParams.poster) {
+    posterSrc = searchParams.poster;
+  }
 
   const singleEpisodeLinks = (movie.downloads || []).filter(link => 
     link.episode !== undefined || /EP\d+/i.test(link.label)

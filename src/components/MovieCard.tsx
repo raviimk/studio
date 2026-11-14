@@ -31,7 +31,6 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
     finalUrl = `${cleanBase}${cleanPath}`;
   }
 
-  // Prioritize catimages.org over catimages.co
   if (finalUrl.includes('catimages.co')) {
     return finalUrl.replace('catimages.co', 'catimages.org');
   }
@@ -41,8 +40,6 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
 
 export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }) {
   const effectiveBase = baseApi || DEFAULT_API_BASE;
-  
-  // Use exact same logic as movie detail page
   const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster || movie.img, effectiveBase);
     
   const qualities = (movie.quality && movie.quality.length > 0) 
@@ -51,10 +48,9 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
 
   return (
     <Link 
-      href={`/movie/${movie.slug}`} 
+      href={`/movie/${movie.slug}?poster=${encodeURIComponent(posterSrc)}`} 
       className="group relative flex flex-col gap-2 transition-all duration-300 hover:-translate-y-2"
     >
-      {/* Clean Poster Container */}
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-muted shadow-lg group-hover:border-primary/30 group-hover:shadow-primary/10">
         <Image
           src={posterSrc}
@@ -66,9 +62,7 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
         />
       </div>
 
-      {/* Info Section */}
       <div className="flex flex-col gap-2 p-1">
-        {/* Quality Badges - Now outside poster */}
         <div className="flex flex-wrap gap-1">
           {qualities.map((q) => {
             const is4K = q.toLowerCase().includes('4k') || q.toLowerCase().includes('2160');
