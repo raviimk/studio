@@ -119,7 +119,8 @@ export default async function Home({
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 relative z-10 w-full md:w-auto">
           <GhostLoader />
           
-          <div className="flex flex-col gap-1 items-center sm:items-start text-center sm:text-left">
+          {/* Hidden on mobile to keep hero section compact */}
+          <div className="hidden sm:flex flex-col gap-1 items-center sm:items-start text-center sm:text-left">
             <h2 className="text-3xl md:text-4xl font-black tracking-tighter uppercase italic leading-none truncate max-w-[200px] sm:max-w-none">
               {isSearching ? `Results` : isCategory ? CATEGORIES.find(c => c.slug === currentCategory)?.label : "Uploads"}
             </h2>
