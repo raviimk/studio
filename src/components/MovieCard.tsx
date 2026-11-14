@@ -25,14 +25,27 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
   if (!url) return placeholders.moviePoster;
   
   let finalUrl = url;
-  if (!url.startsWith('http')) {
-    const cleanBase = base.replace(/\/+$/, '');
-    const cleanPath = url.startsWith('/') ? url : `/${url}`;
-    finalUrl = `${cleanBase}${cleanPath}`;
+
+  // 1. Swap catimages.co to catimages.org for high resolution
+  if (finalUrl.includes('catimages.co')) {
+    finalUrl = finalUrl.replace('catimages.co', 'catimages.org');
   }
 
-  if (finalUrl.includes('catimages.co')) {
-    return finalUrl.replace('catimages.co', 'catimages.org');
+  // 2. Handle relative paths (e.g., /img?u=...)
+  if (!finalUrl.startsWith('http')) {
+    const cleanBase = base.replace(/\/+$/, '');
+    const cleanPath = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+    return `${cleanBase}${cleanPath}`;
+  }
+
+  // 3. Robust Fallback: If it's a direct URL to a known external host (like myimg.bid),
+  // wrap it in the proxy to bypass potential blocks/403s.
+  const externalHosts = ['myimg.bid', 'catimages', 'postimg', 'image.tmdb.org'];
+  const needsProxy = externalHosts.some(host => finalUrl.includes(host));
+  
+  if (needsProxy && !finalUrl.includes('?u=')) {
+    const cleanBase = base.replace(/\/+$/, '');
+    return `${cleanBase}/img?u=${encodeURIComponent(finalUrl)}`;
   }
   
   return finalUrl;
@@ -60,6 +73,7 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
           className="object-cover transition-transform duration-500 group-hover:scale-110"
           unoptimized 
           data-ai-hint="movie poster"
+          priority={false}
         />
       </div>
 
@@ -85,7 +99,7 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
         </div>
 
         <div className="flex flex-col gap-0.5">
-          <h3 className="text-xs sm:text-sm font-bold leading-tight text-foreground/90 group-hover:text-primary transition-colors">
+          <h3 className="text-xs sm:text-sm font-bold leading-tight text-foreground/90 group-hover:text-primary transition-colors line-clamp-2">
             {movie.title}
           </h3>
           {movie.year && (

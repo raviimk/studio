@@ -100,14 +100,27 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
   if (!url) return placeholders.moviePoster;
   
   let finalUrl = url;
-  if (!url.startsWith('http')) {
-    const cleanBase = base.replace(/\/+$/, '');
-    const cleanPath = url.startsWith('/') ? url : `/${url}`;
-    finalUrl = `${cleanBase}${cleanPath}`;
+
+  // 1. Swap catimages.co to catimages.org for high resolution
+  if (finalUrl.includes('catimages.co')) {
+    finalUrl = finalUrl.replace('catimages.co', 'catimages.org');
   }
 
-  if (finalUrl.includes('catimages.co')) {
-    return finalUrl.replace('catimages.co', 'catimages.org');
+  // 2. Handle relative paths (e.g., /img?u=...)
+  if (!finalUrl.startsWith('http')) {
+    const cleanBase = base.replace(/\/+$/, '');
+    const cleanPath = finalUrl.startsWith('/') ? finalUrl : `/${finalUrl}`;
+    return `${cleanBase}${cleanPath}`;
+  }
+
+  // 3. Robust Fallback: If it's a direct URL to a known external host (like myimg.bid),
+  // wrap it in the proxy to bypass potential blocks/403s.
+  const externalHosts = ['myimg.bid', 'catimages', 'postimg', 'image.tmdb.org'];
+  const needsProxy = externalHosts.some(host => finalUrl.includes(host));
+  
+  if (needsProxy && !finalUrl.includes('?u=')) {
+    const cleanBase = base.replace(/\/+$/, '');
+    return `${cleanBase}/img?u=${encodeURIComponent(finalUrl)}`;
   }
   
   return finalUrl;
@@ -122,11 +135,10 @@ export default async function MoviePage({
 }) {
   const movie = await getMovieDetails(params.slug);
 
-  let posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE);
-  
-  if ((!movie.posterBig && !movie.poster) && searchParams.poster) {
-    posterSrc = searchParams.poster;
-  }
+  // Fallback to high-quality poster from search results if API's poster is missing
+  let posterSrc = (movie.posterBig || movie.poster) 
+    ? normalizeProxyUrl(movie.posterBig || movie.poster, API_BASE)
+    : (searchParams.poster || placeholders.moviePoster);
 
   const singleEpisodeLinks = (movie.downloads || []).filter(link => 
     link.episode !== undefined || /EP\d+/i.test(link.label)
