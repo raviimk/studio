@@ -31,14 +31,14 @@ const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
 const CATEGORY_API_BASE = "https://rvmct.deathmaniya.workers.dev";
 
 const CATEGORIES = [
-  { label: "Latest", slug: null },
-  { label: "Bollywood", slug: "bollywood-movies" },
-  { label: "Hollywood", slug: "hollywood-movies" },
-  { label: "Hindi Dubbed", slug: "hindi-dubbed" },
-  { label: "South Hindi", slug: "south-hindi-movies" },
-  { label: "Web Series", slug: "web-series" },
-  { label: "Action", slug: "action-movies" },
-  { label: "Adult", slug: "adult" },
+  { label: "Latest", emoji: "🔥", slug: null },
+  { label: "Bollywood", emoji: "🎬", slug: "bollywood-movies" },
+  { label: "Hollywood", emoji: "🍿", slug: "hollywood-movies" },
+  { label: "Hindi Dubbed", emoji: "🔊", slug: "hindi-dubbed" },
+  { label: "South Hindi", emoji: "🐯", slug: "south-hindi-movies" },
+  { label: "Web Series", emoji: "📺", slug: "web-series" },
+  { label: "Action", emoji: "💣", slug: "action-movies" },
+  { label: "Adult", emoji: "🔞", slug: "adult" },
 ];
 
 async function getMovies(page: number): Promise<ApiResponse> {
