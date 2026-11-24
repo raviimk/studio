@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,9 @@ export function Header() {
   const [query, setQuery] = useState("");
   const [animationData, setAnimationData] = useState<any>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -41,9 +43,9 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isScrolled]);
 
-  // Reset loading state and force scroll to top for new pages
+  // Reset local search state when navigation completes
   useEffect(() => {
-    setIsLoading(false);
+    setIsSearching(false);
     
     // Only scroll to top automatically if we are moving to a detail page or search results
     if (pathname !== '/') {
@@ -53,27 +55,36 @@ export function Header() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) {
-      setIsLoading(true);
-      // Instant keyboard dismissal on mobile
+    const trimmedQuery = query.trim();
+    
+    if (trimmedQuery) {
+      setIsSearching(true);
+      
+      // Instant keyboard dismissal on mobile for faster perceived speed
       if (typeof window !== 'undefined' && document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
-      router.push(`/?search=${encodeURIComponent(query)}`, { scroll: true });
+
+      // Use transition to keep the UI responsive while Next.js fetches the server component
+      startTransition(() => {
+        router.push(`/?search=${encodeURIComponent(trimmedQuery)}`, { scroll: true });
+      });
     }
   };
 
   const handleHomeClick = () => {
-    setIsLoading(true);
-    // Dismiss keyboard if user clicks home while searching
+    setIsSearching(true);
     if (typeof window !== 'undefined' && document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
   };
 
+  // Show the speed loader if we are searching OR if a navigation transition is pending
+  const showLoader = isSearching || isPending;
+
   return (
     <>
-      {isLoading && <SpeederLoader />}
+      {showLoader && <SpeederLoader />}
       <header className={cn(
         "sticky top-0 z-50 w-full border-b border-white/5 transition-all duration-300 ease-out py-2",
         isScrolled 
@@ -105,15 +116,26 @@ export function Header() {
           {/* Search Bar */}
           <form 
             onSubmit={handleSearch} 
-            className="relative flex transition-all duration-300 transform-gpu w-40 sm:w-64 md:w-80"
+            className={cn(
+              "relative flex transition-all duration-300 transform-gpu w-40 sm:w-64 md:w-80 group",
+              showLoader && "opacity-80"
+            )}
           >
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            {showLoader ? (
+              <Loader2 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-primary h-4 w-4 animate-spin" />
+            ) : (
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4 group-focus-within:text-primary transition-colors" />
+            )}
             <Input
               type="search"
               placeholder="Search movies..."
-              className="w-full bg-white/5 border-white/10 pr-3 h-9 pl-8 text-xs sm:text-sm focus:bg-white/10 focus:ring-1 focus:ring-primary/50 transition-all duration-300 rounded-full transform-gpu"
+              className={cn(
+                "w-full bg-white/5 border-white/10 pr-3 h-9 pl-8 text-xs sm:text-sm focus:bg-white/10 focus:ring-1 transition-all duration-300 rounded-full transform-gpu",
+                showLoader ? "focus:ring-primary/20 cursor-wait" : "focus:ring-primary/50"
+              )}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              disabled={showLoader}
             />
           </form>
         </div>
