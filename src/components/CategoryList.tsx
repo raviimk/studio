@@ -19,22 +19,22 @@ interface CategoryListProps {
 const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) => {
   if (icon === 'fire') {
     return (
-      <div className={cn("relative w-6 h-6", isActive && "animate-flame")}>
+      <div className={cn("relative w-6 h-6 flex items-center justify-center", isActive && "animate-flame")}>
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full scale-125">
-          {/* Outer Flame (Red/Orange) */}
+          {/* Outer Heat */}
           <path 
             d="M12 2C12 2 13 4 13 8C13 12 11 14 11 17C11 20 12 22 12 22C12 22 7 20 7 15C7 10 9 8 9 2C9 2 12 2 12 2Z" 
             fill="#ff4500" 
             className={cn(isActive && "animate-pulse")} 
           />
-          {/* Middle Flame (Orange) */}
+          {/* Middle Body */}
           <path 
             d="M12 22C12 22 17 20 17 15C17 10 15 8 15 2C15 2 12 2 12 2C12 2 13 4 13 8C13 12 11 14 11 17C11 20 12 22 12 22Z" 
             fill="#ff8c00" 
             opacity="0.8" 
             className={cn(isActive && "animate-pulse [animation-delay:0.1s]")} 
           />
-          {/* Inner Flame (Yellow/White) */}
+          {/* Inner Core */}
           <path 
             d="M12 22C12 22 14.5 21 14.5 17C14.5 13 13 11 13 8C13 8 12 10 12 13C12 16 13 18 12 22Z" 
             fill="#ffd700" 
@@ -81,7 +81,7 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
     );
   }
 
-  // Action / Bomb
+  // Action / Bomb with sparkle
   if (icon === 'bomb') {
     return (
       <div className="relative w-5 h-5">
