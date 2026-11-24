@@ -403,23 +403,28 @@ export default async function MoviePage({
       )}
 
       {movie.screenshots && movie.screenshots.length > 0 && (
-        <section className="space-y-8 px-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black flex items-center gap-2 tracking-tight uppercase">
-              <LayoutGrid size={24} className="text-yellow-400" /> SCREENSHOTS
+        <section className="space-y-12 px-4 mt-20">
+          <div className="flex flex-col items-center">
+            <h2 className="text-xl md:text-2xl font-black italic text-red-600 tracking-[0.3em] uppercase transition-all duration-500 hover:scale-110">
+              : Screen-Shots :
             </h2>
+            <div className="h-0.5 w-16 bg-red-600/30 mt-2 rounded-full" />
           </div>
-          <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 max-w-7xl mx-auto">
             {movie.screenshots.map((s, idx) => {
               const imageUrl = normalizeProxyUrl(s, API_BASE);
               return (
-                <div key={idx} className="relative w-full rounded-2xl border border-white/10 bg-muted group shadow-2xl overflow-hidden transition-all duration-500 hover:border-primary/30">
-                  <img
-                    src={imageUrl}
-                    alt={`Screenshot ${idx + 1}`}
-                    className="w-full h-auto block transition-transform duration-1000 group-hover:scale-[1.01]"
-                    loading="lazy"
-                  />
+                <div key={idx} className="flex items-center justify-center group">
+                  <div className="relative rounded-xl border border-white/5 bg-zinc-950/40 overflow-hidden transition-all duration-700 hover:border-red-600/40 hover:shadow-[0_0_30px_rgba(220,38,38,0.15)] shadow-2xl">
+                    <img
+                      src={imageUrl}
+                      alt={`Screenshot ${idx + 1}`}
+                      className="max-w-full h-auto block transition-transform duration-1000 group-hover:scale-110"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  </div>
                 </div>
               );
             })}
