@@ -23,20 +23,20 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full scale-125">
           {/* Outer Heat */}
           <path 
-            d="M12 2C12 2 13 4 13 8C13 12 11 14 11 17C11 20 12 22 12 22C12 22 7 20 7 15C7 10 9 8 9 2C9 2 12 2 12 2Z" 
+            d="M12 2.5C12 2.5 13.5 5 13.5 9C13.5 13 11.5 15 11.5 18C11.5 21 12.5 22.5 12.5 22.5C12.5 22.5 6.5 20.5 6.5 15C6.5 9.5 9 7.5 9 2.5C9 2.5 12 2.5 12 2.5Z" 
             fill="#ff4500" 
             className={cn(isActive && "animate-pulse")} 
           />
           {/* Middle Body */}
           <path 
-            d="M12 22C12 22 17 20 17 15C17 10 15 8 15 2C15 2 12 2 12 2C12 2 13 4 13 8C13 12 11 14 11 17C11 20 12 22 12 22Z" 
+            d="M12.5 22.5C12.5 22.5 18.5 20.5 18.5 15C18.5 9.5 16 7.5 16 2.5C16 2.5 12.5 2.5 12.5 2.5C12.5 2.5 14 5 14 9C14 13 12 15 12 18C12 21 12.5 22.5 12.5 22.5Z" 
             fill="#ff8c00" 
             opacity="0.8" 
             className={cn(isActive && "animate-pulse [animation-delay:0.1s]")} 
           />
           {/* Inner Core */}
           <path 
-            d="M12 22C12 22 14.5 21 14.5 17C14.5 13 13 11 13 8C13 8 12 10 12 13C12 16 13 18 12 22Z" 
+            d="M12.5 22.5C12.5 22.5 15 21.5 15 17C15 12.5 13.5 10.5 13.5 8C13.5 8 11.5 11 11.5 14C11.5 17 13.5 19 12.5 22.5Z" 
             fill="#ffd700" 
             opacity="0.9" 
             className={cn(isActive && "animate-pulse [animation-delay:0.2s]")} 
@@ -81,22 +81,23 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
     );
   }
 
-  // Action / Bomb with sparkle
+  // Action / Sparking Bomb
   if (icon === 'bomb') {
     return (
       <div className="relative w-5 h-5">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("w-full h-full transition-all duration-500", isActive ? "text-red-500" : "text-muted-foreground/40")}>
           <circle cx="11" cy="13" r="8" fill={isActive ? "currentColor" : "none"} fillOpacity="0.1" />
-          <path d="M16.5 7.5L18.5 5.5" strokeWidth="2.5" />
+          <path d="M16 8L18 6" strokeWidth="2.5" />
           <path 
-            d="M18.5 5.5C19.5 4.5 21.5 4.5 22.5 5.5" 
+            d="M18 6C19 5 21 5 22 6" 
             className={cn(isActive && "animate-spark-fuse")} 
-            stroke={isActive ? "#ef4444" : "currentColor"}
+            stroke={isActive ? "#fbbf24" : "currentColor"}
+            strokeDasharray="2 2"
           />
           {isActive && (
             <g className="animate-pulse">
-              <circle cx="22.5" cy="5.5" r="1.5" fill="#facc15" />
-              <path d="M22.5 2.5V3.5M25.5 5.5H24.5M22.5 8.5V7.5M19.5 5.5H20.5" stroke="#facc15" strokeWidth="1" />
+              <circle cx="22" cy="6" r="2" fill="#facc15" />
+              <path d="M22 2V4M25 6H23M22 10V8M19 6H21" stroke="#facc15" strokeWidth="1" />
             </g>
           )}
         </svg>
@@ -104,18 +105,19 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
     );
   }
 
-  // Hindi Dubbed / Sound Wave
+  // Hindi Dubbed / Audio Pulse
   if (icon === 'languages') {
     return (
       <div className="relative w-5 h-5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={cn("w-full h-full transition-all duration-500", isActive ? "text-primary" : "text-muted-foreground/40")}>
-          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill={isActive ? "currentColor" : "none"} fillOpacity="0.2" />
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-          <line x1="12" x2="12" y1="19" y2="22" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={cn("w-full h-full transition-all duration-500", isActive ? "text-sky-400" : "text-muted-foreground/40")}>
+          <path d="M3 14v-3a9 9 0 0 1 18 0v3" />
+          <path d="M16 14v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4" />
+          <circle cx="6" cy="14" r="3" fill={isActive ? "currentColor" : "none"} fillOpacity="0.2" />
+          <circle cx="18" cy="14" r="3" fill={isActive ? "currentColor" : "none"} fillOpacity="0.2" />
           {isActive && (
             <g className="animate-pulse-glow">
-              <path d="M8 8.5C7.2 9.5 7.2 11.5 8 12.5" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M16 8.5C16.8 9.5 16.8 11.5 16 12.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M9 10c0-1.5 1.5-2.5 3-2.5s3 1 3 2.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M7 14h10" stroke="currentColor" strokeWidth="1" strokeDasharray="1 2" />
             </g>
           )}
         </svg>
