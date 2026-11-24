@@ -4,7 +4,7 @@ import { CategoryList } from "@/components/CategoryList";
 import { GhostLoader } from "@/components/GhostLoader";
 import { cn } from "@/lib/utils";
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export interface Movie {
   title: string;
@@ -43,15 +43,15 @@ const CATEGORIES = [
 
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  // Use no-store to ensure we always get the latest data as requested
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
 }
 
 async function getCategoryMovies(category: string, page: number): Promise<ApiResponse> {
-  // Updated to use path parameter for page as per request: /api/category/slug/page
   const url = `${CATEGORY_API_BASE}/api/category/${category}/${page}`;
-  const res = await fetch(url, { next: { revalidate: 3600 } });
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch category data");
   return res.json();
 }
