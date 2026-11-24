@@ -20,18 +20,21 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
   if (icon === 'fire') {
     return (
       <div className={cn("relative w-6 h-6", isActive && "animate-flame")}>
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full scale-125">
+          {/* Outer Flame (Red/Orange) */}
           <path 
             d="M12 2C12 2 13 4 13 8C13 12 11 14 11 17C11 20 12 22 12 22C12 22 7 20 7 15C7 10 9 8 9 2C9 2 12 2 12 2Z" 
             fill="#ff4500" 
             className={cn(isActive && "animate-pulse")} 
           />
+          {/* Middle Flame (Orange) */}
           <path 
             d="M12 22C12 22 17 20 17 15C17 10 15 8 15 2C15 2 12 2 12 2C12 2 13 4 13 8C13 12 11 14 11 17C11 20 12 22 12 22Z" 
             fill="#ff8c00" 
             opacity="0.8" 
             className={cn(isActive && "animate-pulse [animation-delay:0.1s]")} 
           />
+          {/* Inner Flame (Yellow/White) */}
           <path 
             d="M12 22C12 22 14.5 21 14.5 17C14.5 13 13 11 13 8C13 8 12 10 12 13C12 16 13 18 12 22Z" 
             fill="#ffd700" 
@@ -83,17 +86,13 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
     return (
       <div className="relative w-5 h-5">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("w-full h-full transition-all duration-500", isActive ? "text-red-500" : "text-muted-foreground/40")}>
-          {/* Bomb Body */}
           <circle cx="11" cy="13" r="8" fill={isActive ? "currentColor" : "none"} fillOpacity="0.1" />
-          {/* Fuse Holder */}
           <path d="M16.5 7.5L18.5 5.5" strokeWidth="2.5" />
-          {/* Fuse with Spark Animation */}
           <path 
             d="M18.5 5.5C19.5 4.5 21.5 4.5 22.5 5.5" 
             className={cn(isActive && "animate-spark-fuse")} 
             stroke={isActive ? "#ef4444" : "currentColor"}
           />
-          {/* Spark effect */}
           {isActive && (
             <g className="animate-pulse">
               <circle cx="22.5" cy="5.5" r="1.5" fill="#facc15" />
@@ -168,7 +167,6 @@ export function CategoryList({ categories, currentCategory }: CategoryListProps)
                   : "bg-white/5 text-muted-foreground border-white/10 hover:bg-white/10 hover:text-white"
               )}
             >
-              {/* Shifting Gradient Background */}
               {isActive && (
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-blue-500/10 to-primary/20 animate-color-shift-bg pointer-events-none" />
               )}
@@ -179,7 +177,6 @@ export function CategoryList({ categories, currentCategory }: CategoryListProps)
               
               <span className="relative z-10">{cat.label}</span>
               
-              {/* Floating Indicator Dot */}
               {isActive && (
                 <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(37,99,235,0.8)]" />
               )}
