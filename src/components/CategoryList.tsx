@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Languages, Tv, Zap, ShieldAlert, Radio } from 'lucide-react';
+import { Tv, Zap, ShieldAlert } from 'lucide-react';
 
 interface Category {
   label: string;
@@ -78,25 +78,62 @@ const AnimatedIcon = ({ icon, isActive }: { icon: string, isActive: boolean }) =
     );
   }
 
+  // Action / Bomb
+  if (icon === 'bomb') {
+    return (
+      <div className="relative w-5 h-5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={cn("w-full h-full transition-all duration-500", isActive ? "text-red-500" : "text-muted-foreground/40")}>
+          {/* Bomb Body */}
+          <circle cx="11" cy="13" r="8" fill={isActive ? "currentColor" : "none"} fillOpacity="0.1" />
+          {/* Fuse Holder */}
+          <path d="M16.5 7.5L18.5 5.5" strokeWidth="2.5" />
+          {/* Fuse with Spark Animation */}
+          <path 
+            d="M18.5 5.5C19.5 4.5 21.5 4.5 22.5 5.5" 
+            className={cn(isActive && "animate-spark-fuse")} 
+            stroke={isActive ? "#ef4444" : "currentColor"}
+          />
+          {/* Spark effect */}
+          {isActive && (
+            <g className="animate-pulse">
+              <circle cx="22.5" cy="5.5" r="1.5" fill="#facc15" />
+              <path d="M22.5 2.5V3.5M25.5 5.5H24.5M22.5 8.5V7.5M19.5 5.5H20.5" stroke="#facc15" strokeWidth="1" />
+            </g>
+          )}
+        </svg>
+      </div>
+    );
+  }
+
+  // Hindi Dubbed / Sound Wave
+  if (icon === 'languages') {
+    return (
+      <div className="relative w-5 h-5">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={cn("w-full h-full transition-all duration-500", isActive ? "text-primary" : "text-muted-foreground/40")}>
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" fill={isActive ? "currentColor" : "none"} fillOpacity="0.2" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" x2="12" y1="19" y2="22" />
+          {isActive && (
+            <g className="animate-pulse-glow">
+              <path d="M8 8.5C7.2 9.5 7.2 11.5 8 12.5" stroke="currentColor" strokeWidth="1.5" />
+              <path d="M16 8.5C16.8 9.5 16.8 11.5 16 12.5" stroke="currentColor" strokeWidth="1.5" />
+            </g>
+          )}
+        </svg>
+      </div>
+    );
+  }
+
   const baseClasses = cn(
     "w-5 h-5 transition-all duration-500",
     isActive ? "text-primary scale-110" : "text-muted-foreground/40 scale-100"
   );
 
   switch (icon) {
-    case 'languages':
-      return <Languages className={cn(baseClasses, isActive && "animate-pulse-glow")} />;
     case 'tiger':
       return <Zap className={cn(baseClasses, isActive && "animate-pulse-glow fill-primary/20")} />;
     case 'tv':
       return <Tv className={cn(baseClasses, isActive && "animate-bounce")} />;
-    case 'bomb':
-      return (
-        <div className="relative">
-          <Radio className={cn(baseClasses, isActive && "animate-pulse")} />
-          {isActive && <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-spark-fuse" />}
-        </div>
-      );
     case 'adult':
       return <ShieldAlert className={cn(baseClasses, isActive && "animate-pulse-glow")} />;
     default:
