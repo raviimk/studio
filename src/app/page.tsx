@@ -43,7 +43,6 @@ const CATEGORIES = [
 
 async function getMovies(page: number): Promise<ApiResponse> {
   const url = `${MOVIE_API_BASE}/api/page/${page}`;
-  // Use no-store to ensure we always get the latest data as requested
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error("Failed to fetch data");
   return res.json();
@@ -142,11 +141,16 @@ export default async function Home({
 
       <CategoryList categories={CATEGORIES} currentCategory={currentCategory} />
 
-      <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
-        {filteredItems.map((movie) => (
+      {/* Grid Container with dynamic key to re-trigger staggered cards animation on content change */}
+      <div 
+        key={`${currentCategory || 'home'}-${currentPage}-${searchQuery || ''}`}
+        className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6"
+      >
+        {filteredItems.map((movie, index) => (
           <MovieCard 
             key={movie.slug} 
             movie={movie} 
+            index={index}
             baseApi={isSearching ? SEARCH_API_BASE : isCategory ? CATEGORY_API_BASE : MOVIE_API_BASE}
           />
         ))}

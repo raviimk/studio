@@ -55,7 +55,7 @@ const normalizeProxyUrl = (url: string | null | undefined, base: string) => {
   return finalUrl;
 };
 
-export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }) {
+export function MovieCard({ movie, baseApi, index = 0 }: { movie: Movie, baseApi?: string, index?: number }) {
   const effectiveBase = baseApi || DEFAULT_API_BASE;
   const posterSrc = normalizeProxyUrl(movie.posterBig || movie.poster || movie.img, effectiveBase);
     
@@ -67,7 +67,8 @@ export function MovieCard({ movie, baseApi }: { movie: Movie, baseApi?: string }
     <Link 
       href={`/movie/${movie.slug}?poster=${encodeURIComponent(posterSrc)}`} 
       scroll={true}
-      className="group relative flex flex-col gap-2 transition-all duration-300 hover:-translate-y-2"
+      style={{ animationDelay: `${(index % 20) * 40}ms` }}
+      className="group relative flex flex-col gap-2 transition-all duration-300 hover:-translate-y-2 animate-poster-entrance transform-gpu"
     >
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl border border-white/5 bg-muted shadow-lg group-hover:border-primary/30 group-hover:shadow-primary/10">
         <Image
