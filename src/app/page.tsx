@@ -3,6 +3,8 @@ import { Pagination } from "@/components/Pagination";
 import { CategoryList } from "@/components/CategoryList";
 import { GhostLoader } from "@/components/GhostLoader";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { PlayCircle } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -129,19 +131,28 @@ export default async function Home({
           </div>
         </div>
 
-        <div className="max-w-md text-center md:text-right flex flex-col gap-3 relative z-10">
-          <h3 className="text-xs font-black text-white/90 tracking-widest uppercase border-b border-primary/30 pb-2 inline-block md:ml-auto">
-            ABOUT RV MOVIES
-          </h3>
-          <p className="text-[13px] text-muted-foreground leading-relaxed font-medium">
-            Welcome to <span className="text-primary font-bold">RV MOVIES</span>, your ultimate platform for the latest cinema. We provide high-speed links in 4K, 1080p, 720p, and 480p quality.
-          </p>
+        <div className="max-w-md text-center md:text-right flex flex-col gap-4 relative z-10">
+          <div className="flex flex-col gap-2">
+            <h3 className="text-xs font-black text-white/90 tracking-widest uppercase border-b border-primary/30 pb-2 inline-block md:ml-auto">
+              ABOUT RV MOVIES
+            </h3>
+            <p className="text-[13px] text-muted-foreground leading-relaxed font-medium">
+              Welcome to <span className="text-primary font-bold">RV MOVIES</span>, your ultimate platform for the latest cinema. We provide high-speed links in 4K, 1080p, 720p, and 480p quality.
+            </p>
+          </div>
+
+          <Link 
+            href="/how-to-download"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/20 border border-primary/30 text-[11px] font-black tracking-widest text-primary hover:bg-primary hover:text-white transition-all duration-300 md:ml-auto group/btn shadow-[0_0_20px_rgba(37,99,235,0.1)] active:scale-95"
+          >
+            <PlayCircle size={16} className="animate-pulse" />
+            HOW TO DOWNLOAD
+          </Link>
         </div>
       </div>
 
       <CategoryList categories={CATEGORIES} currentCategory={currentCategory} />
 
-      {/* Grid Container with dynamic key to re-trigger staggered cards animation on content change */}
       <div 
         key={`${currentCategory || 'home'}-${currentPage}-${searchQuery || ''}`}
         className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:gap-x-6"
