@@ -4,7 +4,7 @@ import { CategoryList } from "@/components/CategoryList";
 import { GhostLoader } from "@/components/GhostLoader";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { PlayCircle, Zap, ShieldCheck } from "lucide-react";
+import { PlayCircle } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -28,17 +28,9 @@ interface ApiResponse {
   items: Movie[];
 }
 
-interface ApiStatus {
-  ok: boolean;
-  version: string;
-  base: string;
-  host: string;
-}
-
 const MOVIE_API_BASE = "https://rvmovies.deathmaniya.workers.dev";
 const SEARCH_API_BASE = "https://rvsrch.deathmaniya.workers.dev";
 const CATEGORY_API_BASE = "https://rvmct.deathmaniya.workers.dev";
-const STATUS_API = "https://rvmovies.deathmaniya.workers.dev/api/base";
 
 const CATEGORIES = [
   { label: "Latest", icon: "fire", slug: null },
@@ -77,16 +69,6 @@ async function getSearchResults(query: string): Promise<ApiResponse> {
   };
 }
 
-async function getApiStatus(): Promise<ApiStatus | null> {
-  try {
-    const res = await fetch(STATUS_API, { cache: 'no-store' });
-    if (!res.ok) return null;
-    return res.json();
-  } catch (e) {
-    return null;
-  }
-}
-
 export default async function Home({
   searchParams,
 }: {
@@ -99,14 +81,11 @@ export default async function Home({
   const isSearching = !!searchQuery;
   const isCategory = !!currentCategory;
 
-  const [data, apiStatus] = await Promise.all([
-    isSearching 
-      ? getSearchResults(searchQuery) 
-      : isCategory 
-        ? getCategoryMovies(currentCategory, currentPage) 
-        : getMovies(currentPage),
-    getApiStatus()
-  ]);
+  const data = await (isSearching 
+    ? getSearchResults(searchQuery) 
+    : isCategory 
+      ? getCategoryMovies(currentCategory, currentPage) 
+      : getMovies(currentPage));
 
   const filteredItems = (data.items || [])
     .filter(item => {
@@ -126,11 +105,6 @@ export default async function Home({
       title: (item.title || "").replace(/HDHub4u/gi, "RV MOVIES")
     }));
 
-  const version = apiStatus?.version || "v22";
-  const baseShort = apiStatus?.base 
-    ? new URL(apiStatus.base).hostname.split('.')[0] 
-    : "new17";
-
   return (
     <div className="flex flex-col gap-8">
       {/* Compact Hero Section */}
@@ -147,16 +121,6 @@ export default async function Home({
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary opacity-80 truncate max-w-[200px] sm:max-w-none pr-2">
               {isSearching ? searchQuery : isCategory ? "CATEGORY EXPLORER" : "LATEST DISCOVERIES"}
             </p>
-            
-            {/* API Status Pills */}
-            <div className="flex items-center gap-2 mt-2 transform-gpu">
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[8px] font-black tracking-widest text-primary/80">
-                <ShieldCheck size={10} /> {version}
-              </div>
-              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[8px] font-black tracking-widest text-blue-400/80">
-                <Zap size={10} /> {baseShort}
-              </div>
-            </div>
           </div>
         </div>
 
